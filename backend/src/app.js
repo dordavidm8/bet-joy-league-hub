@@ -63,13 +63,23 @@ io.on('connection', (socket) => {
   socket.on('leave_game', (gameId) => {
     socket.leave(`game:${gameId}`);
   });
-  socket.on('disconnect', () => {});
+  socket.on('disconnect', () => { });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Kickoff backend running on port ${PORT}`);
   startCronJobs(io);
+
+  // Initial sync on startup to ensure DB isn't empty on first deploy
+  try {
+    const { syncUpcomingFixtures } = require('./jobs/syncGames');
+    console.log('🔄 Running initial fixtures sync...');
+    await syncUpcomingFixtures();
+    console.log('✅ Initial sync complete');
+  } catch (err) {
+    console.error('❌ Initial sync failed:', err.message);
+  }
 });
 
 module.exports = { app, io };
