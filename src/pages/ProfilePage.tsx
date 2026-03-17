@@ -1,9 +1,24 @@
 import { useApp } from "@/context/AppContext";
+import { useUserProfile, useUserBetHistory } from "@/hooks/useApi";
 import { motion } from "framer-motion";
-import { Settings, Bell, Globe, LogOut } from "lucide-react";
+import { Bell, Globe, LogOut } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ProfilePage = () => {
   const { userPoints } = useApp();
+  const { data: profile } = useUserProfile();
+  const { data: history } = useUserBetHistory();
+
+  const displayPoints = profile?.points ?? userPoints;
+  const wins = profile?.wins ?? 12;
+  const totalBets = profile?.totalBets ?? 18;
+  const successRate = profile?.successRate ?? 68;
+
+  const betHistory = history ?? [
+    { match: "מכבי ת״א נגד הפועל ב״ש", bet: "ניצחון מכבי ת״א", result: "ניצחון", points: "+250" },
+    { match: "מכבי חיפה נגד הפועל ת״א", bet: "תיקו", result: "הפסד", points: "-100" },
+    { match: "בית״ר נגד בני סכנין", bet: "2-3 שערים", result: "ניצחון", points: "+180" },
+  ];
 
   return (
     <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
@@ -23,15 +38,15 @@ const ProfilePage = () => {
       {/* Stats */}
       <div className="flex gap-3">
         <div className="card-kickoff flex-1 flex flex-col items-center gap-1">
-          <span className="text-xl font-black">{userPoints.toLocaleString()}</span>
+          <span className="text-xl font-black">{displayPoints.toLocaleString()}</span>
           <span className="text-xs text-muted-foreground">נקודות</span>
         </div>
         <div className="card-kickoff flex-1 flex flex-col items-center gap-1">
-          <span className="text-xl font-black">12/18</span>
+          <span className="text-xl font-black">{wins}/{totalBets}</span>
           <span className="text-xs text-muted-foreground">ניצחונות/הימורים</span>
         </div>
         <div className="card-kickoff flex-1 flex flex-col items-center gap-1">
-          <span className="text-xl font-black">68%</span>
+          <span className="text-xl font-black">{successRate}%</span>
           <span className="text-xs text-muted-foreground">הצלחה</span>
         </div>
       </div>
@@ -39,11 +54,7 @@ const ProfilePage = () => {
       {/* Bet History */}
       <section className="flex flex-col gap-3">
         <span className="section-label">היסטוריית הימורים</span>
-        {[
-          { match: "מכבי ת״א נגד הפועל ב״ש", bet: "ניצחון מכבי ת״א", result: "ניצחון", points: "+250" },
-          { match: "מכבי חיפה נגד הפועל ת״א", bet: "תיקו", result: "הפסד", points: "-100" },
-          { match: "בית״ר נגד בני סכנין", bet: "2-3 שערים", result: "ניצחון", points: "+180" },
-        ].map((item, i) => (
+        {betHistory.map((item, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 10 }}

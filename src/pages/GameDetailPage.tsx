@@ -1,21 +1,32 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { mockGames, mockBetQuestions } from "@/lib/mockData";
+import { useGame, useBetQuestions } from "@/hooks/useApi";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
 import AiAdvisor from "@/components/AiAdvisor";
 
 const GameDetailPage = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   const { addToBetSlip } = useApp();
-  const game = mockGames.find((g) => g.id === gameId);
-  const questions = gameId ? mockBetQuestions[gameId] || [] : [];
+  const { data: game, isLoading: gameLoading } = useGame(gameId || "");
+  const { data: questions = [], isLoading: questionsLoading } = useBetQuestions(gameId || "");
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [points, setPoints] = useState("");
   const [showAi, setShowAi] = useState(false);
+
+  if (gameLoading) {
+    return (
+      <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
+        <Skeleton className="h-8 w-20" />
+        <Skeleton className="h-[200px] rounded-[20px]" />
+        <Skeleton className="h-[120px] rounded-[20px]" />
+      </div>
+    );
+  }
 
   if (!game) return <div className="p-5">משחק לא נמצא</div>;
 
@@ -92,29 +103,35 @@ const GameDetailPage = () => {
 
       {/* Questions */}
       <div className="flex flex-col gap-5 px-5">
-        {questions.map((q, i) => (
-          <motion.div
-            key={q.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + i * 0.05 }}
-            className="flex flex-col gap-3"
-          >
-            <h3 className="font-bold text-base">{q.question}</h3>
-            <div className="flex flex-wrap gap-2">
-              {q.options.map((o) => (
-                <Button
-                  key={o.id}
-                  variant={selections[q.id] === o.id ? "option-selected" : "option"}
-                  size="default"
-                  onClick={() => handleSelect(q.id, o.id)}
-                >
-                  {o.label}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        ))}
+        {questionsLoading ? (
+          Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-[100px] rounded-[20px]" />
+          ))
+        ) : (
+          questions.map((q, i) => (
+            <motion.div
+              key={q.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.05 }}
+              className="flex flex-col gap-3"
+            >
+              <h3 className="font-bold text-base">{q.question}</h3>
+              <div className="flex flex-wrap gap-2">
+                {q.options.map((o) => (
+                  <Button
+                    key={o.id}
+                    variant={selections[q.id] === o.id ? "option-selected" : "option"}
+                    size="default"
+                    onClick={() => handleSelect(q.id, o.id)}
+                  >
+                    {o.label}
+                  </Button>
+                ))}
+              </div>
+            </motion.div>
+          ))
+        )}
       </div>
 
       {/* Points Input */}
