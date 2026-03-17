@@ -12,6 +12,7 @@ import BetSlipPage from "@/pages/BetSlipPage";
 import LeaguesPage from "@/pages/LeaguesPage";
 import QuizPage from "@/pages/QuizPage";
 import ProfilePage from "@/pages/ProfilePage";
+import ExpertChatPage from "@/pages/ExpertChatPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
