@@ -1,11 +1,13 @@
-import { mockLeagues } from "@/lib/mockData";
+import { useLeagues } from "@/hooks/useApi";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, Trophy, Lock, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const LeaguesPage = () => {
   const [showCreate, setShowCreate] = useState(false);
+  const { data: leagues = [], isLoading } = useLeagues();
 
   return (
     <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
@@ -53,34 +55,40 @@ const LeaguesPage = () => {
 
       {/* League List */}
       <div className="flex flex-col gap-3">
-        {mockLeagues.map((league, i) => (
-          <motion.div
-            key={league.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="card-kickoff flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                <Trophy size={18} className="text-primary" />
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-[72px] rounded-[20px]" />
+          ))
+        ) : (
+          leagues.map((league, i) => (
+            <motion.div
+              key={league.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="card-kickoff flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                  <Trophy size={18} className="text-primary" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm flex items-center gap-1">
+                    {league.name}
+                    {league.isPrivate && <Lock size={12} className="text-muted-foreground" />}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Users size={12} /> {league.memberCount} חברים
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-sm flex items-center gap-1">
-                  {league.name}
-                  {league.isPrivate && <Lock size={12} className="text-muted-foreground" />}
-                </p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Users size={12} /> {league.memberCount} חברים
-                </p>
+              <div className="text-left">
+                <p className="text-sm font-black">#{league.rank}</p>
+                <p className="text-xs text-muted-foreground">{league.points.toLocaleString()} נק׳</p>
               </div>
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-black">#{league.rank}</p>
-              <p className="text-xs text-muted-foreground">{league.points.toLocaleString()} נק׳</p>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );

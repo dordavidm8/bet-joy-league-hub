@@ -1,18 +1,31 @@
-import { mockQuizQuestions } from "@/lib/mockData";
+import { useQuizQuestions } from "@/hooks/useApi";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const QuizPage = () => {
+  const { data: quizQuestions = [], isLoading } = useQuizQuestions();
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
 
-  const question = mockQuizQuestions[currentQ];
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-[300px] rounded-[20px]" />
+      </div>
+    );
+  }
+
+  const question = quizQuestions[currentQ];
+  if (!question) return null;
+
   const isAnswered = selected !== null;
-  const isCorrect = selected === question?.correctIndex;
+  const isCorrect = selected === question.correctIndex;
 
   const handleSelect = (index: number) => {
     if (isAnswered) return;
@@ -27,10 +40,8 @@ const QuizPage = () => {
 
   const handleNext = () => {
     setSelected(null);
-    setCurrentQ((q) => (q + 1) % mockQuizQuestions.length);
+    setCurrentQ((q) => (q + 1) % quizQuestions.length);
   };
-
-  if (!question) return null;
 
   return (
     <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
@@ -53,7 +64,7 @@ const QuizPage = () => {
           transition={{ duration: 0.3 }}
           className="card-kickoff flex flex-col gap-5"
         >
-          <p className="text-xs text-muted-foreground">שאלה {currentQ + 1} מתוך {mockQuizQuestions.length}</p>
+          <p className="text-xs text-muted-foreground">שאלה {currentQ + 1} מתוך {quizQuestions.length}</p>
           <h3 className="text-lg font-bold leading-relaxed">{question.question}</h3>
 
           <div className="flex flex-col gap-2">
