@@ -66,7 +66,13 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => { });
 });
 
+console.log('Checking environment variables...');
+console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
+console.log('FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID);
+
 const PORT = process.env.PORT || 3000;
+console.log(`Attempting to listen on port: ${PORT}`);
+
 server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 Kickoff backend running on port ${PORT}`);
   startCronJobs(io);
