@@ -38,6 +38,7 @@ const App = () => (
             <Route path="/betslip" element={<AppLayout><BetSlipPage /></AppLayout>} />
             <Route path="/leagues" element={<AppLayout><LeaguesPage /></AppLayout>} />
             <Route path="/quiz" element={<AppLayout><QuizPage /></AppLayout>} />
+            <Route path="/expert" element={<AppLayout><ExpertChatPage /></AppLayout>} />
             <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

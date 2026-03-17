@@ -7,6 +7,7 @@ const tabs = [
   { path: "/leagues", icon: Trophy, label: "ליגות" },
   { path: "/betslip", icon: FileText, label: "תלוש" },
   { path: "/quiz", icon: HelpCircle, label: "חידון" },
+  { path: "/expert", icon: Bot, label: "מומחה" },
   { path: "/profile", icon: User, label: "פרופיל" },
 ];
 
