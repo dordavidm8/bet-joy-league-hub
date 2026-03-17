@@ -12,6 +12,7 @@ import BetSlipPage from "@/pages/BetSlipPage";
 import LeaguesPage from "@/pages/LeaguesPage";
 import QuizPage from "@/pages/QuizPage";
 import ProfilePage from "@/pages/ProfilePage";
+import ExpertChatPage from "@/pages/ExpertChatPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/betslip" element={<AppLayout><BetSlipPage /></AppLayout>} />
             <Route path="/leagues" element={<AppLayout><LeaguesPage /></AppLayout>} />
             <Route path="/quiz" element={<AppLayout><QuizPage /></AppLayout>} />
+            <Route path="/expert" element={<AppLayout><ExpertChatPage /></AppLayout>} />
             <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

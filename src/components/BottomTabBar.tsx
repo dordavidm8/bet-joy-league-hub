@@ -1,4 +1,4 @@
-import { Home, Trophy, FileText, HelpCircle, User } from "lucide-react";
+import { Home, Trophy, FileText, HelpCircle, User, Bot } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "@/context/AppContext";
 
@@ -7,6 +7,7 @@ const tabs = [
   { path: "/leagues", icon: Trophy, label: "ליגות" },
   { path: "/betslip", icon: FileText, label: "תלוש" },
   { path: "/quiz", icon: HelpCircle, label: "חידון" },
+  { path: "/expert", icon: Bot, label: "מומחה" },
   { path: "/profile", icon: User, label: "פרופיל" },
 ];
 
