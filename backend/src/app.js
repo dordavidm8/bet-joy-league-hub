@@ -67,7 +67,7 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 Kickoff backend running on port ${PORT}`);
   startCronJobs(io);
 
@@ -80,6 +80,10 @@ server.listen(PORT, async () => {
   } catch (err) {
     console.error('❌ Initial sync failed:', err.message);
   }
+});
+
+server.on('error', (err) => {
+  console.error('SERVER ERROR:', err);
 });
 
 module.exports = { app, io };
