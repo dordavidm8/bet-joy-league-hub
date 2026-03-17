@@ -1,134 +1,137 @@
 /**
- * API-Football integration (api-football.com)
- * Docs: https://www.api-football.com/documentation-v3
+ * ESPN Unofficial API integration
+ * Base URL: http://site.api.espn.com/apis/site/v2/sports/soccer
  */
 
 const axios = require('axios');
 
-const client = axios.create({
-  baseURL: 'https://v3.football.api-sports.io',
-  headers: {
-    'x-apisports-key': process.env.API_FOOTBALL_KEY,
-  },
-});
+const baseURL = 'http://site.api.espn.com/apis/site/v2/sports/soccer';
 
-// Fetch live fixtures
-async function getLiveFixtures() {
-  const res = await client.get('/fixtures', { params: { live: 'all' } });
-  return res.data.response;
-}
+// Map of supported leagues (ESPN slugs)
+const SUPPORTED_LEAGUES = [
+  { slug: 'eng.1', name: 'Premier League' },
+  { slug: 'esp.1', name: 'LaLiga' },
+  { slug: 'ger.1', name: 'Bundesliga' },
+  { slug: 'ita.1', name: 'Serie A' },
+  { slug: 'fra.1', name: 'Ligue 1' },
+  { slug: 'uefa.champions', name: 'Champions League' },
+  { slug: 'isr.1', name: 'Ligat HaAl' }
+];
 
-// Fetch fixtures for a specific date (YYYY-MM-DD)
-async function getFixturesByDate(date) {
-  const res = await client.get('/fixtures', { params: { date } });
-  return res.data.response;
-}
-
-// Fetch a single fixture by API id
-async function getFixtureById(fixtureId) {
-  const res = await client.get('/fixtures', { params: { id: fixtureId } });
-  return res.data.response[0] || null;
-}
-
-// Fetch odds for a fixture (market: match_winner = 1, both_teams_score = 8, etc.)
-async function getOdds(fixtureId) {
-  const res = await client.get('/odds', {
-    params: { fixture: fixtureId, bookmaker: 1 },
-  });
-  return res.data.response[0] || null;
-}
-
-// Fetch top scorers for a league/season
-async function getTopScorers(leagueId, season) {
-  const res = await client.get('/players/topscorers', {
-    params: { league: leagueId, season },
-  });
-  return res.data.response;
-}
-
-// Fetch leagues
-async function getLeagues(params = {}) {
-  const res = await client.get('/leagues', { params });
-  return res.data.response;
+/**
+ * Fetch scoreboard for a specific league
+ * ESPN uses /scoreboard as the main endpoint for scores and odds
+ */
+async function getScoreboard(leagueSlug, date = null) {
+  const url = `${baseURL}/${leagueSlug}/scoreboard`;
+  const params = date ? { dates: date.replace(/-/g, '') } : {};
+  const res = await axios.get(url, { params });
+  return res.data;
 }
 
 /**
- * Build bet questions from a fixture's API data + odds
- * Returns array of question objects ready for DB insertion
+ * Fetch all fixtures for all supported leagues for a specific date
  */
-function buildBetQuestions(fixture, oddsData) {
+async function getAllFixturesByDate(date) {
+  let allFixtures = [];
+  for (const league of SUPPORTED_LEAGUES) {
+    try {
+      const data = await getScoreboard(league.slug, date);
+      if (data.events) {
+        // Tag each event with the league info
+        const events = data.events.map(event => ({
+          ...event,
+          leagueInfo: data.leagues?.[0] || { id: league.slug, name: league.name }
+        }));
+        allFixtures = [...allFixtures, ...events];
+      }
+    } catch (err) {
+      console.error(`[ESPN API] Error fetching ${league.slug}:`, err.message);
+    }
+  }
+  return allFixtures;
+}
+
+/**
+ * Build bet questions from ESPN event data
+ * ESPN includes odds in competition.odds
+ */
+function buildBetQuestions(event) {
   const questions = [];
+  const competition = event.competitions[0];
+  const oddsData = competition.odds?.[0]; // Usually DraftKings or similar
 
-  const home = fixture.teams.home.name;
-  const away = fixture.teams.away.name;
+  const home = competition.competitors.find(c => c.homeAway === 'home');
+  const away = competition.competitors.find(c => c.homeAway === 'away');
 
-  // Always: Match winner (1X2)
-  const winnerOdds = extractOdds(oddsData, 'Match Winner');
-  questions.push({
-    question_type: 'winner',
-    question_text: `מי ינצח? ${home} vs ${away}`,
-    options: [
-      { key: 'home', label: home, odds: winnerOdds?.home || 2.0 },
-      { key: 'draw', label: 'תיקו', odds: winnerOdds?.draw || 3.2 },
-      { key: 'away', label: away, odds: winnerOdds?.away || 3.5 },
-    ],
-    is_available_live: true,
-    live_lock_minute: 75,
-  });
+  const homeName = home.team.displayName;
+  const awayName = away.team.displayName;
 
-  // Both teams to score
-  const bttsOdds = extractOdds(oddsData, 'Both Teams Score');
-  if (bttsOdds) {
+  // 1. Match Winner (Moneyline)
+  if (oddsData?.moneyline) {
     questions.push({
-      question_type: 'both_teams_score',
-      question_text: 'שתי הקבוצות יכניסו שער?',
+      question_type: 'winner',
+      question_text: `מי ינצח? ${homeName} vs ${awayName}`,
       options: [
-        { key: 'yes', label: 'כן', odds: bttsOdds.yes || 1.75 },
-        { key: 'no', label: 'לא', odds: bttsOdds.no || 2.0 },
+        { key: 'home', label: homeName, odds: convertMoneyline(oddsData.moneyline.home?.close?.odds) || 2.0 },
+        { key: 'draw', label: 'תיקו', odds: convertMoneyline(oddsData.moneyline.draw?.close?.odds) || 3.2 },
+        { key: 'away', label: awayName, odds: convertMoneyline(oddsData.moneyline.away?.close?.odds) || 3.5 },
+      ],
+      is_available_live: true,
+      live_lock_minute: 75,
+    });
+  } else {
+    // Default odds if not available
+    questions.push({
+      question_type: 'winner',
+      question_text: `מי ינצח? ${homeName} vs ${awayName}`,
+      options: [
+        { key: 'home', label: homeName, odds: 2.0 },
+        { key: 'draw', label: 'תיקו', odds: 3.2 },
+        { key: 'away', label: awayName, odds: 3.5 },
       ],
       is_available_live: true,
       live_lock_minute: 75,
     });
   }
 
-  // Over/Under 2.5
-  const ouOdds = extractOdds(oddsData, 'Goals Over/Under');
-  if (ouOdds) {
+  // 2. Over/Under Total Goals
+  if (oddsData?.total) {
+    const line = oddsData.overUnder || 2.5;
     questions.push({
       question_type: 'total_goals',
-      question_text: 'יותר או פחות מ-2.5 גולים?',
+      question_text: `יותר או פחות מ-${line} גולים?`,
       options: [
-        { key: 'over', label: 'יותר מ-2.5', odds: ouOdds.over || 1.85 },
-        { key: 'under', label: 'פחות מ-2.5', odds: ouOdds.under || 1.95 },
+        { key: 'over', label: `יותר מ-${line}`, odds: convertMoneyline(oddsData.total.over?.close?.odds) || 1.85 },
+        { key: 'under', label: `פחות מ-${line}`, odds: convertMoneyline(oddsData.total.under?.close?.odds) || 1.95 },
       ],
       is_available_live: true,
-      live_lock_minute: 60, // lock earlier for total goals
+      live_lock_minute: 60,
     });
   }
 
   return questions;
 }
 
-function extractOdds(oddsData, marketName) {
-  if (!oddsData?.bookmakers?.length) return null;
-  const bookmaker = oddsData.bookmakers[0];
-  const market = bookmaker.bets?.find((b) => b.name === marketName);
-  if (!market) return null;
+/**
+ * Convert American Moneyline (e.g. +115, -150) to Decimal Odds
+ * Formula for positive: (ML / 100) + 1
+ * Formula for negative: (100 / |ML|) + 1
+ */
+function convertMoneyline(ml) {
+  if (!ml) return null;
+  if (typeof ml === 'string' && ml.toLowerCase() === 'even') return 2.0;
 
-  const result = {};
-  for (const val of market.values) {
-    const key = val.value.toLowerCase().replace(/[^a-z]/g, '_');
-    result[key] = parseFloat(val.odd);
-  }
-  return result;
+  const val = parseInt(ml);
+  if (isNaN(val)) return null;
+
+  if (val > 0) return parseFloat(((val / 100) + 1).toFixed(2));
+  return parseFloat(((100 / Math.abs(val)) + 1).toFixed(2));
 }
 
 module.exports = {
-  getLiveFixtures,
-  getFixturesByDate,
-  getFixtureById,
-  getOdds,
-  getTopScorers,
-  getLeagues,
+  SUPPORTED_LEAGUES,
+  getScoreboard,
+  getAllFixturesByDate,
   buildBetQuestions,
 };

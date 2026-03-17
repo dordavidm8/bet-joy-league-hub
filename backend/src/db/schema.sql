@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS point_transactions (
 -- Competitions (e.g. Champions League, Premier League)
 CREATE TABLE IF NOT EXISTS competitions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  api_id INTEGER UNIQUE NOT NULL,
+  api_id VARCHAR(50) UNIQUE NOT NULL, -- Changed to VARCHAR for ESPN slugs
   name VARCHAR(100) NOT NULL,
   country VARCHAR(100),
   logo_url TEXT,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS competitions (
 -- Games / Fixtures
 CREATE TABLE IF NOT EXISTS games (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  api_id INTEGER UNIQUE NOT NULL,
+  api_id VARCHAR(50) UNIQUE NOT NULL, -- Changed to VARCHAR for ESPN IDs
   competition_id UUID REFERENCES competitions(id),
   home_team VARCHAR(100) NOT NULL,
   away_team VARCHAR(100) NOT NULL,
