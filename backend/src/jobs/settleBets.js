@@ -82,7 +82,7 @@ async function settleBets() {
         if (correctOutcome === undefined) continue; // question not resolved yet
 
         const won = bet.selected_outcome === correctOutcome;
-        const payout = won ? calculatePayout(bet.stake, bet.odds, bet.penalty_pct || 0) : 0;
+        const payout = won ? calculatePayout(bet.stake, bet.odds, bet.live_penalty_pct || 0) : 0;
 
         await client.query(
           `UPDATE bets SET status = $1, actual_payout = $2, settled_at = NOW() WHERE id = $3`,

@@ -6,9 +6,9 @@ const { getLivePenalty, isLiveBettingAllowed, calculatePayout } = require('../se
 
 // POST /api/bets — place single bet
 router.post('/', authenticate, async (req, res, next) => {
-  const { game_id, bet_question_id, selected_option, stake } = req.body;
-  if (!game_id || !bet_question_id || !selected_option || !stake) {
-    return res.status(400).json({ error: 'game_id, bet_question_id, selected_option, stake required' });
+  const { game_id, bet_question_id, selected_outcome, stake } = req.body;
+  if (!game_id || !bet_question_id || !selected_outcome || !stake) {
+    return res.status(400).json({ error: 'game_id, bet_question_id, selected_outcome, stake required' });
   }
   if (!Number.isInteger(stake) || stake <= 0) {
     return res.status(400).json({ error: 'stake must be a positive integer' });
@@ -42,7 +42,7 @@ router.post('/', authenticate, async (req, res, next) => {
       }
     }
 
-    const chosen = question.options.find(o => o.key === selected_option);
+    const chosen = question.outcomes.find(o => o.label === selected_outcome);
     if (!chosen) throw Object.assign(new Error('Invalid option'), { status: 400 });
 
     const penaltyPct = isLive ? (getLivePenalty(game.minute) ?? 0) : 0;
@@ -56,10 +56,10 @@ router.post('/', authenticate, async (req, res, next) => {
     if (!balRes.rows[0]) throw Object.assign(new Error('Insufficient points'), { status: 400 });
 
     const betRes = await client.query(
-      `INSERT INTO bets (user_id, game_id, bet_question_id, selected_option, stake, odds,
+      `INSERT INTO bets (user_id, game_id, bet_question_id, selected_outcome, stake, odds,
         live_penalty_pct, potential_payout, is_live_bet, match_minute_placed)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [req.user.id, game_id, bet_question_id, selected_option, stake, chosen.odds,
+      [req.user.id, game_id, bet_question_id, selected_outcome, stake, chosen.odds,
        penaltyPct, potentialPayout, isLive, isLive ? game.minute : null]
     );
     const bet = betRes.rows[0];
@@ -113,7 +113,7 @@ router.post('/parlay', authenticate, async (req, res, next) => {
       if (isLive && !isLiveBettingAllowed(game.minute)) {
         throw Object.assign(new Error('Live betting closed for a selected game'), { status: 400 });
       }
-      const chosen = question.options.find(o => o.key === sel.selected_option);
+      const chosen = question.outcomes.find(o => o.label === sel.selected_outcome);
       if (!chosen) throw Object.assign(new Error('Invalid option'), { status: 400 });
 
       const odds = parseFloat(chosen.odds);
@@ -139,10 +139,10 @@ router.post('/parlay', authenticate, async (req, res, next) => {
 
     for (const b of betData) {
       await client.query(
-        `INSERT INTO bets (user_id, game_id, bet_question_id, selected_option, stake, odds,
+        `INSERT INTO bets (user_id, game_id, bet_question_id, selected_outcome, stake, odds,
           live_penalty_pct, potential_payout, is_live_bet, match_minute_placed, parlay_id)
          VALUES ($1,$2,$3,$4,0,$5,$6,0,$7,$8,$9)`,
-        [req.user.id, b.game_id, b.bet_question_id, b.selected_option,
+        [req.user.id, b.game_id, b.bet_question_id, b.selected_outcome,
          b.odds, b.penaltyPct, b.isLive, b.isLive ? b.minute : null, parlay.id]
       );
     }
