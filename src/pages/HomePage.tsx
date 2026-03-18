@@ -3,13 +3,16 @@ import { getGames, getMyBets, getRecentResults } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import GameCard from "@/components/GameCard";
 import { motion } from "framer-motion";
+import { Search } from "lucide-react";
+import { useState } from "react";
 
 const HomePage = () => {
   const { backendUser } = useAuth();
+  const [search, setSearch] = useState("");
 
   const { data: gamesData, isLoading: gamesLoading } = useQuery({
-    queryKey: ["games"],
-    queryFn: () => getGames(),
+    queryKey: ["games", search],
+    queryFn: () => getGames(search ? { search } : undefined),
   });
 
   const { data: betsData } = useQuery({
@@ -43,6 +46,19 @@ const HomePage = () => {
         </h2>
         <p className="text-muted-foreground mt-1">הימרו על המשחקים של היום וצברו נקודות</p>
       </motion.div>
+
+      {/* Search */}
+      <div className="px-5 relative">
+        <Search size={16} className="absolute left-8 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="חפש קבוצה או ליגה..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full bg-secondary rounded-xl px-4 py-2.5 pr-4 pl-9 text-sm outline-none"
+          dir="rtl"
+        />
+      </div>
 
       {/* Games */}
       <section className="flex flex-col gap-3">

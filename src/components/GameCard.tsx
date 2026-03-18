@@ -13,9 +13,11 @@ const GameCard = ({ game, index }: GameCardProps) => {
   const isLive = game.status === "live";
   const isFinished = game.status === "finished";
 
+  const startDate = new Date(game.start_time);
   const timeLabel = isLive
     ? game.minute ? `${game.minute}′` : "LIVE"
-    : new Date(game.start_time).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+    : startDate.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  const dateLabel = isLive ? null : startDate.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
 
   return (
     <motion.div
@@ -51,7 +53,10 @@ const GameCard = ({ game, index }: GameCardProps) => {
           {(isLive || isFinished) && game.score_home != null ? (
             <span className="text-2xl font-black">{game.score_home} - {game.score_away}</span>
           ) : (
-            <span className="text-lg font-bold text-muted-foreground">{timeLabel}</span>
+            <div className="flex flex-col items-center">
+              <span className="text-lg font-bold text-muted-foreground">{timeLabel}</span>
+              {dateLabel && <span className="text-xs text-muted-foreground">{dateLabel}</span>}
+            </div>
           )}
         </div>
 

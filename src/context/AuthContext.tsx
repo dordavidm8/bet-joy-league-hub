@@ -19,6 +19,7 @@ interface AuthState {
   signUp: (email: string, password: string, username: string, referralCode?: string) => Promise<void>;
   signInWithGoogle: (username?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -80,8 +81,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setBackendUser(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      const data = await getMe();
+      setBackendUser(data.user);
+    } catch {}
+  };
+
   return (
-    <AuthContext.Provider value={{ firebaseUser, backendUser, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ firebaseUser, backendUser, loading, signIn, signUp, signInWithGoogle, signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

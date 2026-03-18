@@ -25,6 +25,16 @@ router.post('/', authenticate, async (req, res, next) => {
       throw Object.assign(new Error('Game is closed for betting'), { status: 400 });
     }
 
+    if (game.status === 'scheduled') {
+      const now = new Date();
+      const start = new Date(game.start_time);
+      const oneMonthBefore = new Date(start.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const oneHourBefore = new Date(start.getTime() - 60 * 60 * 1000);
+      if (now < oneMonthBefore || now > oneHourBefore) {
+        throw Object.assign(new Error('Betting is only available from 1 month to 1 hour before the game'), { status: 400 });
+      }
+    }
+
     const qRes = await client.query(
       'SELECT * FROM bet_questions WHERE id = $1 AND game_id = $2', [bet_question_id, game_id]
     );
@@ -82,8 +92,8 @@ router.post('/', authenticate, async (req, res, next) => {
 
 // POST /api/bets/parlay — place parlay bet
 router.post('/parlay', authenticate, async (req, res, next) => {
-  const { selections, stake } = req.body;
-  if (!Array.isArray(selections) || selections.length < 2) {
+  const { legs, stake } = req.body;
+  if (!Array.isArray(legs) || legs.length < 2) {
     return res.status(400).json({ error: 'Parlay requires at least 2 selections' });
   }
   if (!Number.isInteger(stake) || stake <= 0) {
@@ -96,7 +106,7 @@ router.post('/parlay', authenticate, async (req, res, next) => {
     let combinedOdds = 1;
     const betData = [];
 
-    for (const sel of selections) {
+    for (const sel of legs) {
       const gameRes = await client.query('SELECT * FROM games WHERE id = $1', [sel.game_id]);
       const game = gameRes.rows[0];
       if (!game || ['finished', 'cancelled'].includes(game.status)) {

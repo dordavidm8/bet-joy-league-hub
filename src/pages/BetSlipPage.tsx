@@ -17,7 +17,7 @@ function parlayBonus(legs: number) {
 
 const BetSlipPage = () => {
   const { betSlip, removeFromBetSlip, clearBetSlip } = useApp();
-  const { backendUser } = useAuth();
+  const { backendUser, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [isParlay, setIsParlay] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -61,6 +61,7 @@ const BetSlipPage = () => {
         }
       }
       clearBetSlip();
+      await refreshUser();
       queryClient.invalidateQueries({ queryKey: ["my-bets"] });
       queryClient.invalidateQueries({ queryKey: ["my-stats"] });
       setResult({ success: true, message: "ההימור אושר בהצלחה! 🎉" });

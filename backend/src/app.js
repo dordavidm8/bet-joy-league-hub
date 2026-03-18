@@ -26,7 +26,17 @@ const io = new Server(server, {
 });
 app.set('io', io);
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https://firebasestorage.googleapis.com', 'https://a.espncdn.com', 'https://*.espncdn.com', 'https://lh3.googleusercontent.com'],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(morgan('dev'));
 app.use(express.json());

@@ -4,12 +4,17 @@ const { pool } = require('../config/database');
 
 // GET /api/games
 router.get('/', async (req, res, next) => {
-  const { status, competition_id, date } = req.query;
+  const { status, date, competition, search } = req.query;
   const conditions = [], params = [];
 
   if (status) { params.push(status); conditions.push(`g.status = $${params.length}`); }
-  if (competition_id) { params.push(competition_id); conditions.push(`g.competition_id = $${params.length}`); }
-  if (date) { params.push(date); conditions.push(`DATE(g.start_time) = $${params.length}`); }
+  if (date) { params.push(date); conditions.push(`DATE(g.start_time AT TIME ZONE 'UTC') = $${params.length}`); }
+  if (competition) { params.push(`%${competition}%`); conditions.push(`c.name ILIKE $${params.length}`); }
+  if (search) {
+    params.push(`%${search}%`);
+    const n = params.length;
+    conditions.push(`(g.home_team ILIKE $${n} OR g.away_team ILIKE $${n} OR c.name ILIKE $${n})`);
+  }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   try {
