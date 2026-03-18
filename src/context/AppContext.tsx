@@ -1,39 +1,42 @@
 import React, { createContext, useContext, useState } from "react";
-import { BetSlipItem, Game } from "@/lib/mockData";
+
+export interface BetSlipItem {
+  id: string;
+  game_id: string;
+  gameLabel: string;        // "מנצ'סטר סיטי נגד ארסנל"
+  bet_question_id: string;
+  question: string;
+  selectedOption: string;
+  odds: number;
+  points: number;           // stake for this leg
+}
 
 interface AppState {
-  userPoints: number;
   betSlip: BetSlipItem[];
   addToBetSlip: (item: Omit<BetSlipItem, "id">) => void;
   removeFromBetSlip: (id: string) => void;
   clearBetSlip: () => void;
-  confirmBets: () => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [userPoints, setUserPoints] = useState(5000);
   const [betSlip, setBetSlip] = useState<BetSlipItem[]>([]);
 
   const addToBetSlip = (item: Omit<BetSlipItem, "id">) => {
-    setBetSlip((prev) => [...prev, { ...item, id: crypto.randomUUID() }]);
+    // Replace existing selection for the same question
+    setBetSlip((prev) => {
+      const filtered = prev.filter((b) => b.bet_question_id !== item.bet_question_id);
+      return [...filtered, { ...item, id: crypto.randomUUID() }];
+    });
   };
 
-  const removeFromBetSlip = (id: string) => {
-    setBetSlip((prev) => prev.filter((b) => b.id !== id));
-  };
+  const removeFromBetSlip = (id: string) => setBetSlip((prev) => prev.filter((b) => b.id !== id));
 
   const clearBetSlip = () => setBetSlip([]);
 
-  const confirmBets = () => {
-    const totalPoints = betSlip.reduce((sum, b) => sum + b.points, 0);
-    setUserPoints((prev) => prev - totalPoints);
-    setBetSlip([]);
-  };
-
   return (
-    <AppContext.Provider value={{ userPoints, betSlip, addToBetSlip, removeFromBetSlip, clearBetSlip, confirmBets }}>
+    <AppContext.Provider value={{ betSlip, addToBetSlip, removeFromBetSlip, clearBetSlip }}>
       {children}
     </AppContext.Provider>
   );
