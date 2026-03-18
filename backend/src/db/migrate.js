@@ -4,7 +4,10 @@ const path = require('path');
 const { Pool } = require('pg');
 
 async function migrate() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  });
   const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   try {
     await pool.query(sql);

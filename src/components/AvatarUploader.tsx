@@ -74,9 +74,9 @@ export default function AvatarUploader({ onDone, onCancel }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-5" onClick={onCancel}>
       <div
-        className="w-full max-w-sm bg-card rounded-t-2xl p-5 flex flex-col gap-4"
+        className="w-full max-w-sm bg-card rounded-2xl p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

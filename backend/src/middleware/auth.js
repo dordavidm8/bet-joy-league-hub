@@ -2,17 +2,10 @@ const admin = require('../config/firebase');
 const { pool } = require('../config/database');
 
 async function authenticate(req, res, next) {
-  // Stub mode — inject demo user, no token needed
+  // Stub mode — inject demo user from shared mutable STUB_USER
   if (process.env.STUB_MODE === 'true') {
-    req.user = {
-      id: 'aaaaaaaa-0000-0000-0000-000000000001',
-      firebase_uid: 'stub-uid-001',
-      username: 'demo',
-      email: 'demo@kickoff.app',
-      points_balance: 1250,
-      total_bets: 18,
-      total_wins: 12,
-    };
+    const { stubPool } = require('../config/stubDb');
+    req.user = await stubPool.query('SELECT * FROM users WHERE id = $1', ['aaaaaaaa-0000-0000-0000-000000000001']).then(r => r.rows[0]);
     return next();
   }
 

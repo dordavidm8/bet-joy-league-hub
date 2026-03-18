@@ -3,13 +3,14 @@
 
 const { v4: uuid } = require('uuid');
 
+// Mutable so in-memory updates (avatar, points) persist within the process lifetime
 const STUB_USER = {
   id: 'aaaaaaaa-0000-0000-0000-000000000001',
   firebase_uid: 'stub-uid-001',
   username: 'demo',
   email: 'demo@kickoff.app',
   avatar_url: null,
-  points_balance: 1250,
+  points_balance: 5000,
   total_bets: 18,
   total_wins: 12,
   created_at: new Date('2026-01-01'),
@@ -182,11 +183,16 @@ async function q(sql, params = []) {
   }
 
   // Users — UPDATE
-  if (s.startsWith('update users')) return { rows: [{ ...STUB_USER, points_balance: 1050 }] };
+  if (s.startsWith('update users')) {
+    // Persist avatar or points changes in memory
+    if (s.includes('avatar_url') && params[0]) STUB_USER.avatar_url = params[0];
+    if (s.includes('points_balance') && params[0] != null) STUB_USER.points_balance = Number(params[0]) || STUB_USER.points_balance;
+    return { rows: [{ ...STUB_USER }] };
+  }
 
   // Users — INSERT
   if (s.startsWith('insert into users')) {
-    return { rows: [{ ...STUB_USER, id: uuid(), username: params[1] || 'newuser' }] };
+    return { rows: [{ ...STUB_USER, id: uuid(), username: params[1] || 'newuser', points_balance: 5000 }] };
   }
 
   // Bets — SELECT
