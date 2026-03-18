@@ -97,8 +97,10 @@ CREATE TABLE IF NOT EXISTS parlays (
   settled_at TIMESTAMPTZ
 );
 
-ALTER TABLE bets ADD CONSTRAINT IF NOT EXISTS bets_parlay_fk
-  FOREIGN KEY (parlay_id) REFERENCES parlays(id);
+DO $$ BEGIN
+  ALTER TABLE bets ADD CONSTRAINT bets_parlay_fk FOREIGN KEY (parlay_id) REFERENCES parlays(id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS leagues (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
