@@ -18,23 +18,26 @@ const LEAGUE_SLUGS = {
 
 const DEFAULT_LEAGUES = Object.values(LEAGUE_SLUGS);
 
-// ── Fetch scoreboard for a league (today + next 30 days) ─────────────────────
+// ── Fetch scoreboard for a league (last 7 days + next 30 days) ───────────────
 async function fetchScoreboard(leagueSlug) {
   const now = new Date();
+  const past   = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
   const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const pastStr = past.toISOString().slice(0, 10).replace(/-/g, '');
   const fromStr = now.toISOString().slice(0, 10).replace(/-/g, '');
   const toStr   = future.toISOString().slice(0, 10).replace(/-/g, '');
 
-  // Fetch current round AND upcoming 30 days in parallel
-  const [current, upcoming] = await Promise.allSettled([
+  // Fetch current round, past 7 days (to update finished status), and upcoming 30 days
+  const [current, recent, upcoming] = await Promise.allSettled([
     axios.get(`${ESPN_BASE}/${leagueSlug}/scoreboard`, { timeout: 10000 }),
+    axios.get(`${ESPN_BASE}/${leagueSlug}/scoreboard?dates=${pastStr}-${fromStr}&limit=100`, { timeout: 10000 }),
     axios.get(`${ESPN_BASE}/${leagueSlug}/scoreboard?dates=${fromStr}-${toStr}&limit=100`, { timeout: 10000 }),
   ]);
 
   // Merge and deduplicate by event id
   const seen = new Set();
   const events = [];
-  for (const r of [current, upcoming]) {
+  for (const r of [current, recent, upcoming]) {
     if (r.status === 'rejected') continue;
     for (const e of (r.value.data.events || [])) {
       if (!seen.has(e.id)) { seen.add(e.id); events.push(e); }
