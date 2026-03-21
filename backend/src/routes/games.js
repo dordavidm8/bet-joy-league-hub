@@ -2,18 +2,34 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 
+const POPULAR_TEAMS = [
+  'Manchester City', 'Man City', 'Arsenal', 'Liverpool', 'Chelsea', 'Manchester United', 'Man United', 'Tottenham', 'Tottenham Hotspur',
+  'Real Madrid', 'Barcelona', 'Atlético Madrid', 'Atletico Madrid',
+  'Bayern Munich', 'Borussia Dortmund', 'Dortmund',
+  'Paris Saint-Germain', 'PSG',
+  'Juventus', 'Inter Milan', 'Internazionale', 'AC Milan',
+  'Ajax',
+];
+
 // GET /api/games
 router.get('/', async (req, res, next) => {
-  const { status, date, competition, search } = req.query;
+  const { status, date, competition, search, featured, from, to } = req.query;
   const conditions = [], params = [];
 
   if (status) { params.push(status); conditions.push(`g.status = $${params.length}`); }
   if (date) { params.push(date); conditions.push(`DATE(g.start_time AT TIME ZONE 'UTC') = $${params.length}`); }
+  if (from) { params.push(from); conditions.push(`g.start_time >= $${params.length}::date`); }
+  if (to) { params.push(to); conditions.push(`g.start_time < ($${params.length}::date + INTERVAL '1 day')`); }
   if (competition) { params.push(`%${competition}%`); conditions.push(`c.name ILIKE $${params.length}`); }
   if (search) {
     params.push(`%${search}%`);
     const n = params.length;
     conditions.push(`(g.home_team ILIKE $${n} OR g.away_team ILIKE $${n} OR c.name ILIKE $${n})`);
+  }
+  if (featured === 'true') {
+    params.push(POPULAR_TEAMS);
+    const n = params.length;
+    conditions.push(`(g.home_team = ANY($${n}) OR g.away_team = ANY($${n}))`);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -28,15 +44,17 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/games/results — finished games from the last 24h
+// GET /api/games/results — finished games, last N days (default 7)
 router.get('/results', async (req, res, next) => {
+  const days = parseInt(req.query.days) || 7;
   try {
     const result = await pool.query(
       `SELECT g.*, c.name AS competition_name
        FROM games g LEFT JOIN competitions c ON c.id = g.competition_id
        WHERE g.status = 'finished'
-         AND g.start_time >= NOW() - INTERVAL '24 hours'
-       ORDER BY g.start_time DESC LIMIT 30`
+         AND g.start_time >= NOW() - ($1 || ' days')::INTERVAL
+       ORDER BY g.start_time DESC LIMIT 100`,
+      [days]
     );
     res.json({ games: result.rows });
   } catch (err) { next(err); }

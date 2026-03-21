@@ -17,6 +17,8 @@ import ExpertChatPage from "@/pages/ExpertChatPage";
 import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import NotFound from "./pages/NotFound.tsx";
+import AllGamesPage from "@/pages/AllGamesPage";
+import FinishedGamesPage from "@/pages/FinishedGamesPage";
 import { useState } from "react";
 
 const queryClient = new QueryClient();
@@ -49,6 +51,8 @@ function AuthGate() {
     <Routes>
       <Route path="/" element={<AppLayout><HomePage /></AppLayout>} />
       <Route path="/game/:gameId" element={<AppLayout><GameDetailPage /></AppLayout>} />
+      <Route path="/games" element={<AppLayout><AllGamesPage /></AppLayout>} />
+      <Route path="/games/finished" element={<AppLayout><FinishedGamesPage /></AppLayout>} />
       <Route path="/betslip" element={<AppLayout><BetSlipPage /></AppLayout>} />
       <Route path="/leagues" element={<AppLayout><LeaguesPage /></AppLayout>} />
       <Route path="/quiz" element={<AppLayout><QuizPage /></AppLayout>} />

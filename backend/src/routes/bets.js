@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
-const { getLivePenalty, isLiveBettingAllowed, calculatePayout } = require('../services/bettingService');
+const { calculatePayout } = require('../services/bettingService');
 
 // POST /api/bets — place single bet
 router.post('/', authenticate, async (req, res, next) => {
@@ -21,7 +21,7 @@ router.post('/', authenticate, async (req, res, next) => {
     const gameRes = await client.query('SELECT * FROM games WHERE id = $1', [game_id]);
     const game = gameRes.rows[0];
     if (!game) throw Object.assign(new Error('Game not found'), { status: 404 });
-    if (['finished', 'cancelled'].includes(game.status)) {
+    if (['finished', 'cancelled', 'live'].includes(game.status)) {
       throw Object.assign(new Error('Game is closed for betting'), { status: 400 });
     }
 
@@ -42,20 +42,10 @@ router.post('/', authenticate, async (req, res, next) => {
     if (!question) throw Object.assign(new Error('Bet question not found'), { status: 404 });
     if (question.is_locked) throw Object.assign(new Error('This bet is locked'), { status: 400 });
 
-    const isLive = game.status === 'live';
-    if (isLive) {
-      if (!isLiveBettingAllowed(game.minute)) {
-        throw Object.assign(new Error('Live betting closed after minute 75'), { status: 400 });
-      }
-      if (!question.is_available_live) {
-        throw Object.assign(new Error('Bet not available live'), { status: 400 });
-      }
-    }
-
     const chosen = question.outcomes.find(o => o.label === selected_outcome);
     if (!chosen) throw Object.assign(new Error('Invalid option'), { status: 400 });
 
-    const penaltyPct = isLive ? (getLivePenalty(game.minute) ?? 0) : 0;
+    const penaltyPct = 0;
     const potentialPayout = calculatePayout(stake, parseFloat(chosen.odds), penaltyPct);
 
     const balRes = await client.query(
@@ -70,7 +60,7 @@ router.post('/', authenticate, async (req, res, next) => {
         live_penalty_pct, potential_payout, is_live_bet, match_minute_placed)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
       [req.user.id, game_id, bet_question_id, selected_outcome, stake, chosen.odds,
-       penaltyPct, potentialPayout, isLive, isLive ? game.minute : null]
+       penaltyPct, potentialPayout, false, null]
     );
     const bet = betRes.rows[0];
 
@@ -81,7 +71,7 @@ router.post('/', authenticate, async (req, res, next) => {
     );
 
     await client.query('COMMIT');
-    res.status(201).json({ bet, new_balance: balRes.rows[0].points_balance, penalty_applied: penaltyPct > 0 ? `${penaltyPct}%` : null });
+    res.status(201).json({ bet, new_balance: balRes.rows[0].points_balance });
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
@@ -109,7 +99,7 @@ router.post('/parlay', authenticate, async (req, res, next) => {
     for (const sel of legs) {
       const gameRes = await client.query('SELECT * FROM games WHERE id = $1', [sel.game_id]);
       const game = gameRes.rows[0];
-      if (!game || ['finished', 'cancelled'].includes(game.status)) {
+      if (!game || ['finished', 'cancelled', 'live'].includes(game.status)) {
         throw Object.assign(new Error(`Game unavailable: ${sel.game_id}`), { status: 400 });
       }
       const qRes = await client.query(
@@ -119,17 +109,12 @@ router.post('/parlay', authenticate, async (req, res, next) => {
       if (!question || question.is_locked) {
         throw Object.assign(new Error('A selection is locked or invalid'), { status: 400 });
       }
-      const isLive = game.status === 'live';
-      if (isLive && !isLiveBettingAllowed(game.minute)) {
-        throw Object.assign(new Error('Live betting closed for a selected game'), { status: 400 });
-      }
       const chosen = question.outcomes.find(o => o.label === sel.selected_outcome);
       if (!chosen) throw Object.assign(new Error('Invalid option'), { status: 400 });
 
       const odds = parseFloat(chosen.odds);
-      const penaltyPct = isLive ? (getLivePenalty(game.minute) ?? 0) : 0;
-      combinedOdds *= odds * (1 - penaltyPct / 100);
-      betData.push({ ...sel, odds, penaltyPct, isLive, minute: game.minute, questionText: question.question_text });
+      combinedOdds *= odds;
+      betData.push({ ...sel, odds, questionText: question.question_text });
     }
 
     const potentialPayout = Math.floor(stake * combinedOdds);
@@ -153,7 +138,7 @@ router.post('/parlay', authenticate, async (req, res, next) => {
           live_penalty_pct, potential_payout, is_live_bet, match_minute_placed, parlay_id)
          VALUES ($1,$2,$3,$4,0,$5,$6,0,$7,$8,$9)`,
         [req.user.id, b.game_id, b.bet_question_id, b.selected_outcome,
-         b.odds, b.penaltyPct, b.isLive, b.isLive ? b.minute : null, parlay.id]
+         b.odds, 0, false, null, parlay.id]
       );
     }
 

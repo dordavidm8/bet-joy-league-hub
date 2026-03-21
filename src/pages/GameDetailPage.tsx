@@ -111,26 +111,15 @@ const GameDetailPage = () => {
         </motion.div>
       </div>
 
-      {/* Live penalty notice */}
-      {isLive && game.minute != null && (
-        <div className="px-5">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2 text-xs text-yellow-800">
-            {game.minute <= 45 && "הימור ללא קנס"}
-            {game.minute > 45 && game.minute <= 60 && "⚠️ קנס 10% על תשלום (דקה 46-60)"}
-            {game.minute > 60 && game.minute <= 70 && "⚠️ קנס 25% על תשלום (דקה 61-70)"}
-            {game.minute > 70 && game.minute <= 75 && "⚠️ קנס 40% על תשלום (דקה 71-75)"}
-            {game.minute > 75 && <span className="flex items-center gap-1"><Lock size={12} /> הימור נעול לאחר דקה 75</span>}
-          </div>
-        </div>
-      )}
-
       {/* Bet Questions */}
-      {isFinished ? (
-        <div className="px-5 text-sm text-muted-foreground">המשחק הסתיים — לא ניתן להמר</div>
+      {(isFinished || isLive) ? (
+        <div className="px-5 text-sm text-muted-foreground">
+          {isFinished ? "המשחק הסתיים — לא ניתן להמר" : "המשחק מתקיים כרגע — לא ניתן להמר"}
+        </div>
       ) : (
         <div className="flex flex-col gap-6 px-5">
           {bet_questions.map((q: any, i: number) => {
-            const isLocked = q.is_locked || (isLive && game.minute != null && game.minute > 75);
+            const isLocked = q.is_locked;
             return (
               <motion.div
                 key={q.id}
@@ -192,7 +181,7 @@ const GameDetailPage = () => {
       )}
 
       {/* AI Button */}
-      {!isFinished && (
+      {!isFinished && !isLive && (
         <button
           onClick={() => setShowAi(true)}
           className="fixed bottom-24 left-6 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-40"

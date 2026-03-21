@@ -1,6 +1,6 @@
 import { auth } from './firebase';
 
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL ?? '') + '/api';
 
 async function getHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -35,10 +35,26 @@ export const updateAvatar = (avatar_url: string) =>
 export const getMe = () => request<{ user: BackendUser }>('/auth/me');
 
 // ── Games ─────────────────────────────────────────────────────────────────────
-export const getGames = (params?: Record<string, string>) => {
-  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+export interface GetGamesParams {
+  status?: string;
+  search?: string;
+  competition?: string;
+  from?: string;
+  to?: string;
+  featured?: boolean;
+}
+
+export const getGames = (params?: GetGamesParams) => {
+  const p: Record<string, string> = {};
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined) p[k] = String(v); });
+  }
+  const qs = Object.keys(p).length ? '?' + new URLSearchParams(p).toString() : '';
   return request<{ games: Game[] }>(`/games${qs}`);
 };
+
+export const getFinishedGames = (days = 7) =>
+  request<{ games: Game[] }>(`/games/results?days=${days}`);
 
 export const getLiveGames = () => request<{ games: Game[] }>('/games/live');
 
@@ -139,6 +155,8 @@ export interface Bet {
   is_live_bet: boolean;
   penalty_pct?: number;
   placed_at: string;
+  home_team?: string;
+  away_team?: string;
 }
 
 export interface Parlay {
