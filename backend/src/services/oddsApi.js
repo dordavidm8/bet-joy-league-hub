@@ -47,8 +47,15 @@ async function fetchOddsForSport(sportKey) {
   }
 }
 
-// Fetch all odds across all supported sports
+// Cache odds for 12 hours to stay within free-tier request limits (500/month)
+let _oddsCache = { data: {}, fetchedAt: 0 };
+const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+// Fetch all odds across all supported sports (cached)
 async function fetchAllOdds() {
+  if (Date.now() - _oddsCache.fetchedAt < CACHE_TTL_MS) {
+    return _oddsCache.data;
+  }
   const results = await Promise.allSettled(
     Object.values(SPORT_MAP).map(sport => fetchOddsForSport(sport))
   );
@@ -56,6 +63,7 @@ async function fetchAllOdds() {
   for (const r of results) {
     if (r.status === 'fulfilled') Object.assign(merged, r.value);
   }
+  _oddsCache = { data: merged, fetchedAt: Date.now() };
   return merged;
 }
 

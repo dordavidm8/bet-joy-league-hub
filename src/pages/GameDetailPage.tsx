@@ -88,7 +88,9 @@ const GameDetailPage = () => {
 
           <div className="flex items-center justify-between gap-4 my-4">
             <div className="flex flex-col items-center gap-2 flex-1">
-              <span className="text-3xl">⚽</span>
+              {game.home_team_logo
+                ? <img src={game.home_team_logo} className="w-10 h-10 object-contain" alt="" />
+                : <span className="text-3xl">⚽</span>}
               <span className="text-sm font-bold text-center">{game.home_team}</span>
             </div>
             <div className="flex flex-col items-center">
@@ -104,7 +106,9 @@ const GameDetailPage = () => {
               )}
             </div>
             <div className="flex flex-col items-center gap-2 flex-1">
-              <span className="text-3xl">⚽</span>
+              {game.away_team_logo
+                ? <img src={game.away_team_logo} className="w-10 h-10 object-contain" alt="" />
+                : <span className="text-3xl">⚽</span>}
               <span className="text-sm font-bold text-center">{game.away_team}</span>
             </div>
           </div>
