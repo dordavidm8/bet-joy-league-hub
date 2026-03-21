@@ -9,7 +9,6 @@ const morgan = require('morgan');
 const { errorHandler } = require('./middleware/errorHandler');
 const { startCronJobs } = require('./jobs');
 
-// Routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const gameRoutes = require('./routes/games');
@@ -22,27 +21,30 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io for real-time live betting
 const io = new Server(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || '*',
-    methods: ['GET', 'POST'],
-  },
+  cors: { origin: process.env.FRONTEND_URL || '*', methods: ['GET', 'POST'] },
 });
-
-// Make io accessible in routes
 app.set('io', io);
 
-// Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https://firebasestorage.googleapis.com', 'https://a.espncdn.com', 'https://*.espncdn.com', 'https://lh3.googleusercontent.com'],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Health check
-app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date() }));
+app.get('/health', (req, res) =>
+  res.json({ status: 'ok', stub: process.env.STUB_MODE === 'true', ts: new Date() })
+);
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
@@ -52,44 +54,19 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Global error handler
 app.use(errorHandler);
 
-// Socket.io — live score rooms
 io.on('connection', (socket) => {
-  socket.on('join_game', (gameId) => {
-    socket.join(`game:${gameId}`);
-  });
-  socket.on('leave_game', (gameId) => {
-    socket.leave(`game:${gameId}`);
-  });
-  socket.on('disconnect', () => { });
+  socket.on('join_game', (gameId) => socket.join(`game:${gameId}`));
+  socket.on('leave_game', (gameId) => socket.leave(`game:${gameId}`));
 });
 
-console.log('Checking environment variables...');
-console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
-console.log('FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID);
-
-const PORT = process.env.PORT || 3000;
-console.log(`Attempting to listen on port: ${PORT}`);
-
-server.listen(PORT, '0.0.0.0', async () => {
-  console.log(`🚀 Kickoff backend running on port ${PORT}`);
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, '0.0.0.0', () => {
+  const mode = process.env.STUB_MODE === 'true' ? '🧪 STUB MODE' : '🚀 LIVE MODE';
+  console.log(`Kickoff backend running on port ${PORT} — ${mode}`);
   startCronJobs(io);
-
-  // Initial sync on startup to ensure DB isn't empty on first deploy
-  try {
-    const { syncUpcomingFixtures } = require('./jobs/syncGames');
-    console.log('🔄 Running initial fixtures sync...');
-    await syncUpcomingFixtures();
-    console.log('✅ Initial sync complete');
-  } catch (err) {
-    console.error('❌ Initial sync failed:', err.message);
-  }
 });
 
-server.on('error', (err) => {
-  console.error('SERVER ERROR:', err);
-});
-
+server.on('error', (err) => console.error('Server error:', err));
 module.exports = { app, io };

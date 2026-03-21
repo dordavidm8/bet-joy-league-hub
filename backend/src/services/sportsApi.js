@@ -1,137 +1,150 @@
-/**
- * ESPN Unofficial API integration
- * Base URL: http://site.api.espn.com/apis/site/v2/sports/soccer
- */
-
 const axios = require('axios');
 
-const baseURL = 'http://site.api.espn.com/apis/site/v2/sports/soccer';
+let _oddsCache = {}; // { 'HomeTeam|AwayTeam': { home_odds, draw_odds, away_odds } }
+function setOddsCache(cache) { _oddsCache = cache; }
 
-// Map of supported leagues (ESPN slugs)
-const SUPPORTED_LEAGUES = [
-  { slug: 'eng.1', name: 'Premier League' },
-  { slug: 'esp.1', name: 'LaLiga' },
-  { slug: 'ger.1', name: 'Bundesliga' },
-  { slug: 'ita.1', name: 'Serie A' },
-  { slug: 'fra.1', name: 'Ligue 1' },
-  { slug: 'uefa.champions', name: 'Champions League' },
-  { slug: 'isr.1', name: 'Ligat HaAl' }
-];
+const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 
-/**
- * Fetch scoreboard for a specific league
- * ESPN uses /scoreboard as the main endpoint for scores and odds
- */
-async function getScoreboard(leagueSlug, date = null) {
-  const url = `${baseURL}/${leagueSlug}/scoreboard`;
-  const params = date ? { dates: date.replace(/-/g, '') } : {};
-  const res = await axios.get(url, { params });
-  return res.data;
-}
+// Map common competition slugs to ESPN league paths
+const LEAGUE_SLUGS = {
+  'eng.1':   'eng.1',   // Premier League
+  'esp.1':   'esp.1',   // La Liga
+  'ger.1':   'ger.1',   // Bundesliga
+  'ita.1':   'ita.1',   // Serie A
+  'fra.1':   'fra.1',   // Ligue 1
+  'uefa.champions': 'uefa.champions',
+  // isr.1 removed — ESPN data for Israeli league is unreliable
+};
 
-/**
- * Fetch all fixtures for all supported leagues for a specific date
- */
-async function getAllFixturesByDate(date) {
-  let allFixtures = [];
-  for (const league of SUPPORTED_LEAGUES) {
-    try {
-      const data = await getScoreboard(league.slug, date);
-      if (data.events) {
-        // Tag each event with the league info
-        const events = data.events.map(event => ({
-          ...event,
-          leagueInfo: data.leagues?.[0] || { id: league.slug, name: league.name }
-        }));
-        allFixtures = [...allFixtures, ...events];
-      }
-    } catch (err) {
-      console.error(`[ESPN API] Error fetching ${league.slug}:`, err.message);
+const DEFAULT_LEAGUES = Object.values(LEAGUE_SLUGS);
+
+// ── Fetch scoreboard for a league (last 7 days + next 30 days) ───────────────
+async function fetchScoreboard(leagueSlug) {
+  const now = new Date();
+  const past   = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
+  const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const pastStr = past.toISOString().slice(0, 10).replace(/-/g, '');
+  const fromStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const toStr   = future.toISOString().slice(0, 10).replace(/-/g, '');
+
+  // Fetch current round, past 7 days (to update finished status), and upcoming 30 days
+  const [current, recent, upcoming] = await Promise.allSettled([
+    axios.get(`${ESPN_BASE}/${leagueSlug}/scoreboard`, { timeout: 10000 }),
+    axios.get(`${ESPN_BASE}/${leagueSlug}/scoreboard?dates=${pastStr}-${fromStr}&limit=100`, { timeout: 10000 }),
+    axios.get(`${ESPN_BASE}/${leagueSlug}/scoreboard?dates=${fromStr}-${toStr}&limit=100`, { timeout: 10000 }),
+  ]);
+
+  // Merge and deduplicate by event id
+  const seen = new Set();
+  const events = [];
+  for (const r of [current, recent, upcoming]) {
+    if (r.status === 'rejected') continue;
+    for (const e of (r.value.data.events || [])) {
+      if (!seen.has(e.id)) { seen.add(e.id); events.push(e); }
     }
   }
-  return allFixtures;
+  return events;
 }
 
-/**
- * Build bet questions from ESPN event data
- * ESPN includes odds in competition.odds
- */
-function buildBetQuestions(event) {
-  const questions = [];
-  const competition = event.competitions[0];
-  const oddsData = competition.odds?.[0]; // Usually DraftKings or similar
+// ── Map ESPN event → our DB shape ─────────────────────────────────────────────
+function mapEvent(event, leagueSlug) {
+  const comp   = event.competitions?.[0];
+  const status = event.status;
+  const home   = comp?.competitors?.find(c => c.homeAway === 'home');
+  const away   = comp?.competitors?.find(c => c.homeAway === 'away');
+  if (!home || !away) return null;
 
-  const home = competition.competitors.find(c => c.homeAway === 'home');
-  const away = competition.competitors.find(c => c.homeAway === 'away');
+  const espnStatus = status?.type?.name; // 'STATUS_SCHEDULED' | 'STATUS_IN_PROGRESS' | 'STATUS_FINAL'
+  let gameStatus = 'scheduled';
+  if (espnStatus === 'STATUS_IN_PROGRESS') gameStatus = 'live';
+  else if (espnStatus === 'STATUS_FINAL')  gameStatus = 'finished';
 
-  const homeName = home.team.displayName;
-  const awayName = away.team.displayName;
+  const minute = espnStatus === 'STATUS_IN_PROGRESS'
+    ? parseInt(status?.displayClock) || null
+    : null;
 
-  // 1. Match Winner (Moneyline)
-  if (oddsData?.moneyline) {
-    questions.push({
-      question_type: 'winner',
-      question_text: `מי ינצח? ${homeName} vs ${awayName}`,
-      options: [
-        { key: 'home', label: homeName, odds: convertMoneyline(oddsData.moneyline.home?.close?.odds) || 2.0 },
-        { key: 'draw', label: 'תיקו', odds: convertMoneyline(oddsData.moneyline.draw?.close?.odds) || 3.2 },
-        { key: 'away', label: awayName, odds: convertMoneyline(oddsData.moneyline.away?.close?.odds) || 3.5 },
-      ],
-      is_available_live: true,
-      live_lock_minute: 75,
-    });
-  } else {
-    // Default odds if not available
-    questions.push({
-      question_type: 'winner',
-      question_text: `מי ינצח? ${homeName} vs ${awayName}`,
-      options: [
-        { key: 'home', label: homeName, odds: 2.0 },
-        { key: 'draw', label: 'תיקו', odds: 3.2 },
-        { key: 'away', label: awayName, odds: 3.5 },
-      ],
-      is_available_live: true,
-      live_lock_minute: 75,
-    });
-  }
-
-  // 2. Over/Under Total Goals
-  if (oddsData?.total) {
-    const line = oddsData.overUnder || 2.5;
-    questions.push({
-      question_type: 'total_goals',
-      question_text: `יותר או פחות מ-${line} גולים?`,
-      options: [
-        { key: 'over', label: `יותר מ-${line}`, odds: convertMoneyline(oddsData.total.over?.close?.odds) || 1.85 },
-        { key: 'under', label: `פחות מ-${line}`, odds: convertMoneyline(oddsData.total.under?.close?.odds) || 1.95 },
-      ],
-      is_available_live: true,
-      live_lock_minute: 60,
-    });
-  }
-
-  return questions;
+  return {
+    espn_id:        event.id,
+    competition_slug: leagueSlug,
+    home_team:      home.team.displayName,
+    away_team:      away.team.displayName,
+    home_team_logo: home.team.logo || null,
+    away_team_logo: away.team.logo || null,
+    start_time:     new Date(event.date),
+    status:         gameStatus,
+    minute:         minute,
+    score_home:     home.score !== undefined && home.score !== '' ? parseInt(home.score) : null,
+    score_away:     away.score !== undefined && away.score !== '' ? parseInt(away.score) : null,
+    venue:          comp?.venue?.fullName || null,
+  };
 }
 
-/**
- * Convert American Moneyline (e.g. +115, -150) to Decimal Odds
- * Formula for positive: (ML / 100) + 1
- * Formula for negative: (100 / |ML|) + 1
- */
-function convertMoneyline(ml) {
-  if (!ml) return null;
-  if (typeof ml === 'string' && ml.toLowerCase() === 'even') return 2.0;
+// ── Get all upcoming + live games across default leagues ─────────────────────
+async function fetchAllGames() {
+  const results = await Promise.allSettled(
+    DEFAULT_LEAGUES.map(slug => fetchScoreboard(slug))
+  );
 
-  const val = parseInt(ml);
-  if (isNaN(val)) return null;
-
-  if (val > 0) return parseFloat(((val / 100) + 1).toFixed(2));
-  return parseFloat(((100 / Math.abs(val)) + 1).toFixed(2));
+  const games = [];
+  results.forEach((res, i) => {
+    if (res.status === 'rejected') {
+      console.warn(`[sportsApi] Failed to fetch ${DEFAULT_LEAGUES[i]}:`, res.reason?.message);
+      return;
+    }
+    res.value.forEach(event => {
+      const mapped = mapEvent(event, DEFAULT_LEAGUES[i]);
+      if (mapped) games.push(mapped);
+    });
+  });
+  return games;
 }
 
-module.exports = {
-  SUPPORTED_LEAGUES,
-  getScoreboard,
-  getAllFixturesByDate,
-  buildBetQuestions,
-};
+// ── Fetch single game by ESPN ID ──────────────────────────────────────────────
+async function fetchGameById(leagueSlug, espnId) {
+  const url = `${ESPN_BASE}/${leagueSlug}/summary?event=${espnId}`;
+  const { data } = await axios.get(url, { timeout: 10000 });
+  return data;
+}
+
+// ── Build bet questions for a game ────────────────────────────────────────────
+// Returns array of { question_text, outcomes: [{label, odds}], type }
+function buildBetQuestions(game) {
+  const h = game.home_team;
+  const a = game.away_team;
+
+  // Try to use real odds from The Odds API cache, fall back to defaults
+  const realOdds = _oddsCache[`${h}|${a}`] || _oddsCache[`${a}|${h}`];
+  const homeOdds = realOdds?.home_odds ?? 2.10;
+  const drawOdds = realOdds?.draw_odds ?? 3.20;
+  const awayOdds = realOdds?.away_odds ?? 2.80;
+
+  return [
+    {
+      type: 'match_winner',
+      question_text: `Who will win: ${h} vs ${a}?`,
+      outcomes: [
+        { label: h,      odds: homeOdds },
+        { label: 'Draw', odds: drawOdds },
+        { label: a,      odds: awayOdds },
+      ],
+    },
+    {
+      type: 'both_teams_score',
+      question_text: `Both teams to score in ${h} vs ${a}?`,
+      outcomes: [
+        { label: 'Yes', odds: 1.75 },
+        { label: 'No',  odds: 1.95 },
+      ],
+    },
+    {
+      type: 'over_under',
+      question_text: `Over/Under 2.5 goals in ${h} vs ${a}?`,
+      outcomes: [
+        { label: 'Over 2.5',  odds: 1.85 },
+        { label: 'Under 2.5', odds: 1.90 },
+      ],
+    },
+  ];
+}
+
+module.exports = { fetchAllGames, fetchGameById, buildBetQuestions, mapEvent, DEFAULT_LEAGUES, setOddsCache };

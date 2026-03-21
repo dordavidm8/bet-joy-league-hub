@@ -1,58 +1,69 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useGame, useBetQuestions } from "@/hooks/useApi";
+import { useQuery } from "@tanstack/react-query";
+import { getGame } from "@/lib/api";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Lock } from "lucide-react";
 import { motion } from "framer-motion";
-import { Skeleton } from "@/components/ui/skeleton";
 import AiAdvisor from "@/components/AiAdvisor";
 
 const GameDetailPage = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
-  const { addToBetSlip } = useApp();
-  const { data: game, isLoading: gameLoading } = useGame(gameId || "");
-  const { data: questions = [], isLoading: questionsLoading } = useBetQuestions(gameId || "");
+  const { addToBetSlip, betSlip } = useApp();
+  const { backendUser } = useAuth();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["game", gameId],
+    queryFn: () => getGame(gameId!),
+    enabled: !!gameId,
+  });
+
+  const [stakes, setStakes] = useState<Record<string, string>>({});
   const [selections, setSelections] = useState<Record<string, string>>({});
-  const [points, setPoints] = useState("");
   const [showAi, setShowAi] = useState(false);
 
-  if (gameLoading) {
-    return (
-      <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
-        <Skeleton className="h-8 w-20" />
-        <Skeleton className="h-[200px] rounded-[20px]" />
-        <Skeleton className="h-[120px] rounded-[20px]" />
-      </div>
-    );
-  }
+  if (isLoading) return <div className="p-5 text-sm text-muted-foreground">טוען משחק...</div>;
+  if (error || !data?.game) return <div className="p-5">משחק לא נמצא</div>;
 
-  if (!game) return <div className="p-5">משחק לא נמצא</div>;
+  const { game, bet_questions } = data;
+  const isLive = game.status === "live";
+  const isFinished = game.status === "finished";
+  const gameLabel = `${game.home_team} נגד ${game.away_team}`;
 
-  const handleSelect = (questionId: string, optionId: string) => {
-    setSelections((prev) => ({ ...prev, [questionId]: optionId }));
+  const timeLabel = isLive
+    ? game.minute ? `${game.minute}′` : "LIVE"
+    : new Date(game.start_time).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+
+  const handleSelect = (questionId: string, label: string) => {
+    setSelections((prev) => ({ ...prev, [questionId]: label }));
   };
 
-  const handleAddToSlip = () => {
-    const selectedQuestions = Object.entries(selections);
-    if (selectedQuestions.length === 0 || !points) return;
+  const handleAddToSlip = (questionId: string) => {
+    const selectedLabel = selections[questionId];
+    const stakeVal = parseInt(stakes[questionId] || "0");
+    if (!selectedLabel || stakeVal <= 0) return;
 
-    selectedQuestions.forEach(([qId, oId]) => {
-      const q = questions.find((qq) => qq.id === qId);
-      const o = q?.options.find((oo) => oo.id === oId);
-      if (q && o) {
-        addToBetSlip({
-          game,
-          question: q.question,
-          selectedOption: o.label,
-          points: Math.round(Number(points) / selectedQuestions.length),
-        });
-      }
+    const question = bet_questions.find((q) => q.id === questionId);
+    if (!question) return;
+
+    const outcome = question.outcomes?.find((o: any) => o.label === selectedLabel);
+    const odds = outcome?.odds ?? 1;
+
+    addToBetSlip({
+      game_id: game.id,
+      gameLabel,
+      bet_question_id: questionId,
+      question: question.question_text,
+      selectedOption: selectedLabel,
+      odds,
+      points: stakeVal,
     });
-
-    navigate("/betslip");
   };
+
+  const inSlip = (questionId: string) => betSlip.some((b) => b.bet_question_id === questionId);
 
   return (
     <div className="flex flex-col gap-6 pb-24">
@@ -63,111 +74,133 @@ const GameDetailPage = () => {
           חזרה
         </button>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card-kickoff"
-        >
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card-kickoff">
           <div className="flex items-center justify-between mb-2">
-            <span className="section-label">{game.competition}</span>
-            {game.isLive && (
+            <span className="section-label">{game.competition_name ?? "כדורגל"}</span>
+            {isLive && (
               <span className="flex items-center gap-1 text-xs font-bold text-primary">
                 <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                LIVE
+                LIVE · {timeLabel}
               </span>
             )}
+            {isFinished && <span className="text-xs font-bold text-muted-foreground">הסתיים</span>}
           </div>
 
           <div className="flex items-center justify-between gap-4 my-4">
             <div className="flex flex-col items-center gap-2 flex-1">
-              <span className="text-3xl">{game.homeTeam.logo}</span>
-              <span className="text-sm font-bold text-center">{game.homeTeam.name}</span>
+              {game.home_team_logo
+                ? <img src={game.home_team_logo} className="w-10 h-10 object-contain" alt="" />
+                : <span className="text-3xl">⚽</span>}
+              <span className="text-sm font-bold text-center">{game.home_team}</span>
             </div>
             <div className="flex flex-col items-center">
-              {game.isLive && game.score ? (
-                <span className="text-3xl font-black">{game.score.home} - {game.score.away}</span>
+              {(isLive || isFinished) && game.score_home != null ? (
+                <span className="text-3xl font-black">{game.score_home} - {game.score_away}</span>
               ) : (
                 <div className="text-center">
-                  <p className="text-xl font-bold">{game.time}</p>
-                  <p className="text-xs text-muted-foreground">{game.date}</p>
+                  <p className="text-xl font-bold">{timeLabel}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(game.start_time).toLocaleDateString("he-IL")}
+                  </p>
                 </div>
               )}
             </div>
             <div className="flex flex-col items-center gap-2 flex-1">
-              <span className="text-3xl">{game.awayTeam.logo}</span>
-              <span className="text-sm font-bold text-center">{game.awayTeam.name}</span>
+              {game.away_team_logo
+                ? <img src={game.away_team_logo} className="w-10 h-10 object-contain" alt="" />
+                : <span className="text-3xl">⚽</span>}
+              <span className="text-sm font-bold text-center">{game.away_team}</span>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Questions */}
-      <div className="flex flex-col gap-5 px-5">
-        {questionsLoading ? (
-          Array.from({ length: 2 }).map((_, i) => (
-            <Skeleton key={i} className="h-[100px] rounded-[20px]" />
-          ))
-        ) : (
-          questions.map((q, i) => (
-            <motion.div
-              key={q.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.05 }}
-              className="flex flex-col gap-3"
-            >
-              <h3 className="font-bold text-base">{q.question}</h3>
-              <div className="flex flex-wrap gap-2">
-                {q.options.map((o) => (
-                  <Button
-                    key={o.id}
-                    variant={selections[q.id] === o.id ? "option-selected" : "option"}
-                    size="default"
-                    onClick={() => handleSelect(q.id, o.id)}
-                  >
-                    {o.label}
-                  </Button>
-                ))}
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+      {/* Bet Questions */}
+      {(isFinished || isLive) ? (
+        <div className="px-5 text-sm text-muted-foreground">
+          {isFinished ? "המשחק הסתיים — לא ניתן להמר" : "המשחק מתקיים כרגע — לא ניתן להמר"}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6 px-5">
+          {bet_questions.map((q: any, i: number) => {
+            const isLocked = q.is_locked;
+            return (
+              <motion.div
+                key={q.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + i * 0.05 }}
+                className="flex flex-col gap-3"
+              >
+                <h3 className="font-bold text-base">{q.question_text}</h3>
 
-      {/* Points Input */}
-      <div className="px-5 flex flex-col gap-2">
-        <label className="font-bold text-sm">כמה נקודות להמר?</label>
-        <input
-          type="number"
-          value={points}
-          onChange={(e) => setPoints(e.target.value)}
-          placeholder="הכנס כמות נקודות"
-          className="bg-secondary rounded-[16px] px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-shadow"
-        />
-      </div>
+                {isLocked ? (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Lock size={12} /> הימור נעול</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {(q.outcomes ?? []).map((o: any) => (
+                        <button
+                          key={o.label}
+                          onClick={() => handleSelect(q.id, o.label)}
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                            selections[q.id] === o.label
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-secondary border-border hover:border-primary/40"
+                          }`}
+                        >
+                          {o.label}
+                          <span className="ml-1 text-xs opacity-70">×{o.odds}</span>
+                        </button>
+                      ))}
+                    </div>
 
-      {/* Add to Slip */}
-      <div className="px-5">
-        <Button
-          variant="cta"
-          size="xl"
-          className="w-full"
-          onClick={handleAddToSlip}
-          disabled={Object.keys(selections).length === 0 || !points}
-        >
-          הוסף לתלוש
-        </Button>
-      </div>
+                    {selections[q.id] && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={backendUser?.points_balance ?? 9999}
+                          value={stakes[q.id] ?? ""}
+                          onChange={(e) => setStakes((p) => ({ ...p, [q.id]: e.target.value }))}
+                          placeholder="כמה נקודות?"
+                          className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <Button
+                          variant="cta"
+                          size="default"
+                          onClick={() => handleAddToSlip(q.id)}
+                          disabled={!stakes[q.id] || parseInt(stakes[q.id]) <= 0}
+                        >
+                          {inSlip(q.id) ? "עדכן תלוש" : "הוסף לתלוש"}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       {/* AI Button */}
-      <button
-        onClick={() => setShowAi(true)}
-        className="fixed bottom-24 left-6 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-40"
-      >
-        <Sparkles size={22} />
-      </button>
+      {!isFinished && !isLive && (
+        <button
+          onClick={() => setShowAi(true)}
+          className="fixed bottom-24 left-6 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-40"
+        >
+          <Sparkles size={22} />
+        </button>
+      )}
 
-      {showAi && <AiAdvisor game={game} onClose={() => setShowAi(false)} />}
+      {showAi && (
+        <AiAdvisor
+          homeTeam={game.home_team}
+          awayTeam={game.away_team}
+          onClose={() => setShowAi(false)}
+        />
+      )}
     </div>
   );
 };

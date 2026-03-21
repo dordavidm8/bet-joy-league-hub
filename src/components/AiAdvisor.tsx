@@ -1,13 +1,13 @@
-import { Game } from "@/lib/mockData";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AiAdvisorProps {
-  game: Game;
+  homeTeam: string;
+  awayTeam: string;
   onClose: () => void;
 }
 
-const AiAdvisor = ({ game, onClose }: AiAdvisorProps) => {
+const AiAdvisor = ({ homeTeam, awayTeam, onClose }: AiAdvisorProps) => {
   return (
     <AnimatePresence>
       <motion.div
@@ -35,12 +35,12 @@ const AiAdvisor = ({ game, onClose }: AiAdvisorProps) => {
           <div className="flex flex-col gap-4">
             <div className="bg-secondary rounded-[16px] p-4">
               <p className="text-sm font-medium mb-2">
-                ניתוח: {game.homeTeam.name} נגד {game.awayTeam.name}
+                ניתוח: {homeTeam} נגד {awayTeam}
               </p>
               <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
-                <li>• {game.homeTeam.name} בסדרת 4 ניצחונות רצופים בבית</li>
-                <li>• {game.awayTeam.name} לא ניצחה מחוץ לבית ב-3 משחקים אחרונים</li>
-                <li>• במפגשים האחרונים: 3 ניצחונות ל{game.homeTeam.name}, 1 תיקו, 1 ניצחון ל{game.awayTeam.name}</li>
+                <li>• {homeTeam} בסדרת 4 ניצחונות רצופים בבית</li>
+                <li>• {awayTeam} לא ניצחה מחוץ לבית ב-3 משחקים אחרונים</li>
+                <li>• במפגשים האחרונים: 3 ניצחונות ל{homeTeam}, 1 תיקו, 1 ניצחון ל{awayTeam}</li>
               </ul>
             </div>
 

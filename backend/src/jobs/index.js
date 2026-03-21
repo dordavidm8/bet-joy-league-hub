@@ -1,18 +1,28 @@
 const cron = require('node-cron');
-const { syncLiveGames, syncUpcomingFixtures } = require('./syncGames');
+const { syncGames }  = require('./syncGames');
 const { settleBets } = require('./settleBets');
 
-function startCronJobs(io) {
+function startJobs() {
   // Sync live scores every 60 seconds
-  cron.schedule('* * * * *', () => syncLiveGames(io));
+  cron.schedule('* * * * *', async () => {
+    try { await syncGames(); }
+    catch (err) { console.error('[cron:syncGames]', err.message); }
+  });
 
-  // Settle finished bets every 5 minutes
-  cron.schedule('*/5 * * * *', () => settleBets());
+  // Settle bets every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    try { await settleBets(); }
+    catch (err) { console.error('[cron:settleBets]', err.message); }
+  });
 
-  // Sync upcoming fixtures once a day at 6am
-  cron.schedule('0 6 * * *', () => syncUpcomingFixtures());
+  // Full fixture refresh every day at 04:00
+  cron.schedule('0 4 * * *', async () => {
+    console.log('[cron] Daily fixture refresh');
+    try { await syncGames(); }
+    catch (err) { console.error('[cron:dailySync]', err.message); }
+  });
 
-  console.log('⏱️  Cron jobs started');
+  console.log('[jobs] Cron jobs started: syncGames (1min), settleBets (5min), dailySync (04:00)');
 }
 
-module.exports = { startCronJobs };
+module.exports = { startJobs, startCronJobs: startJobs };

@@ -1,22 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { v4: uuidv4 } = require('uuid');
 const admin = require('../config/firebase');
 const { pool } = require('../config/database');
 
-// POST /api/auth/register
-// Called after Firebase signup — creates user row in DB
+// POST /api/auth/register — called after Firebase signup
 router.post('/register', async (req, res, next) => {
-  const { idToken, username, referralCode } = req.body;
+  const { username, referral_code: referralCode, avatar_url } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
 
-  if (!idToken || !username) {
-    return res.status(400).json({ error: 'idToken and username are required' });
-  }
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing token' });
 
   try {
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    const decoded = await admin.auth().verifyIdToken(header.split(' ')[1]);
 
-    // Check username available
     const existing = await pool.query(
       'SELECT id FROM users WHERE username = $1 OR firebase_uid = $2',
       [username, decoded.uid]
@@ -28,64 +25,56 @@ router.post('/register', async (req, res, next) => {
     // Resolve referrer
     let referrerId = null;
     if (referralCode) {
-      const ref = await pool.query(
-        'SELECT id FROM users WHERE id::text LIKE $1 OR username = $1',
-        [referralCode]
-      );
+      const ref = await pool.query('SELECT id FROM users WHERE id::text = $1 OR username = $1', [referralCode]);
       if (ref.rows[0]) referrerId = ref.rows[0].id;
     }
 
-    // Create user
-    const user = await pool.query(
-      `INSERT INTO users (firebase_uid, username, email, points_balance, referred_by)
-       VALUES ($1, $2, $3, 500, $4)
-       RETURNING *`,
-      [decoded.uid, username, decoded.email || '', referrerId]
-    );
+    const resolvedAvatar = avatar_url || decoded.picture || null;
 
-    // Log signup bonus
+    const userRes = await pool.query(
+      `INSERT INTO users (firebase_uid, username, email, avatar_url, points_balance, referred_by)
+       VALUES ($1, $2, $3, $4, 5000, $5) RETURNING *`,
+      [decoded.uid, username, decoded.email || '', resolvedAvatar, referrerId]
+    );
+    const user = userRes.rows[0];
+
     await pool.query(
-      `INSERT INTO point_transactions (user_id, amount, type, description)
-       VALUES ($1, 500, 'signup', 'Welcome bonus')`,
-      [user.rows[0].id]
+      `INSERT INTO point_transactions (user_id, amount, type, description) VALUES ($1, 5000, 'signup', 'Welcome bonus')`,
+      [user.id]
     );
 
-    // Award referral points if applicable
     if (referrerId) {
+      await pool.query('UPDATE users SET points_balance = points_balance + 1000 WHERE id = $1', [referrerId]);
       await pool.query(
-        'UPDATE users SET points_balance = points_balance + 1000 WHERE id = $1',
-        [referrerId]
+        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description) VALUES ($1, 1000, 'referral', $2, 'Referral bonus')`,
+        [referrerId, user.id]
       );
       await pool.query(
-        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
-         VALUES ($1, 1000, 'referral', $2, 'Referral bonus')`,
-        [referrerId, user.rows[0].id]
-      );
-      await pool.query(
-        `INSERT INTO referrals (referrer_id, referred_id, points_awarded)
-         VALUES ($1, $2, 1000)`,
-        [referrerId, user.rows[0].id]
+        `INSERT INTO referrals (referrer_id, referred_id, points_awarded) VALUES ($1, $2, 1000)`,
+        [referrerId, user.id]
       );
     }
 
-    res.status(201).json({ user: user.rows[0] });
+    res.status(201).json({ user });
   } catch (err) {
     next(err);
   }
 });
 
-// GET /api/auth/me — returns current user profile
+// GET /api/auth/me
 router.get('/me', async (req, res, next) => {
-  const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing token' });
+  // In stub mode, always return the demo user
+  if (process.env.STUB_MODE === 'true') {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', ['aaaaaaaa-0000-0000-0000-000000000001']);
+    return res.json({ user: result.rows[0] });
   }
+
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing token' });
+
   try {
     const decoded = await admin.auth().verifyIdToken(header.split(' ')[1]);
-    const result = await pool.query(
-      'SELECT * FROM users WHERE firebase_uid = $1',
-      [decoded.uid]
-    );
+    const result = await pool.query('SELECT * FROM users WHERE firebase_uid = $1', [decoded.uid]);
     if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
     res.json({ user: result.rows[0] });
   } catch (err) {

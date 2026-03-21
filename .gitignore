@@ -28,3 +28,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+kickoff-c1b6a-firebase-adminsdk-fbsvc-*.json
+backend/.env

@@ -1,89 +1,98 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
 
-// GET /api/games — list games (filter by status, competition, date)
+const POPULAR_TEAMS = [
+  'Manchester City', 'Man City', 'Arsenal', 'Liverpool', 'Chelsea', 'Manchester United', 'Man United', 'Tottenham', 'Tottenham Hotspur',
+  'Real Madrid', 'Barcelona', 'Atlético Madrid', 'Atletico Madrid',
+  'Bayern Munich', 'Borussia Dortmund', 'Dortmund',
+  'Paris Saint-Germain', 'PSG',
+  'Juventus', 'Inter Milan', 'Internazionale', 'AC Milan',
+  'Ajax',
+];
+
+// GET /api/games
 router.get('/', async (req, res, next) => {
-  const { status, competition_id, date } = req.query;
-  const conditions = [];
-  const params = [];
+  const { status, date, competition, search, featured, from, to } = req.query;
+  const conditions = [], params = [];
 
-  if (status) {
-    params.push(status);
-    conditions.push(`g.status = $${params.length}`);
+  if (status) { params.push(status); conditions.push(`g.status = $${params.length}`); if (status === 'scheduled') { conditions.push(`g.start_time > NOW() - INTERVAL '2 hours'`); } }
+  if (date) { params.push(date); conditions.push(`DATE(g.start_time AT TIME ZONE 'UTC') = $${params.length}`); }
+  if (from) { params.push(from); conditions.push(`g.start_time >= $${params.length}::date`); }
+  if (to) { params.push(to); conditions.push(`g.start_time < ($${params.length}::date + INTERVAL '1 day')`); }
+  if (competition) { params.push(`%${competition}%`); conditions.push(`c.name ILIKE $${params.length}`); }
+  if (search) {
+    params.push(`%${search}%`);
+    const n = params.length;
+    conditions.push(`(g.home_team ILIKE $${n} OR g.away_team ILIKE $${n} OR c.name ILIKE $${n})`);
   }
-  if (competition_id) {
-    params.push(competition_id);
-    conditions.push(`g.competition_id = $${params.length}`);
-  }
-  if (date) {
-    // date format: YYYY-MM-DD
-    params.push(date);
-    conditions.push(`DATE(g.start_time) = $${params.length}`);
+  if (featured === 'true') {
+    const teamConditions = POPULAR_TEAMS.map((_, idx) => {
+      params.push(`%${POPULAR_TEAMS[idx]}%`);
+      return `g.home_team ILIKE $${params.length} OR g.away_team ILIKE $${params.length}`;
+    });
+    conditions.push(`(${teamConditions.join(' OR ')})`);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
   try {
     const result = await pool.query(
       `SELECT g.*, c.name AS competition_name, c.logo_url AS competition_logo
-       FROM games g
-       LEFT JOIN competitions c ON c.id = g.competition_id
-       ${where}
-       ORDER BY g.start_time ASC
-       LIMIT 100`,
+       FROM games g LEFT JOIN competitions c ON c.id = g.competition_id
+       ${where} ORDER BY g.start_time ASC LIMIT 100`,
       params
     );
     res.json({ games: result.rows });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
-// GET /api/games/live — active live games
-router.get('/live', async (req, res, next) => {
+// GET /api/games/results — finished games, last N days (default 7)
+router.get('/results', async (req, res, next) => {
+  const days = parseInt(req.query.days) || 7;
   try {
     const result = await pool.query(
       `SELECT g.*, c.name AS competition_name
-       FROM games g
-       LEFT JOIN competitions c ON c.id = g.competition_id
-       WHERE g.status = 'live'
-       ORDER BY g.start_time ASC`
+       FROM games g LEFT JOIN competitions c ON c.id = g.competition_id
+       WHERE g.status = 'finished'
+         AND g.start_time >= NOW() - ($1 * INTERVAL '1 day')
+       ORDER BY g.start_time DESC LIMIT 100`,
+      [days]
     );
     res.json({ games: result.rows });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
-// GET /api/games/:id — single game with bet questions
+// GET /api/games/live
+router.get('/live', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT g.*, c.name AS competition_name FROM games g
+       LEFT JOIN competitions c ON c.id = g.competition_id
+       WHERE g.status = 'live' ORDER BY g.start_time ASC`
+    );
+    res.json({ games: result.rows });
+  } catch (err) { next(err); }
+});
+
+// GET /api/games/:id
 router.get('/:id', async (req, res, next) => {
   try {
-    const gameResult = await pool.query(
+    const gameRes = await pool.query(
       `SELECT g.*, c.name AS competition_name, c.logo_url AS competition_logo
-       FROM games g
-       LEFT JOIN competitions c ON c.id = g.competition_id
-       WHERE g.id = $1`,
+       FROM games g LEFT JOIN competitions c ON c.id = g.competition_id WHERE g.id = $1`,
       [req.params.id]
     );
-    if (!gameResult.rows[0]) return res.status(404).json({ error: 'Game not found' });
+    if (!gameRes.rows[0]) return res.status(404).json({ error: 'Game not found' });
 
-    const questionsResult = await pool.query(
+    const questionsRes = await pool.query(
       `SELECT * FROM bet_questions WHERE game_id = $1 ORDER BY created_at ASC`,
       [req.params.id]
     );
-
-    res.json({
-      game: gameResult.rows[0],
-      bet_questions: questionsResult.rows,
-    });
-  } catch (err) {
-    next(err);
-  }
+    res.json({ game: gameRes.rows[0], bet_questions: questionsRes.rows });
+  } catch (err) { next(err); }
 });
 
-// GET /api/games/:id/bet-questions — just the bet questions
+// GET /api/games/:id/bet-questions
 router.get('/:id/bet-questions', async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -91,9 +100,7 @@ router.get('/:id/bet-questions', async (req, res, next) => {
       [req.params.id]
     );
     res.json({ bet_questions: result.rows });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

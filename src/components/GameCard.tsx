@@ -1,4 +1,4 @@
-import { Game } from "@/lib/mockData";
+import { Game } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -10,6 +10,14 @@ interface GameCardProps {
 
 const GameCard = ({ game, index }: GameCardProps) => {
   const navigate = useNavigate();
+  const isLive = game.status === "live";
+  const isFinished = game.status === "finished";
+
+  const startDate = new Date(game.start_time);
+  const timeLabel = isLive
+    ? game.minute ? `${game.minute}′` : "LIVE"
+    : startDate.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  const dateLabel = isLive ? null : startDate.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
 
   return (
     <motion.div
@@ -20,41 +28,55 @@ const GameCard = ({ game, index }: GameCardProps) => {
     >
       {/* Competition + Live badge */}
       <div className="flex items-center justify-between">
-        <span className="section-label">{game.competition}</span>
-        {game.isLive && (
+        <span className="section-label">{game.competition_name ?? "כדורגל"}</span>
+        {isLive && (
           <span className="flex items-center gap-1 text-xs font-bold text-primary">
             <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
             LIVE
           </span>
+        )}
+        {isFinished && (
+          <span className="text-xs font-bold text-muted-foreground">הסתיים</span>
         )}
       </div>
 
       {/* Teams */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col items-center gap-1 flex-1">
-          <span className="text-2xl">{game.homeTeam.logo}</span>
-          <span className="text-sm font-bold text-center leading-tight">{game.homeTeam.name}</span>
+          {game.home_team_logo
+            ? <img src={game.home_team_logo} className="w-8 h-8 object-contain" alt="" />
+            : <span className="text-2xl">⚽</span>}
+          <span className="text-sm font-bold text-center leading-tight">{game.home_team}</span>
         </div>
 
         <div className="flex flex-col items-center">
-          {game.isLive && game.score ? (
-            <span className="text-2xl font-black">
-              {game.score.home} - {game.score.away}
-            </span>
+          {(isLive || isFinished) && game.score_home != null ? (
+            <span className="text-2xl font-black">{game.score_home} - {game.score_away}</span>
           ) : (
-            <span className="text-lg font-bold text-muted-foreground">{game.time}</span>
+            <div className="flex flex-col items-center">
+              <span className="text-lg font-bold text-muted-foreground">{timeLabel}</span>
+              {dateLabel && <span className="text-xs text-muted-foreground">{dateLabel}</span>}
+            </div>
           )}
         </div>
 
         <div className="flex flex-col items-center gap-1 flex-1">
-          <span className="text-2xl">{game.awayTeam.logo}</span>
-          <span className="text-sm font-bold text-center leading-tight">{game.awayTeam.name}</span>
+          {game.away_team_logo
+            ? <img src={game.away_team_logo} className="w-8 h-8 object-contain" alt="" />
+            : <span className="text-2xl">⚽</span>}
+          <span className="text-sm font-bold text-center leading-tight">{game.away_team}</span>
         </div>
       </div>
 
       {/* CTA */}
-      <Button variant="cta" size="default" onClick={() => navigate(`/game/${game.id}`)} className="w-full">
-        הימר עכשיו
+      <Button
+        variant="cta"
+        size="default"
+        onClick={() => navigate(`/game/${game.id}`)}
+        className="w-full"
+        disabled={isFinished}
+      >
+        {isFinished ? "הסתיים" : "הימר עכשיו"}
       </Button>
     </motion.div>
   );
