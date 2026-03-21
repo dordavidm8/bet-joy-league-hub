@@ -12,6 +12,7 @@ const ProfilePage = () => {
   const [copied, setCopied] = useState(false);
   const [showAvatarUploader, setShowAvatarUploader] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const { data: betsData } = useQuery({ queryKey: ["my-bets"], queryFn: getMyBets });
   const { data: referralData } = useQuery({ queryKey: ["my-referral"], queryFn: getMyReferralCode });
@@ -48,8 +49,8 @@ const ProfilePage = () => {
       >
         <div className="relative">
           <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-3xl overflow-hidden">
-            {backendUser?.avatar_url ? (
-              <img src={backendUser.avatar_url} className="w-full h-full rounded-full object-cover" alt="" />
+            {backendUser?.avatar_url && !avatarError ? (
+              <img src={backendUser.avatar_url} className="w-full h-full rounded-full object-cover" alt="" onError={() => setAvatarError(true)} />
             ) : <span>👤</span>}
           </div>
           <button

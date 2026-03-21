@@ -16,7 +16,7 @@ router.get('/', async (req, res, next) => {
   const { status, date, competition, search, featured, from, to } = req.query;
   const conditions = [], params = [];
 
-  if (status) { params.push(status); conditions.push(`g.status = $${params.length}`); }
+  if (status) { params.push(status); conditions.push(`g.status = $${params.length}`); if (status === 'scheduled') { conditions.push(`g.start_time > NOW() - INTERVAL '2 hours'`); } }
   if (date) { params.push(date); conditions.push(`DATE(g.start_time AT TIME ZONE 'UTC') = $${params.length}`); }
   if (from) { params.push(from); conditions.push(`g.start_time >= $${params.length}::date`); }
   if (to) { params.push(to); conditions.push(`g.start_time < ($${params.length}::date + INTERVAL '1 day')`); }
@@ -54,7 +54,7 @@ router.get('/results', async (req, res, next) => {
       `SELECT g.*, c.name AS competition_name
        FROM games g LEFT JOIN competitions c ON c.id = g.competition_id
        WHERE g.status = 'finished'
-         AND g.start_time >= NOW() - ($1 || ' days')::INTERVAL
+         AND g.start_time >= NOW() - ($1 * INTERVAL '1 day')
        ORDER BY g.start_time DESC LIMIT 100`,
       [days]
     );
