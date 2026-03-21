@@ -1,5 +1,8 @@
 const axios = require('axios');
 
+let _oddsCache = {}; // { 'HomeTeam|AwayTeam': { home_odds, draw_odds, away_odds } }
+function setOddsCache(cache) { _oddsCache = cache; }
+
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 
 // Map common competition slugs to ESPN league paths
@@ -15,11 +18,29 @@ const LEAGUE_SLUGS = {
 
 const DEFAULT_LEAGUES = Object.values(LEAGUE_SLUGS);
 
-// ── Fetch scoreboard for a league (today + next 7 days) ───────────────────────
+// ── Fetch scoreboard for a league (today + next 30 days) ─────────────────────
 async function fetchScoreboard(leagueSlug) {
-  const url = `${ESPN_BASE}/${leagueSlug}/scoreboard`;
-  const { data } = await axios.get(url, { timeout: 10000 });
-  return data.events || [];
+  const now = new Date();
+  const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const fromStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const toStr   = future.toISOString().slice(0, 10).replace(/-/g, '');
+
+  // Fetch current round AND upcoming 30 days in parallel
+  const [current, upcoming] = await Promise.allSettled([
+    axios.get(`${ESPN_BASE}/${leagueSlug}/scoreboard`, { timeout: 10000 }),
+    axios.get(`${ESPN_BASE}/${leagueSlug}/scoreboard?dates=${fromStr}-${toStr}&limit=100`, { timeout: 10000 }),
+  ]);
+
+  // Merge and deduplicate by event id
+  const seen = new Set();
+  const events = [];
+  for (const r of [current, upcoming]) {
+    if (r.status === 'rejected') continue;
+    for (const e of (r.value.data.events || [])) {
+      if (!seen.has(e.id)) { seen.add(e.id); events.push(e); }
+    }
+  }
+  return events;
 }
 
 // ── Map ESPN event → our DB shape ─────────────────────────────────────────────
@@ -49,8 +70,8 @@ function mapEvent(event, leagueSlug) {
     start_time:     new Date(event.date),
     status:         gameStatus,
     minute:         minute,
-    score_home:     parseInt(home.score) || 0,
-    score_away:     parseInt(away.score) || 0,
+    score_home:     home.score !== undefined && home.score !== '' ? parseInt(home.score) : null,
+    score_away:     away.score !== undefined && away.score !== '' ? parseInt(away.score) : null,
     venue:          comp?.venue?.fullName || null,
   };
 }
@@ -88,18 +109,24 @@ function buildBetQuestions(game) {
   const h = game.home_team;
   const a = game.away_team;
 
-  const questions = [
+  // Try to use real odds from The Odds API cache, fall back to defaults
+  const realOdds = _oddsCache[`${h}|${a}`] || _oddsCache[`${a}|${h}`];
+  const homeOdds = realOdds?.home_odds ?? 2.10;
+  const drawOdds = realOdds?.draw_odds ?? 3.20;
+  const awayOdds = realOdds?.away_odds ?? 2.80;
+
+  return [
     {
-      type:          'match_winner',
+      type: 'match_winner',
       question_text: `Who will win: ${h} vs ${a}?`,
       outcomes: [
-        { label: h,      odds: 2.1 },
-        { label: 'Draw', odds: 3.2 },
-        { label: a,      odds: 2.8 },
+        { label: h,      odds: homeOdds },
+        { label: 'Draw', odds: drawOdds },
+        { label: a,      odds: awayOdds },
       ],
     },
     {
-      type:          'both_teams_score',
+      type: 'both_teams_score',
       question_text: `Both teams to score in ${h} vs ${a}?`,
       outcomes: [
         { label: 'Yes', odds: 1.75 },
@@ -107,7 +134,7 @@ function buildBetQuestions(game) {
       ],
     },
     {
-      type:          'over_under',
+      type: 'over_under',
       question_text: `Over/Under 2.5 goals in ${h} vs ${a}?`,
       outcomes: [
         { label: 'Over 2.5',  odds: 1.85 },
@@ -115,7 +142,6 @@ function buildBetQuestions(game) {
       ],
     },
   ];
-  return questions;
 }
 
-module.exports = { fetchAllGames, fetchGameById, buildBetQuestions, mapEvent, DEFAULT_LEAGUES };
+module.exports = { fetchAllGames, fetchGameById, buildBetQuestions, mapEvent, DEFAULT_LEAGUES, setOddsCache };

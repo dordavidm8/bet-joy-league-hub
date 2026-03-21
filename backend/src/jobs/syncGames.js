@@ -1,4 +1,6 @@
 const { pool } = require('../config/database');
+const { fetchAllOdds } = require('../services/oddsApi');
+const { setOddsCache } = require('../services/sportsApi');
 const { fetchAllGames, buildBetQuestions } = require('../services/sportsApi');
 
 // ── Upsert a single game row ───────────────────────────────────────────────────
@@ -66,6 +68,12 @@ async function syncGames() {
     console.log('[syncGames] STUB_MODE — skipping ESPN sync');
     return;
   }
+
+  // Update odds cache before syncing games
+  const oddsCache = await fetchAllOdds();
+  setOddsCache(oddsCache);
+  const oddsCount = Object.keys(oddsCache).length;
+  if (oddsCount > 0) console.log(`[syncGames] Loaded real odds for ${oddsCount} matches`);
 
   console.log('[syncGames] Fetching games from ESPN…');
   let games;

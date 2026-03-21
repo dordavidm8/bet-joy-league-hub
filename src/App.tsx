@@ -25,7 +25,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen max-w-lg mx-auto relative">
     <TopBar />
     <main>{children}</main>
+    <div className="pb-16" />
     <BottomTabBar />
+    <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none" style={{ bottom: '64px' }}>
+      <span className="text-[9px] text-muted-foreground/40 pb-0.5">
+        v{import.meta.env.VITE_GIT_HASH ?? "dev"}
+      </span>
+    </div>
   </div>
 );
 
