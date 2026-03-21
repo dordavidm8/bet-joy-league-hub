@@ -67,7 +67,8 @@ export default function AvatarUploader({ onDone, onCancel }: Props) {
       const url = await getDownloadURL(storageRef);
       onDone(url);
     } catch (err: any) {
-      setError("העלאה נכשלה: " + (err.message || "שגיאה"));
+      console.error("Avatar upload error:", err);
+      setError("העלאה נכשלה: " + (err.code || err.message || "שגיאה"));
     } finally {
       setUploading(false);
     }

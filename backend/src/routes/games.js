@@ -27,9 +27,11 @@ router.get('/', async (req, res, next) => {
     conditions.push(`(g.home_team ILIKE $${n} OR g.away_team ILIKE $${n} OR c.name ILIKE $${n})`);
   }
   if (featured === 'true') {
-    params.push(POPULAR_TEAMS);
-    const n = params.length;
-    conditions.push(`(g.home_team = ANY($${n}) OR g.away_team = ANY($${n}))`);
+    const teamConditions = POPULAR_TEAMS.map((_, idx) => {
+      params.push(`%${POPULAR_TEAMS[idx]}%`);
+      return `g.home_team ILIKE $${params.length} OR g.away_team ILIKE $${params.length}`;
+    });
+    conditions.push(`(${teamConditions.join(' OR ')})`);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';

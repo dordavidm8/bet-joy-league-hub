@@ -13,7 +13,7 @@ const LEAGUE_SLUGS = {
   'ita.1':   'ita.1',   // Serie A
   'fra.1':   'fra.1',   // Ligue 1
   'uefa.champions': 'uefa.champions',
-  'isr.1':   'isr.1',   // Israeli Premier League
+  // isr.1 removed — ESPN data for Israeli league is unreliable
 };
 
 const DEFAULT_LEAGUES = Object.values(LEAGUE_SLUGS);
