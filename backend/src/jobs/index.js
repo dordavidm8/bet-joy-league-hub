@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { syncGames }  = require('./syncGames');
 const { settleBets } = require('./settleBets');
+const { generateAllMiniGames } = require('./generateMiniGames');
 
 function startJobs() {
   // Sync live scores every 60 seconds
@@ -22,7 +23,14 @@ function startJobs() {
     catch (err) { console.error('[cron:dailySync]', err.message); }
   });
 
-  console.log('[jobs] Cron jobs started: syncGames (1min), settleBets (5min), dailySync (04:00)');
+  // Generate daily mini games at 03:00
+  cron.schedule('0 3 * * *', async () => {
+    console.log('[cron] Daily minigames generation');
+    try { await generateAllMiniGames(); }
+    catch (err) { console.error('[cron:generateMiniGames]', err.message); }
+  });
+
+  console.log('[jobs] Cron jobs started: syncGames (1min), settleBets (5min), dailySync (04:00), generateMiniGames (03:00)');
 }
 
 module.exports = { startJobs, startCronJobs: startJobs };

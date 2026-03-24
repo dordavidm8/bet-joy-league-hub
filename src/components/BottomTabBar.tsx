@@ -1,12 +1,12 @@
-import { Home, Trophy, FileText, HelpCircle, User, Bot } from "lucide-react";
+import { Home, Trophy, FileText, HelpCircle, User, Bot, Gamepad2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "@/context/AppContext";
 
 const tabs = [
   { path: "/", icon: Home, label: "בית" },
   { path: "/leagues", icon: Trophy, label: "ליגות" },
+  { path: "/minigames", icon: Gamepad2, label: "אתגרים" },
   { path: "/betslip", icon: FileText, label: "תלוש" },
-  { path: "/quiz", icon: HelpCircle, label: "חידון" },
   { path: "/expert", icon: Bot, label: "מומחה" },
   { path: "/profile", icon: User, label: "פרופיל" },
 ];

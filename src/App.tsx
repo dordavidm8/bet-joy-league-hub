@@ -19,6 +19,8 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import NotFound from "./pages/NotFound.tsx";
 import AllGamesPage from "@/pages/AllGamesPage";
 import FinishedGamesPage from "@/pages/FinishedGamesPage";
+import MiniGamesHubPage from "@/pages/MiniGamesHubPage";
+import MiniGamePlayPage from "@/pages/MiniGamePlayPage";
 import { useState } from "react";
 
 const queryClient = new QueryClient();
@@ -54,6 +56,8 @@ function AuthGate() {
       <Route path="/games" element={<AppLayout><AllGamesPage /></AppLayout>} />
       <Route path="/games/finished" element={<AppLayout><FinishedGamesPage /></AppLayout>} />
       <Route path="/betslip" element={<AppLayout><BetSlipPage /></AppLayout>} />
+      <Route path="/minigames" element={<AppLayout><MiniGamesHubPage /></AppLayout>} />
+      <Route path="/minigames/:gameType" element={<AppLayout><MiniGamePlayPage /></AppLayout>} />
       <Route path="/leagues" element={<AppLayout><LeaguesPage /></AppLayout>} />
       <Route path="/quiz" element={<AppLayout><QuizPage /></AppLayout>} />
       <Route path="/expert" element={<AppLayout><ExpertChatPage /></AppLayout>} />

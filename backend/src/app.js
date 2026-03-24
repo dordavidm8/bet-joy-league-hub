@@ -17,6 +17,7 @@ const leagueRoutes = require('./routes/leagues');
 const leaderboardRoutes = require('./routes/leaderboard');
 const quizRoutes = require('./routes/quiz');
 const adminRoutes = require('./routes/admin');
+const minigamesRoutes = require('./routes/minigames');
 
 const app = express();
 const server = http.createServer(app);
@@ -53,6 +54,7 @@ app.use('/api/leagues', leagueRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/minigames', minigamesRoutes);
 
 app.use(errorHandler);
 

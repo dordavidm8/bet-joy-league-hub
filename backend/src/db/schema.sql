@@ -163,3 +163,26 @@ CREATE INDEX IF NOT EXISTS idx_bets_user_id ON bets(user_id);
 CREATE INDEX IF NOT EXISTS idx_bets_status ON bets(status);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON point_transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_league_members_user ON league_members(user_id);
+
+CREATE TABLE IF NOT EXISTS daily_mini_games (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_type VARCHAR(20) NOT NULL CHECK (game_type IN ('missing_xi', 'who_are_ya', 'career_path', 'box2box', 'guess_club')),
+  play_date DATE NOT NULL,
+  puzzle_data JSONB NOT NULL,
+  solution JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_mini_games_date ON daily_mini_games(play_date, game_type);
+
+CREATE TABLE IF NOT EXISTS player_clubs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_name VARCHAR(100) NOT NULL,
+  club_name VARCHAR(100) NOT NULL,
+  years JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(player_name, club_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_clubs_name ON player_clubs(player_name);
+CREATE INDEX IF NOT EXISTS idx_player_clubs_club ON player_clubs(club_name);
