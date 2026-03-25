@@ -42,6 +42,23 @@ if (!admin.apps.length) {
     }
   }
 
+  // Option 4: Individual environment variables
+  if (!initialized && process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        })
+      });
+      console.log('✅ Firebase initialized from individual environment variables');
+      initialized = true;
+    } catch (err) {
+      console.warn('⚠️  Firebase: failed to initialize from individual environment variables:', err.message);
+    }
+  }
+
   if (!initialized) {
     console.warn('⚠️  No Firebase credentials configured — auth disabled');
   }

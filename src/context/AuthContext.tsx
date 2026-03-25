@@ -37,9 +37,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const data = await getMe();
           setBackendUser(data.user);
-        } catch {
-          // User exists in Firebase but not in backend yet — happens on first load
-          setBackendUser(null);
+        } catch (err: any) {
+          // If user exists in Firebase but not in backend (e.g. DB wiped), try auto-registration
+          try {
+            const name = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
+            const regData = await registerUser(name, undefined, fbUser.photoURL || undefined);
+            setBackendUser(regData.user);
+          } catch (regErr) {
+            console.error('Auto-registration failed:', regErr);
+            setBackendUser(null);
+          }
         }
       } else {
         setBackendUser(null);

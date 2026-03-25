@@ -11,7 +11,7 @@ const FinishedGamesPage = () => {
 
   const { data: gamesData, isLoading } = useQuery({
     queryKey: ["finished-games"],
-    queryFn: () => getFinishedGames(7),
+    queryFn: () => getFinishedGames(30),
   });
 
   const { data: betsData } = useQuery({
@@ -40,7 +40,7 @@ const FinishedGamesPage = () => {
           <ArrowRight size={16} /> חזרה
         </button>
         <h2 className="text-2xl font-black">תוצאות</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">7 ימים אחרונים</p>
+        <p className="text-xs text-muted-foreground mt-0.5">30 ימים אחרונים</p>
       </div>
 
       {/* Toggle */}

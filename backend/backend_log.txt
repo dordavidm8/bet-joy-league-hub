@@ -1,0 +1,33 @@
+
+> kickoff-backend@1.0.0 dev
+> node --watch src/app.js
+
+✅ Firebase initialized from individual environment variables
+Kickoff backend running on port 4000 — 🚀 LIVE MODE
+[jobs] Cron jobs started: syncGames (1min), settleBets (5min), dailySync (04:00), generateMiniGames (03:00)
+[0mGET /api/auth/me [33m404[0m 1547.103 ms - 26[0m
+[0mGET /api/auth/me [33m404[0m 1672.958 ms - 26[0m
+[0mPOST /api/auth/register [32m201[0m 685.110 ms - 318[0m
+[0mPOST /api/auth/register [32m201[0m 693.775 ms - 417[0m
+[0mGET /api/games?status=scheduled&from=2026-03-25&to=2026-04-01 [32m200[0m 231.919 ms - 12[0m
+[0mGET /api/games?featured=true&status=scheduled [32m200[0m 400.368 ms - 24843[0m
+[0mGET /api/auth/me [32m200[0m 231.546 ms - 318[0m
+[0mGET /api/games?status=scheduled&from=2026-03-25&to=2026-04-01 [36m304[0m 229.190 ms - -[0m
+[syncGames] Fetching games from ESPN…
+[syncGames] Got 197 games
+[syncGames] Done — inserted 0, updated 197
+[syncGames] Fetching games from ESPN…
+[syncGames] Got 197 games
+[syncGames] Done — inserted 0, updated 197
+[syncGames] Fetching games from ESPN…
+[syncGames] Got 197 games
+[settleBets] No pending bets for finished games
+[syncGames] Done — inserted 0, updated 197
+[syncGames] Fetching games from ESPN…
+[syncGames] Got 197 games
+[syncGames] Done — inserted 0, updated 197
+[syncGames] Fetching games from ESPN…
+[syncGames] Got 197 games
+[syncGames] Done — inserted 0, updated 197
+[syncGames] Fetching games from ESPN…
+[syncGames] Got 197 games

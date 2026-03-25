@@ -48,7 +48,7 @@ router.get('/', async (req, res, next) => {
 
 // GET /api/games/results — finished games, last N days (default 7)
 router.get('/results', async (req, res, next) => {
-  const days = parseInt(req.query.days) || 7;
+  const days = parseInt(req.query.days) || 30;
   try {
     const result = await pool.query(
       `SELECT g.*, c.name AS competition_name
