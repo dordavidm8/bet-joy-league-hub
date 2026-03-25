@@ -74,7 +74,7 @@ const MiniGamesHubPage: React.FC = () => {
   };
 
   const handlePlay = (gameType: string, id: string) => {
-    navigate(`/minigames/${gameType}?id=${id}`);
+    navigate(`/minigames/play/${id}`);
   };
 
   return (

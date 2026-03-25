@@ -57,7 +57,7 @@ function AuthGate() {
       <Route path="/games/finished" element={<AppLayout><FinishedGamesPage /></AppLayout>} />
       <Route path="/betslip" element={<AppLayout><BetSlipPage /></AppLayout>} />
       <Route path="/minigames" element={<AppLayout><MiniGamesHubPage /></AppLayout>} />
-      <Route path="/minigames/:gameType" element={<AppLayout><MiniGamePlayPage /></AppLayout>} />
+      <Route path="/minigames/play/:id" element={<AppLayout><MiniGamePlayPage /></AppLayout>} />
       <Route path="/leagues" element={<AppLayout><LeaguesPage /></AppLayout>} />
       <Route path="/quiz" element={<AppLayout><QuizPage /></AppLayout>} />
       <Route path="/expert" element={<AppLayout><ExpertChatPage /></AppLayout>} />

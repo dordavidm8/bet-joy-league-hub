@@ -95,8 +95,6 @@ async function generateCareerPath() {
   const $ = cheerio.load(res.data);
   const transfers = [];
 
-  // Wikipedia Infobox parsing is tricky but "Club career" section usually has it
-  // We'll target the infobox rows that have a year range
   $('.infobox tr').each((i, el) => {
     const yearText = $(el).find('th').text().trim();
     if (/^\d{4}–(\d{4}|present)?$/.test(yearText) || /^\d{4}–$/.test(yearText)) {
@@ -104,13 +102,15 @@ async function generateCareerPath() {
        if (tds.length >= 2) {
           const club = $(tds[0]).text().trim().replace(/\[\d+\]/g, '');
           const stats = $(tds[1]).text().trim();
-          const match = stats.match(/\((\d+)\)/); // Matches (goals)
+          const match = stats.match(/\((\d+)\)/);
           const appearances = stats.split('(')[0].trim();
           const goals = match ? match[1] : '0';
           
           if (club && club !== 'Total') {
             const clubSlug = club.toLowerCase().replace(/[`']/g, '').replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-            const clubLogo = `https://alt.p.fastly.net/api/v1/logo?slug=${clubSlug}&size=100` || `https://logo.clearbit.com/${clubSlug.replace(/-/g, '')}.com`;
+            // Using clearbit as a better fallback than fastly
+            const clubLogo = `https://logo.clearbit.com/${clubSlug.replace(/-/g, '')}.com?size=100`;
+            
             transfers.push({ 
               season: yearText, 
               club, 
@@ -220,9 +220,15 @@ async function generateWhoAreYa() {
     return data;
   };
 
+  let image_url = infobox.find('.infobox-image img').attr('src');
+  if (image_url && !image_url.startsWith('http')) {
+    image_url = 'https:' + image_url;
+  }
+
   let nationality = getInfoboxData('National team') || getInfoboxData('Nationalité') || '';
   if (!nationality || /\d{4}/.test(nationality)) {
-      nationality = infobox.find('th:contains("Place of birth")').next().find('a').last().text().trim() || 'Egypt';
+      const birthRow = infobox.find('tr').filter((i, el) => $(el).text().includes('Place of birth'));
+      nationality = birthRow.find('a').last().text().trim() || 'World';
   }
 
   const club = getInfoboxData('Current team') || 'Liverpool';
@@ -231,10 +237,11 @@ async function generateWhoAreYa() {
   return {
     game_type: 'who_are_ya',
     puzzle_data: {
+      image_url,
       nationality: nationality.replace(/\[\d+\]/g, '').split(/[()]/)[0].split(',').pop().trim(),
       club: club.replace(/\[\d+\]/g, '').trim(),
       position: position.split(',')[0].trim(),
-      age: 25 
+      age: 26 
     },
     solution: { secret: playerName.replace(/_/g, ' ') }
   };

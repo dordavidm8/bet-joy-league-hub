@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import GuessClubGame from '../components/minigames/GuessClubGame';
 import WhoAreYaGame from '../components/minigames/WhoAreYaGame';
 import CareerPathGame from '../components/minigames/CareerPathGame';
@@ -32,12 +33,39 @@ const MiniGamePlayPage: React.FC = () => {
     fetchPuzzle();
   }, [id, navigate]);
 
-  const handleSolve = (isCorrect: boolean) => {
+  const { firebaseUser, refreshUser } = useAuth();
+
+  const handleSolve = async (isCorrect: boolean) => {
     console.log('[MiniGameDebug] Attempt Result:', isCorrect, 'Solution was:', puzzle?.solution);
     
-    if (isCorrect) {
-      localStorage.setItem(`minigame_completed_${id}`, 'true');
+    if (firebaseUser) {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/minigames/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            puzzle_id: id,
+            is_correct: isCorrect
+          })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('[MiniGameDebug] Submit Response:', data);
+          if (isCorrect) {
+            localStorage.setItem(`minigame_completed_${id}`, 'true');
+            await refreshUser(); // Update points in header
+          }
+        }
+      } catch (err) {
+        console.error('Failed to submit mini game result:', err);
+      }
     }
+    
     setModalState({ open: true, correct: isCorrect });
   };
 
