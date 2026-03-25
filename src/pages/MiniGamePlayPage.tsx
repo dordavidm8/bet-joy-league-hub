@@ -27,8 +27,10 @@ const MiniGamePlayPage: React.FC = () => {
         if (res.ok) {
           const list = await res.json();
           const target = list.find((p: any) => p.id === id);
-          if (target) setPuzzle(target);
-          else navigate('/minigames');
+          if (target) {
+            console.log('[MiniGameDebug] Puzzle:', target);
+            setPuzzle(target);
+          } else navigate('/minigames');
         }
       } catch (err) {
         console.error(err);
@@ -40,6 +42,9 @@ const MiniGamePlayPage: React.FC = () => {
   }, [id, navigate]);
 
   const handleSolve = (isCorrect: boolean) => {
+    // Debug log to help identify failures
+    console.log('[MiniGameDebug] Attempt Result:', isCorrect, 'Solution was:', puzzle?.solution);
+    
     if (isCorrect) {
       localStorage.setItem(`minigame_completed_${id}`, 'true');
       alert('תשובה נכונה! כל הכבוד');

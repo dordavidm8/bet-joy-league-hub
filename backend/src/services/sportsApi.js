@@ -21,7 +21,7 @@ const DEFAULT_LEAGUES = Object.values(LEAGUE_SLUGS);
 // ── Fetch scoreboard for a league (last 7 days + next 30 days) ───────────────
 async function fetchScoreboard(leagueSlug) {
   const now = new Date();
-  const past   = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
+  const past   = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const pastStr = past.toISOString().slice(0, 10).replace(/-/g, '');
   const fromStr = now.toISOString().slice(0, 10).replace(/-/g, '');

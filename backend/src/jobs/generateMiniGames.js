@@ -3,9 +3,11 @@ const cheerio = require('cheerio');
 const sharp = require('sharp');
 const { Pool } = require('pg');
 
+const dbUrl = process.env.DATABASE_URL || '';
+const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionString: dbUrl,
+  ssl: !isLocal ? { rejectUnauthorized: false } : false,
 });
 
 const USER_AGENTS = [
@@ -110,6 +112,7 @@ async function generateCareerPath() {
             transfers.push({ 
               season: yearText, 
               club, 
+              clubLogo: `https://logo.clearbit.com/${club.toLowerCase().replace(/\s+/g, '')}.com`, // Fallback logo service
               appearances: parseInt(appearances) || 0, 
               goals: parseInt(goals) || 0 
             });
@@ -144,6 +147,7 @@ async function generateMissingXI() {
 
   let starters = [];
   let teamName = '';
+  let teamLogo = '';
   
   // Shuffle and try them all until one works
   const shuffled = [...verifiedMatches].sort(() => Math.random() - 0.5);
@@ -156,6 +160,7 @@ async function generateMissingXI() {
         const teamIdx = Math.random() < 0.5 ? 0 : 1;
         const roster = data.rosters[teamIdx];
         teamName = roster.team.displayName;
+        teamLogo = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href) || '';
         
         const allPlayers = (roster.roster || roster.entries || [])
           .map(e => ({
@@ -191,7 +196,7 @@ async function generateMissingXI() {
 
   return {
     game_type: 'missing_xi',
-    puzzle_data: { teamName, formation, players: puzzlePlayers, hidden_idx: hiddenIdx },
+    puzzle_data: { teamName, teamLogo, formation, players: puzzlePlayers, hidden_idx: hiddenIdx },
     solution: { secret: hiddenPlayerName }
   };
 }
@@ -305,16 +310,16 @@ async function saveMiniGame(game) {
   const query = `
     INSERT INTO daily_mini_games (game_type, play_date, puzzle_data, solution)
     VALUES ($1, CURRENT_DATE, $2, $3)
+    ON CONFLICT (game_type, play_date) DO UPDATE SET
+      puzzle_data = EXCLUDED.puzzle_data,
+      solution = EXCLUDED.solution
   `;
   try {
     await pool.query(query, [game.game_type, game.puzzle_data, game.solution]);
-    console.log(`[generateMiniGames] Saved ${game.game_type} to DB.`);
+    console.log(`[generateMiniGames] Saved/Updated ${game.game_type} in DB.`);
   } catch (err) {
-    if (err.code === '23505' || err.code === '23502') { 
-        console.log(`[generateMiniGames] Daily ${game.game_type} already exists or error.`, err.message);
-    } else {
-        throw err;
-    }
+    console.error(`[generateMiniGames] Error saving ${game.game_type}:`, err.message);
+    throw err;
   }
 }
 

@@ -25,21 +25,24 @@ const STUB_GAMES = [
   {
     id: GAME_1, api_id: 'g-001', competition_name: 'פרמייר ליג',
     home_team: "מנצ'סטר סיטי", away_team: 'ארסנל',
-    home_team_logo: null, away_team_logo: null,
+    home_team_logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/167.png',
+    away_team_logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/359.png',
     start_time: new Date(Date.now() + 2 * 3600 * 1000),
     status: 'scheduled', minute: null, home_score: null, away_score: null,
   },
   {
     id: GAME_2, api_id: 'g-002', competition_name: 'פרמייר ליג',
     home_team: 'ליברפול', away_team: "צ'לסי",
-    home_team_logo: null, away_team_logo: null,
+    home_team_logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/364.png',
+    away_team_logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/363.png',
     start_time: new Date(Date.now() - 35 * 60 * 1000),
     status: 'live', minute: 35, home_score: 1, away_score: 0,
   },
   {
     id: GAME_3, api_id: 'g-003', competition_name: 'ליגת העל',
     home_team: 'מכבי תל אביב', away_team: 'הפועל באר שבע',
-    home_team_logo: null, away_team_logo: null,
+    home_team_logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/1577.png',
+    away_team_logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/1580.png',
     start_time: new Date(Date.now() - 3 * 3600 * 1000),
     status: 'finished', minute: 90, home_score: 2, away_score: 1,
   },
@@ -140,6 +143,38 @@ const STUB_QUIZ = [
   },
 ];
 
+const STUB_DAILY_MINI_GAMES = [
+  {
+    id: 'stub_box2box_1',
+    game_type: 'box2box',
+    play_date: new Date().toISOString().split('T')[0],
+    puzzle_data: {
+      team1: 'ריאל מדריד',
+      team2: 'ברצלונה'
+    },
+    solution: {
+      secret: 'לואיס פיגו'
+    }
+  },
+  {
+    id: 'stub_career_path_1',
+    game_type: 'career_path',
+    play_date: new Date().toISOString().split('T')[0],
+    puzzle_data: {
+      clubs: [
+        { name: 'סנטוס', year: '2009-2013' },
+        { name: 'ברצלונה', year: '2013-2017' },
+        { name: 'פסז', year: '2017-2023' },
+        { name: 'אל הילאל', year: '2023-' }
+      ],
+      hint: 'כוכב ברזילאי'
+    },
+    solution: {
+      secret: 'ניימאר'
+    }
+  }
+];
+
 const STUB_TRANSACTIONS = [
   { id: 'tx-001', user_id: STUB_USER.id, amount: 500, type: 'signup', description: 'נקודות פתיחה', created_at: new Date('2026-01-01') },
   { id: 'tx-002', user_id: STUB_USER.id, amount: -150, type: 'bet_placed', description: 'הימור על מכבי תל אביב', created_at: new Date(Date.now() - 4 * 3600 * 1000) },
@@ -157,12 +192,28 @@ async function q(sql, params = []) {
 
   // Games
   if (s.includes('from games')) {
-    if (params[0] && STUB_GAMES.find(g => g.id === params[0])) {
-      return { rows: STUB_GAMES.filter(g => g.id === params[0]) };
+    let filtered = [...STUB_GAMES];
+    if (s.includes("status = $")) {
+      const status = params[0];
+      filtered = filtered.filter(g => g.status === status);
+    } else if (s.includes("status = 'live'")) {
+      filtered = filtered.filter(g => g.status === 'live');
+    } else if (s.includes("status = 'finished'")) {
+      filtered = filtered.filter(g => g.status === 'finished');
     }
-    if (s.includes("status = 'live'")) return { rows: STUB_GAMES.filter(g => g.status === 'live') };
-    if (s.includes("status = 'finished'") && s.includes('interval')) return { rows: STUB_GAMES.filter(g => g.status === 'finished') };
-    return { rows: STUB_GAMES };
+    
+    // Simple mock for "featured" (just return first few or all if featured is true)
+    if (s.includes('ilike %')) {
+       // ... existing code expects team list for featured, for now just return scheduled games if featured is requested
+       if (s.includes('g.home_team ilike')) {
+         filtered = filtered.filter(g => g.status === 'scheduled');
+       }
+    }
+
+    if (params[0] && !s.includes('$1 * interval') && filtered.find(g => g.id === params[0])) {
+      return { rows: filtered.filter(g => g.id === params[0]) };
+    }
+    return { rows: filtered };
   }
 
   // Bet questions
@@ -251,6 +302,9 @@ async function q(sql, params = []) {
   if (s.includes('count(*)') || s.includes('coalesce(')) {
     return { rows: [{ total_bets: '18', wins: '12', losses: '6', total_won: '4200', total_lost: '900', total_users: '5', new_today: '1', new_this_month: '5' }] };
   }
+
+  // Daily mini games
+  if (s.includes('from daily_mini_games')) return { rows: STUB_DAILY_MINI_GAMES };
 
   return { rows: [] };
 }

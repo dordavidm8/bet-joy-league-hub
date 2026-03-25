@@ -7,9 +7,11 @@ if (process.env.STUB_MODE === 'true') {
   pool = stubPool;
   console.log('🧪 DB: stub mode (no PostgreSQL needed)');
 } else {
+  const dbUrl = process.env.DATABASE_URL || '';
+  const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    connectionString: dbUrl,
+    ssl: !isLocal ? { rejectUnauthorized: false } : false,
   });
   pool.on('error', (err) => console.error('DB error:', err.message));
 }

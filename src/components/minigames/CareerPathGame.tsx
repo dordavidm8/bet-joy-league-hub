@@ -6,6 +6,7 @@ interface CareerPathGameProps {
   data: {
     transfers: Array<{
       club: string;
+      clubLogo?: string;
       season: string;
       appearances: number;
       goals: number;
@@ -56,7 +57,10 @@ const CareerPathGame: React.FC<CareerPathGameProps> = ({ data, solution, onSolve
                 </div>
                 <div className="flex flex-col flex-1 pb-4">
                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-sm text-foreground">{t.club}</span>
+                      <div className="flex items-center gap-2">
+                        {t.clubLogo && <img src={t.clubLogo} alt={t.club} className="w-5 h-5 object-contain opacity-80" onError={(e) => (e.currentTarget.style.display = 'none')} />}
+                        <span className="font-bold text-sm text-foreground">{t.club}</span>
+                      </div>
                       <span className="text-[10px] font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{t.season}</span>
                    </div>
                    <div className="flex gap-4 mt-1">

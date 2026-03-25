@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 interface MissingXIGameProps {
   data: {
     teamName: string;
+    teamLogo?: string;
     formation: string;
     players: { name: string; shirt: string }[];
     hidden_idx: number;
@@ -60,10 +61,13 @@ const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, solution, onSolve }
     <div className="w-full h-full flex flex-col pt-4">
       <header className="flex items-center justify-between px-4 mb-4">
          <button onClick={() => navigate(-1)} className="p-2 bg-card rounded-full shadow-sm"><ArrowLeft size={20} /></button>
-         <div className="text-center">
-            <h1 className="font-bold text-lg text-primary leading-tight">{data.teamName}</h1>
-            <p className="text-[10px] text-muted-foreground uppercase">ההרכב החסר • {data.formation}</p>
-         </div>
+          <div className="flex items-center gap-3">
+             {data.teamLogo && <img src={data.teamLogo} alt={data.teamName} className="w-10 h-10 object-contain drop-shadow-sm" />}
+             <div className="text-right">
+                <h1 className="font-bold text-lg text-primary leading-tight">{data.teamName}</h1>
+                <p className="text-[10px] text-muted-foreground uppercase">ההרכב החסר • {data.formation}</p>
+             </div>
+          </div>
          <button className="p-2 bg-card rounded-full shadow-sm"><HelpCircle size={20} /></button>
       </header>
 
