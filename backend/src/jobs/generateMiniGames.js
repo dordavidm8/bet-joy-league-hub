@@ -109,10 +109,12 @@ async function generateCareerPath() {
           const goals = match ? match[1] : '0';
           
           if (club && club !== 'Total') {
+            const clubSlug = club.toLowerCase().replace(/[`']/g, '').replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            const clubLogo = `https://alt.p.fastly.net/api/v1/logo?slug=${clubSlug}&size=100` || `https://logo.clearbit.com/${clubSlug.replace(/-/g, '')}.com`;
             transfers.push({ 
               season: yearText, 
               club, 
-              clubLogo: `https://logo.clearbit.com/${club.toLowerCase().replace(/\s+/g, '')}.com`, // Fallback logo service
+              clubLogo,
               appearances: parseInt(appearances) || 0, 
               goals: parseInt(goals) || 0 
             });
@@ -274,35 +276,36 @@ async function generateBox2Box() {
 
 async function generateGuessClub() {
   try {
-    const teamId = Math.floor(Math.random() * 60) + 33; // PL teams are around 33-60
-    const apiKey = process.env.API_FOOTBALL_KEY || 'demo';
-    const response = await axios.get(`https://v3.football.api-sports.io/teams?id=${teamId}`, {
-      headers: { 'x-apisports-key': apiKey },
-      timeout: 5000
-    });
+    const verifiedMatches = [
+      { league: 'eng.1', id: '671413' }, { league: 'eng.1', id: '671404' },
+      { league: 'esp.1', id: '674034' }, { league: 'ger.1', id: '675845' }
+    ];
+    const match = verifiedMatches[Math.floor(Math.random() * verifiedMatches.length)];
+    const data = await fetchEspnMatch(match.league, match.id);
     
-    if (response.data.response && response.data.response.length > 0) {
-      const team = response.data.response[0].team;
-      const club_name = team.name;
-      const logoUrl = team.logo;
+    if (data.rosters && data.rosters.length > 0) {
+      const roster = data.rosters[Math.floor(Math.random() * data.rosters.length)];
+      const club_name = roster.team.displayName;
+      const logoUrl = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href);
 
-      // Download and blur
-      const imgRes = await axios.get(logoUrl, { responseType: 'arraybuffer' });
-      const blurredBuffer = await sharp(imgRes.data).blur(25).toBuffer();
-      const base64 = `data:image/png;base64,${blurredBuffer.toString('base64')}`;
+      if (logoUrl) {
+        const imgRes = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+        const blurredBuffer = await sharp(imgRes.data).blur(30).toBuffer();
+        const base64 = `data:image/png;base64,${blurredBuffer.toString('base64')}`;
 
-      return {
-        game_type: 'guess_club',
-        puzzle_data: { logo_data: base64 },
-        solution: { secret: club_name }
-      };
+        return {
+          game_type: 'guess_club',
+          puzzle_data: { logo_data: base64 },
+          solution: { secret: club_name }
+        };
+      }
     }
-  } catch(e) { console.error('[generateGuessClub] fallback:', e.message); }
+  } catch(e) { console.error('[generateGuessClub] error:', e.message); }
 
   return {
     game_type: 'guess_club',
-    puzzle_data: { logo_data: 'https://placehold.co/100x100?text=Blurred' },
-    solution: { secret: 'Manchester United' }
+    puzzle_data: { logo_data: 'https://placehold.co/100x100?text=GuessTheClub' },
+    solution: { secret: 'Real Madrid' }
   };
 }
 

@@ -29,7 +29,12 @@ const CareerPathGame: React.FC<CareerPathGameProps> = ({ data, solution, onSolve
      .trim();
 
   const handleSubmit = () => {
-    const isCorrect = normalize(guess) === normalize(solution.secret);
+    const userGuess = normalize(guess);
+    const correctSecret = normalize(solution.secret);
+    
+    const isCorrect = userGuess === correctSecret || 
+                     (userGuess.length >= 3 && correctSecret.split(' ').some(part => part === userGuess));
+    
     onSolve(isCorrect);
   };
 

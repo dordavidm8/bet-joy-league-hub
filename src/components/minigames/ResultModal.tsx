@@ -1,0 +1,65 @@
+import React from 'react';
+import { CheckCircle2, XCircle, ArrowRight, RotateCcw } from 'lucide-react';
+
+interface ResultModalProps {
+  isOpen: boolean;
+  isCorrect: boolean;
+  solution: string;
+  onClose: () => void;
+  onRetry?: () => void;
+}
+
+const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, onClose, onRetry }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-card w-full max-w-sm rounded-[32px] shadow-2xl border border-border p-8 flex flex-col items-center text-center gap-6 animate-in zoom-in-95 duration-300">
+        <div className={`p-4 rounded-full ${isCorrect ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'}`}>
+          {isCorrect ? <CheckCircle2 size={64} /> : <XCircle size={64} />}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-black text-foreground">
+            {isCorrect ? 'כל הכבוד!' : 'אופס, לא בדיוק...'}
+          </h2>
+          <p className="text-muted-foreground text-sm font-medium px-4">
+            {isCorrect 
+              ? 'זיהיתם נכון! צברתם נקודות נוספות לדירוג שלכם.' 
+              : `התשובה הנכונה הייתה: ${solution}. אל תדאגו, תמיד יש אתגרים חדשים!`}
+          </p>
+        </div>
+
+        <div className="w-full flex flex-col gap-3 mt-2">
+          {isCorrect ? (
+            <button 
+              onClick={onClose}
+              className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg"
+            >
+              המשך למרכז האתגרים
+              <ArrowRight size={20} />
+            </button>
+          ) : (
+            <>
+              <button 
+                onClick={onRetry}
+                className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg"
+              >
+                נסו שוב
+                <RotateCcw size={18} />
+              </button>
+              <button 
+                onClick={onClose}
+                className="w-full bg-secondary text-secondary-foreground py-4 rounded-2xl font-bold hover:opacity-90 active:scale-95 transition-all"
+              >
+                חזרה לרשימה
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ResultModal;

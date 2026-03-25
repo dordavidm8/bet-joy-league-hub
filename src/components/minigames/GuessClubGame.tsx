@@ -23,7 +23,14 @@ const GuessClubGame: React.FC<GuessClubGameProps> = ({ data, solution, onSolve }
      .trim();
 
   const handleSubmit = () => {
-    const isCorrect = normalize(guess) === normalize(solution.secret);
+    const userGuess = normalize(guess);
+    const correctSecret = normalize(solution.secret);
+    
+    // Lax check: exact match OR if the secret contains the guess (e.g. "Brighton" in "Brighton & Hove Albion")
+    // but only if the guess is long enough (>= 3 chars) to avoid false positives
+    const isCorrect = userGuess === correctSecret || 
+                     (userGuess.length >= 3 && correctSecret.includes(userGuess));
+    
     onSolve(isCorrect);
   };
 

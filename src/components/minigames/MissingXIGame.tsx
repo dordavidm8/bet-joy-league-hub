@@ -28,7 +28,13 @@ const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, solution, onSolve }
      .trim();
 
   const handleSubmit = () => {
-    const isCorrect = normalize(guess) === normalize(solution.secret);
+    const userGuess = normalize(guess);
+    const correctSecret = normalize(solution.secret);
+    
+    // Lax check: exact match OR if the secret ends with the guess (e.g. "Messi" in "Lionel Messi")
+    const isCorrect = userGuess === correctSecret || 
+                     (userGuess.length >= 3 && correctSecret.split(' ').some(part => part === userGuess));
+    
     onSolve(isCorrect);
   };
 
