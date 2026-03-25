@@ -111,12 +111,19 @@ export interface BackendUser {
   username: string;
   email: string;
   avatar_url: string | null;
+  role: 'user' | 'admin';
   points_balance: number;
   total_bets: number;
   total_wins: number;
   referral_code: string;
   created_at: string;
 }
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+export const getAdminGames = () => request<{ games: any[] }>('/admin/games');
+export const updateAdminGame = (id: string, data: any) => 
+  request<{ game: any }>(`/admin/games/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const generateGames = () => request<{ message: string }>('/admin/games/generate', { method: 'POST' });
 
 export interface Game {
   id: string;

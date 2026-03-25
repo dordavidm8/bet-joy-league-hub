@@ -338,4 +338,11 @@ async function generateAllMiniGames() {
   }
 }
 
-module.exports = { generateAllMiniGames };
+module.exports = {
+  generateAllMiniGames,
+  generateMissingXI,
+  generateWhoAreYa,
+  generateCareerPath,
+  generateBox2Box,
+  generateGuessClub,
+};

@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMyBets, getMyReferralCode, updateAvatar, deleteAccount } from "@/lib/api";
 import AvatarUploader from "@/components/AvatarUploader";
 import { motion } from "framer-motion";
-import { LogOut, Copy, Check, Camera } from "lucide-react";
+import { LogOut, Copy, Check, Camera, Shield } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const ProfilePage = () => {
   const { backendUser, firebaseUser, signOut } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [showAvatarUploader, setShowAvatarUploader] = useState(false);
@@ -139,6 +141,15 @@ const ProfilePage = () => {
       {/* Settings */}
       <section className="flex flex-col gap-2">
         <span className="section-label">הגדרות</span>
+        {backendUser?.role === 'admin' && (
+          <button
+            onClick={() => navigate("/admin/games")}
+            className="card-kickoff flex items-center gap-3 text-right text-primary"
+          >
+            <Shield size={18} />
+            <span className="text-sm font-bold">פאנל ניהול (Admin)</span>
+          </button>
+        )}
         <button
           onClick={() => signOut()}
           className="card-kickoff flex items-center gap-3 text-right text-muted-foreground"

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, HelpCircle, Flag, Shield, User } from 'lucide-react';
+import { ArrowRight, HelpCircle, Flag, Shield, User, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 interface WhoAreYaGameProps {
   data: {
@@ -10,89 +11,86 @@ interface WhoAreYaGameProps {
     age: number;
     league?: string;
   };
-  solution: {
-    secret: string;
-  };
-  onSolve: (correct: boolean) => void;
+  solution: { secret: string };
+  onSolve: (answer: string) => void;
 }
-
 
 const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, solution, onSolve }) => {
   const [guess, setGuess] = useState('');
   const navigate = useNavigate();
 
-  const normalize = (s: string) => 
-    s.toLowerCase()
-     .normalize("NFD")
-     .replace(/[\u0300-\u036f]/g, "")
-     .trim();
+  const handleSubmit = () => { if (guess.trim()) onSolve(guess.trim()); };
 
-  const handleSubmit = () => {
-    const isCorrect = normalize(guess) === normalize(solution.secret);
-    onSolve(isCorrect);
-  };
+  const clues = [
+    { label: 'לאום',    value: data.nationality, icon: Flag    },
+    { label: 'מועדון',  value: data.club,         icon: Shield  },
+    { label: 'תפקיד',   value: data.position,     icon: User    },
+    { label: 'גיל',     value: String(data.age),  icon: Clock   },
+  ];
 
   return (
-    <div className="w-full h-full flex flex-col pt-4">
-      <header className="flex items-center justify-between px-4 mb-4">
-         <button onClick={() => navigate(-1)} className="p-2 bg-card rounded-full shadow-sm"><ArrowLeft size={20} /></button>
-         <div className="text-center">
-            <h1 className="font-bold text-lg text-primary leading-tight">מי אתה?</h1>
-            <p className="text-[10px] text-muted-foreground uppercase">זהו את השחקן</p>
-         </div>
-         <button className="p-2 bg-card rounded-full shadow-sm"><HelpCircle size={20} /></button>
+    <div className="w-full flex flex-col pt-2 pb-32">
+      {/* Top bar */}
+      <header className="flex items-center justify-between px-4 pb-4">
+        <button onClick={() => navigate(-1)} className="p-2 bg-card rounded-full shadow-sm"><ArrowRight size={20} /></button>
+        <div className="text-center">
+          <h1 className="font-black text-base text-primary">מי אתה?</h1>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">זהו את השחקן מהרמזים</p>
+        </div>
+        <button className="p-2 bg-card rounded-full shadow-sm"><HelpCircle size={20} /></button>
       </header>
 
-      <main className="px-4 pb-8 max-w-sm mx-auto w-full flex flex-col gap-6">
-        {/* Pixelated Portrait Mock */}
-        <section className="relative group mx-auto w-48 h-48 sm:w-64 sm:h-64 rounded-2xl overflow-hidden shadow-soft bg-card border border-border flex items-center justify-center">
-           {/* Fallback pattern if no image */}
-           <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-             <User size={80} className="text-primary/30 blur-sm" />
-           </div>
-           
-           <div className="absolute bottom-4 right-4 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-border">
-             <span className="text-xs font-bold text-foreground">מי זה?</span>
-           </div>
-        </section>
+      {/* Player silhouette */}
+      <div className="mx-4 mb-5 relative group">
+        <div className="rounded-3xl overflow-hidden bg-gradient-to-b from-card to-secondary/60 flex items-center justify-center" style={{ height: 200 }}>
+          <User size={96} className="text-muted-foreground/20 blur-[3px]" />
+          <div className="absolute inset-0 flex items-end p-4">
+            <div className="w-full bg-black/50 backdrop-blur-md rounded-2xl px-4 py-2 flex items-center justify-between border border-white/10">
+              <span className="text-white font-black text-sm">???</span>
+              <span className="text-white/60 text-[10px]">זהו את השחקן</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* Clues Section: Bento Layout */}
-        <section className="grid grid-cols-3 gap-3">
-          <div className="bg-card p-4 rounded-xl shadow-sm border border-border flex flex-col items-center justify-center gap-2 text-center">
-            <Flag className="text-primary" size={24} />
-            <span className="text-[10px] text-muted-foreground font-medium">לאום</span>
-            <span className="text-xs font-bold">{data.nationality || '?'}</span>
-          </div>
-          <div className="bg-card p-4 rounded-xl shadow-sm border border-border flex flex-col items-center justify-center gap-2 text-center">
-            <Shield className="text-primary" size={24} />
-            <span className="text-[10px] text-muted-foreground font-medium">מועדון</span>
-            <span className="text-xs font-bold">{data.club || '?'}</span>
-          </div>
-          <div className="bg-card p-4 rounded-xl shadow-sm border border-border flex flex-col items-center justify-center gap-2 text-center">
-            <User className="text-primary" size={24} />
-            <span className="text-[10px] text-muted-foreground font-medium">תפקיד</span>
-            <span className="text-xs font-bold">{data.position || '?'}</span>
-          </div>
-        </section>
+      {/* Clue bento grid */}
+      <div className="px-4 mb-5 grid grid-cols-2 gap-3">
+        {clues.map((clue, i) => {
+          const Icon = clue.icon;
+          return (
+            <motion.div
+              key={clue.label}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className="card-kickoff flex flex-col items-center gap-2 p-4 text-center"
+            >
+              <Icon className="text-primary" size={22} />
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{clue.label}</span>
+              <span className="text-sm font-black leading-tight">{clue.value || '—'}</span>
+            </motion.div>
+          );
+        })}
+      </div>
 
-        {/* Input Section */}
-        <section className="flex flex-col gap-4 mt-4">
-           <div className="relative">
-              <input 
-                value={guess}
-                onChange={e => setGuess(e.target.value)}
-                className="w-full bg-card border-none rounded-full py-4 px-6 text-center focus:ring-2 focus:ring-primary text-foreground font-medium shadow-sm outline-none" 
-                placeholder="הקלד את השם כאן..." 
-              />
-           </div>
-           <button 
-             onClick={handleSubmit}
-             className="w-full bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground py-4 rounded-full font-bold text-lg shadow-lg active:scale-95 transition-transform"
-           >
-             בדוק מי זה
-           </button>
-        </section>
-      </main>
+      {/* Input */}
+      <div className="px-4">
+        <input
+          value={guess}
+          onChange={e => setGuess(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+          className="w-full bg-card rounded-2xl py-4 px-5 text-center shadow-sm border border-border focus:ring-2 focus:ring-primary outline-none text-base"
+          placeholder="הקלד את שם השחקן..."
+          autoComplete="off"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!guess.trim()}
+          className="w-full mt-3 bg-primary disabled:opacity-40 text-primary-foreground font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all"
+        >
+          בדוק מי זה ✓
+        </button>
+      </div>
     </div>
   );
 };

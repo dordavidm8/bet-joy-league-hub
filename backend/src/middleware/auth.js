@@ -26,8 +26,7 @@ async function authenticate(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  const adminUids = (process.env.ADMIN_UIDS || '').split(',').map(u => u.trim()).filter(Boolean);
-  if (process.env.STUB_MODE === 'true' || adminUids.includes(req.user?.firebase_uid)) {
+  if (req.user?.role === 'admin') {
     return next();
   }
   res.status(403).json({ error: 'Admin access required' });
