@@ -3,9 +3,11 @@ const cheerio = require('cheerio');
 const sharp = require('sharp');
 const { Pool } = require('pg');
 
+const dbUrl = process.env.DATABASE_URL || '';
+const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionString: dbUrl,
+  ssl: !isLocal ? { rejectUnauthorized: false } : false,
 });
 
 const USER_AGENTS = [
@@ -93,8 +95,6 @@ async function generateCareerPath() {
   const $ = cheerio.load(res.data);
   const transfers = [];
 
-  // Wikipedia Infobox parsing is tricky but "Club career" section usually has it
-  // We'll target the infobox rows that have a year range
   $('.infobox tr').each((i, el) => {
     const yearText = $(el).find('th').text().trim();
     if (/^\d{4}–(\d{4}|present)?$/.test(yearText) || /^\d{4}–$/.test(yearText)) {
@@ -102,14 +102,19 @@ async function generateCareerPath() {
        if (tds.length >= 2) {
           const club = $(tds[0]).text().trim().replace(/\[\d+\]/g, '');
           const stats = $(tds[1]).text().trim();
-          const match = stats.match(/\((\d+)\)/); // Matches (goals)
+          const match = stats.match(/\((\d+)\)/);
           const appearances = stats.split('(')[0].trim();
           const goals = match ? match[1] : '0';
           
           if (club && club !== 'Total') {
+            const clubSlug = club.toLowerCase().replace(/[`']/g, '').replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            // Using clearbit as a better fallback than fastly
+            const clubLogo = `https://logo.clearbit.com/${clubSlug.replace(/-/g, '')}.com?size=100`;
+            
             transfers.push({ 
               season: yearText, 
               club, 
+              clubLogo,
               appearances: parseInt(appearances) || 0, 
               goals: parseInt(goals) || 0 
             });
@@ -144,6 +149,7 @@ async function generateMissingXI() {
 
   let starters = [];
   let teamName = '';
+  let teamLogo = '';
   
   // Shuffle and try them all until one works
   const shuffled = [...verifiedMatches].sort(() => Math.random() - 0.5);
@@ -156,6 +162,7 @@ async function generateMissingXI() {
         const teamIdx = Math.random() < 0.5 ? 0 : 1;
         const roster = data.rosters[teamIdx];
         teamName = roster.team.displayName;
+        teamLogo = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href) || '';
         
         const allPlayers = (roster.roster || roster.entries || [])
           .map(e => ({
@@ -191,7 +198,7 @@ async function generateMissingXI() {
 
   return {
     game_type: 'missing_xi',
-    puzzle_data: { teamName, formation, players: puzzlePlayers, hidden_idx: hiddenIdx },
+    puzzle_data: { teamName, teamLogo, formation, players: puzzlePlayers, hidden_idx: hiddenIdx },
     solution: { secret: hiddenPlayerName }
   };
 }
@@ -213,9 +220,15 @@ async function generateWhoAreYa() {
     return data;
   };
 
+  let image_url = infobox.find('.infobox-image img').attr('src');
+  if (image_url && !image_url.startsWith('http')) {
+    image_url = 'https:' + image_url;
+  }
+
   let nationality = getInfoboxData('National team') || getInfoboxData('Nationalité') || '';
   if (!nationality || /\d{4}/.test(nationality)) {
-      nationality = infobox.find('th:contains("Place of birth")').next().find('a').last().text().trim() || 'Egypt';
+      const birthRow = infobox.find('tr').filter((i, el) => $(el).text().includes('Place of birth'));
+      nationality = birthRow.find('a').last().text().trim() || 'World';
   }
 
   const club = getInfoboxData('Current team') || 'Liverpool';
@@ -224,10 +237,11 @@ async function generateWhoAreYa() {
   return {
     game_type: 'who_are_ya',
     puzzle_data: {
+      image_url,
       nationality: nationality.replace(/\[\d+\]/g, '').split(/[()]/)[0].split(',').pop().trim(),
       club: club.replace(/\[\d+\]/g, '').trim(),
       position: position.split(',')[0].trim(),
-      age: 25 
+      age: 26 
     },
     solution: { secret: playerName.replace(/_/g, ' ') }
   };
@@ -269,35 +283,36 @@ async function generateBox2Box() {
 
 async function generateGuessClub() {
   try {
-    const teamId = Math.floor(Math.random() * 60) + 33; // PL teams are around 33-60
-    const apiKey = process.env.API_FOOTBALL_KEY || 'demo';
-    const response = await axios.get(`https://v3.football.api-sports.io/teams?id=${teamId}`, {
-      headers: { 'x-apisports-key': apiKey },
-      timeout: 5000
-    });
+    const verifiedMatches = [
+      { league: 'eng.1', id: '671413' }, { league: 'eng.1', id: '671404' },
+      { league: 'esp.1', id: '674034' }, { league: 'ger.1', id: '675845' }
+    ];
+    const match = verifiedMatches[Math.floor(Math.random() * verifiedMatches.length)];
+    const data = await fetchEspnMatch(match.league, match.id);
     
-    if (response.data.response && response.data.response.length > 0) {
-      const team = response.data.response[0].team;
-      const club_name = team.name;
-      const logoUrl = team.logo;
+    if (data.rosters && data.rosters.length > 0) {
+      const roster = data.rosters[Math.floor(Math.random() * data.rosters.length)];
+      const club_name = roster.team.displayName;
+      const logoUrl = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href);
 
-      // Download and blur
-      const imgRes = await axios.get(logoUrl, { responseType: 'arraybuffer' });
-      const blurredBuffer = await sharp(imgRes.data).blur(25).toBuffer();
-      const base64 = `data:image/png;base64,${blurredBuffer.toString('base64')}`;
+      if (logoUrl) {
+        const imgRes = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+        const blurredBuffer = await sharp(imgRes.data).blur(30).toBuffer();
+        const base64 = `data:image/png;base64,${blurredBuffer.toString('base64')}`;
 
-      return {
-        game_type: 'guess_club',
-        puzzle_data: { logo_data: base64 },
-        solution: { secret: club_name }
-      };
+        return {
+          game_type: 'guess_club',
+          puzzle_data: { logo_data: base64 },
+          solution: { secret: club_name }
+        };
+      }
     }
-  } catch(e) { console.error('[generateGuessClub] fallback:', e.message); }
+  } catch(e) { console.error('[generateGuessClub] error:', e.message); }
 
   return {
     game_type: 'guess_club',
-    puzzle_data: { logo_data: 'https://placehold.co/100x100?text=Blurred' },
-    solution: { secret: 'Manchester United' }
+    puzzle_data: { logo_data: 'https://placehold.co/100x100?text=GuessTheClub' },
+    solution: { secret: 'Real Madrid' }
   };
 }
 
@@ -305,16 +320,16 @@ async function saveMiniGame(game) {
   const query = `
     INSERT INTO daily_mini_games (game_type, play_date, puzzle_data, solution)
     VALUES ($1, CURRENT_DATE, $2, $3)
+    ON CONFLICT (game_type, play_date) DO UPDATE SET
+      puzzle_data = EXCLUDED.puzzle_data,
+      solution = EXCLUDED.solution
   `;
   try {
     await pool.query(query, [game.game_type, game.puzzle_data, game.solution]);
-    console.log(`[generateMiniGames] Saved ${game.game_type} to DB.`);
+    console.log(`[generateMiniGames] Saved/Updated ${game.game_type} in DB.`);
   } catch (err) {
-    if (err.code === '23505' || err.code === '23502') { 
-        console.log(`[generateMiniGames] Daily ${game.game_type} already exists or error.`, err.message);
-    } else {
-        throw err;
-    }
+    console.error(`[generateMiniGames] Error saving ${game.game_type}:`, err.message);
+    throw err;
   }
 }
 

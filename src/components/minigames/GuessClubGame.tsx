@@ -23,11 +23,18 @@ const GuessClubGame: React.FC<GuessClubGameProps> = ({ data, solution, onSolve }
      .trim();
 
   const handleSubmit = () => {
-    const isCorrect = normalize(guess) === normalize(solution.secret);
+    const userGuess = normalize(guess);
+    const correctSecret = normalize(solution.secret);
+    
+    // Lax check: exact match OR if the secret contains the guess (e.g. "Brighton" in "Brighton & Hove Albion")
+    // but only if the guess is long enough (>= 3 chars) to avoid false positives
+    const isCorrect = userGuess === correctSecret || 
+                     (userGuess.length >= 3 && correctSecret.includes(userGuess));
+    
     onSolve(isCorrect);
   };
 
-  const isBase64 = data.logo_data.startsWith('data:image');
+  const isImageVisible = data.logo_data.startsWith('data:image') || data.logo_data.startsWith('http');
 
   return (
     <div className="w-full h-full flex flex-col pt-4">
@@ -43,7 +50,7 @@ const GuessClubGame: React.FC<GuessClubGameProps> = ({ data, solution, onSolve }
       <main className="px-4 pb-8 max-w-sm mx-auto w-full flex flex-col gap-8">
         {/* Blurred Logo Section */}
         <section className="mx-auto w-48 h-48 sm:w-64 sm:h-64 bg-card rounded-3xl shadow-soft border border-border flex items-center justify-center relative overflow-hidden group">
-           {isBase64 ? (
+           {isImageVisible ? (
              <img 
                src={data.logo_data} 
                alt="Blurred Club Logo" 

@@ -3,12 +3,13 @@ import { getNextQuestion, answerQuestion } from "@/lib/api";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X } from "lucide-react";
+import { Check, X, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 
 const QuizPage = () => {
   const queryClient = useQueryClient();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [result, setResult] = useState<{ correct: boolean; correct_option: string; points_earned: number } | null>(null);
+  const [showModal, setShowModal] = useState(false);
   const [sessionScore, setSessionScore] = useState(0);
   const [streak, setStreak] = useState(0);
 
@@ -22,6 +23,7 @@ const QuizPage = () => {
       answerQuestion(data!.question!.id, selected_option),
     onSuccess: (res) => {
       setResult(res);
+      setShowModal(true);
       if (res.correct) {
         setSessionScore((s) => s + res.points_earned);
         setStreak((s) => s + 1);
@@ -39,6 +41,7 @@ const QuizPage = () => {
   };
 
   const handleNext = () => {
+    setShowModal(false);
     setSelectedKey(null);
     setResult(null);
     refetch();
@@ -93,8 +96,9 @@ const QuizPage = () => {
 
           <div className="flex flex-col gap-2">
             {options.map((option, idx) => {
-              const isSelected = selectedKey === option;
-              const isCorrect = result?.correct_option === option;
+              const optionKey = ["A", "B", "C", "D"][idx];
+              const isSelected = selectedKey === optionKey;
+              const isCorrect = result?.correct_option === optionKey;
               const isWrong = isSelected && !result?.correct;
 
               let cls = "justify-between py-3 px-4 rounded-xl border text-sm font-semibold transition-colors text-right w-full flex items-center";
@@ -109,7 +113,7 @@ const QuizPage = () => {
               }
 
               return (
-                <button key={idx} className={cls} onClick={() => handleSelect(option)} disabled={!!result}>
+                <button key={idx} className={cls} onClick={() => handleSelect(optionKey)} disabled={!!result}>
                   <span>{option}</span>
                   {result && isCorrect && <Check size={16} />}
                   {result && isWrong && <X size={16} />}
@@ -118,17 +122,52 @@ const QuizPage = () => {
             })}
           </div>
 
-          {result && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
-              <p className={`text-center font-bold ${result.correct ? "text-primary" : "text-muted-foreground"}`}>
-                {result.correct ? `🎉 נכון! +${result.points_earned} נקודות` : "❌ לא נכון"}
-              </p>
-              <Button variant="cta" size="lg" onClick={handleNext}>
-                שאלה הבאה
-              </Button>
-            </motion.div>
-          )}
         </motion.div>
+      </AnimatePresence>
+
+      {/* Result Modal */}
+      <AnimatePresence>
+        {showModal && result && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="bg-card w-full max-w-sm rounded-[32px] shadow-2xl border border-border p-8 flex flex-col items-center text-center gap-6"
+            >
+              <div className={`p-4 rounded-full ${result.correct ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
+                {result.correct ? <CheckCircle2 size={64} /> : <XCircle size={64} />}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <h2 className="text-2xl font-black text-foreground">
+                  {result.correct ? 'כל הכבוד!' : 'אופס, לא נכון'}
+                </h2>
+                {result.correct ? (
+                  <p className="text-primary text-xl font-black">+{result.points_earned} נקודות!</p>
+                ) : (
+                  <p className="text-muted-foreground text-sm font-medium px-4">
+                    התשובה הנכונה הייתה אפשרות {result.correct_option}. בהצלחה בשאלה הבאה!
+                  </p>
+                )}
+              </div>
+
+              <button
+                onClick={handleNext}
+                className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg"
+              >
+                שאלה הבאה
+                <ArrowRight size={20} />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

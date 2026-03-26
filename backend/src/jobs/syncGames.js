@@ -8,15 +8,16 @@ async function upsertGame(client, game) {
   const res = await client.query(
     `INSERT INTO games
        (espn_id, competition_id, home_team, away_team, home_team_logo, away_team_logo,
-        start_time, status, minute, score_home, score_away, venue)
+        start_time, status, minute, score_home, score_away, venue, espn_odds)
      VALUES ($1,
        (SELECT id FROM competitions WHERE slug = $2 LIMIT 1),
-       $3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       $3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
      ON CONFLICT (espn_id) DO UPDATE SET
        status      = EXCLUDED.status,
        minute      = EXCLUDED.minute,
        score_home  = EXCLUDED.score_home,
        score_away  = EXCLUDED.score_away,
+       espn_odds   = EXCLUDED.espn_odds,
        updated_at  = NOW()
      RETURNING id, (xmax = 0) AS inserted`,
     [
@@ -25,6 +26,7 @@ async function upsertGame(client, game) {
       game.home_team_logo, game.away_team_logo,
       game.start_time, game.status, game.minute,
       game.score_home, game.score_away, game.venue,
+      JSON.stringify(game.espn_odds)
     ]
   );
   return res.rows[0];
@@ -90,9 +92,11 @@ async function syncGames() {
   try {
     await client.query('BEGIN');
     await ensureCompetitions(client, slugs);
+    console.log(`[syncGames] Competitions verified: ${slugs.join(', ')}`);
 
     let inserted = 0, updated = 0;
-    for (const game of games) {
+    for (let j = 0; j < games.length; j++) {
+      const game = games[j];
       const row = await upsertGame(client, game);
       if (row.inserted) {
         await seedBetQuestions(client, row.id, game);
@@ -100,6 +104,7 @@ async function syncGames() {
       } else {
         updated++;
       }
+      if ((j + 1) % 50 === 0) console.log(`[syncGames] Processed ${j + 1}/${games.length} games…`);
     }
 
     await client.query('COMMIT');

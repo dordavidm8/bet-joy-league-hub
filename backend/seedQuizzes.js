@@ -7,21 +7,21 @@ const questions = [
     options: ["כריסטיאנו רונאלדו", "ליונל מסי", "רוברט לבנדובסקי", "קארים בנזמה"],
     correct_option: "A",
     category: "general",
-    points_reward: 100
+    points_reward: 500
   },
   {
     question_text: "איזו נבחרת זכתה במונדיאל 2022?",
     options: ["צרפת", "ארגנטינה", "ברזיל", "מרוקו"],
     correct_option: "B",
     category: "general",
-    points_reward: 100
+    points_reward: 500
   },
   {
     question_text: "באיזו קבוצה משחק ארלינג הולאנד (2024)?",
     options: ["באיירן מינכן", "ריאל מדריד", "מנצ'סטר סיטי", "בורוסיה דורטמונד"],
     correct_option: "C",
     category: "general",
-    points_reward: 50
+    points_reward: 500
   }
 ];
 

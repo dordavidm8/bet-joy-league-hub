@@ -1,5 +1,12 @@
 const axios = require('axios');
 
+function americanToDecimal(american) {
+  const val = parseInt(american);
+  if (isNaN(val)) return null;
+  if (val > 0) return parseFloat((1 + val / 100).toFixed(2));
+  return parseFloat((1 + 100 / Math.abs(val)).toFixed(2));
+}
+
 let _oddsCache = {}; // { 'HomeTeam|AwayTeam': { home_odds, draw_odds, away_odds } }
 function setOddsCache(cache) { _oddsCache = cache; }
 
@@ -21,7 +28,7 @@ const DEFAULT_LEAGUES = Object.values(LEAGUE_SLUGS);
 // ── Fetch scoreboard for a league (last 7 days + next 30 days) ───────────────
 async function fetchScoreboard(leagueSlug) {
   const now = new Date();
-  const past   = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
+  const past   = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const pastStr = past.toISOString().slice(0, 10).replace(/-/g, '');
   const fromStr = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -54,29 +61,46 @@ function mapEvent(event, leagueSlug) {
   const away   = comp?.competitors?.find(c => c.homeAway === 'away');
   if (!home || !away) return null;
 
-  const espnStatus = status?.type?.name; // 'STATUS_SCHEDULED' | 'STATUS_IN_PROGRESS' | 'STATUS_FINAL'
+  const espnStatus = status?.type?.name;
+  const isCompleted = status?.type?.completed || espnStatus === 'STATUS_FINAL' || espnStatus === 'STATUS_FULL_TIME';
+  
   let gameStatus = 'scheduled';
-  if (espnStatus === 'STATUS_IN_PROGRESS') gameStatus = 'live';
-  else if (espnStatus === 'STATUS_FINAL')  gameStatus = 'finished';
+  if (espnStatus && (espnStatus.includes('IN_PROGRESS') || espnStatus.includes('LIVE'))) {
+    gameStatus = 'live';
+  } else if (isCompleted) {
+    gameStatus = 'finished';
+  }
 
-  const minute = espnStatus === 'STATUS_IN_PROGRESS'
+  const minute = gameStatus === 'live'
     ? parseInt(status?.displayClock) || null
     : null;
 
-  return {
+  const mapped = {
     espn_id:        event.id,
     competition_slug: leagueSlug,
     home_team:      home.team.displayName,
     away_team:      away.team.displayName,
-    home_team_logo: home.team.logo || null,
-    away_team_logo: away.team.logo || null,
+    home_team_logo: home.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${home.team.id}.png`,
+    away_team_logo: away.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${away.team.id}.png`,
     start_time:     new Date(event.date),
     status:         gameStatus,
     minute:         minute,
     score_home:     home.score !== undefined && home.score !== '' ? parseInt(home.score) : null,
     score_away:     away.score !== undefined && away.score !== '' ? parseInt(away.score) : null,
     venue:          comp?.venue?.fullName || null,
+    espn_odds:      null
   };
+
+  const oddsObj = comp?.odds?.[0];
+  if (oddsObj && oddsObj.moneyline) {
+    const h = americanToDecimal(oddsObj.moneyline.home?.close?.odds || oddsObj.moneyline.home?.open?.odds);
+    const a = americanToDecimal(oddsObj.moneyline.away?.close?.odds || oddsObj.moneyline.away?.open?.odds);
+    const d = americanToDecimal(oddsObj.moneyline.draw?.close?.odds || oddsObj.moneyline.draw?.open?.odds);
+    if (h && a && d) {
+      mapped.espn_odds = { home_odds: h, away_odds: a, draw_odds: d };
+    }
+  }
+  return mapped;
 }
 
 // ── Get all upcoming + live games across default leagues ─────────────────────
@@ -112,8 +136,8 @@ function buildBetQuestions(game) {
   const h = game.home_team;
   const a = game.away_team;
 
-  // Try to use real odds from The Odds API cache, fall back to defaults
-  const realOdds = _oddsCache[`${h}|${a}`] || _oddsCache[`${a}|${h}`];
+  // Priority: 1. ESPN live odds, 2. The Odds API cache, 3. Defaults
+  const realOdds = game.espn_odds || _oddsCache[`${h}|${a}`] || _oddsCache[`${a}|${h}`];
   const homeOdds = realOdds?.home_odds ?? 2.10;
   const drawOdds = realOdds?.draw_odds ?? 3.20;
   const awayOdds = realOdds?.away_odds ?? 2.80;
