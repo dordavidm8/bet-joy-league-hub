@@ -64,8 +64,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, username: string, referralCode?: string) => {
     await createUserWithEmailAndPassword(auth, email, password);
-    const data = await registerUser(username, referralCode);
-    setBackendUser(data.user);
+    try {
+      const data = await registerUser(username, referralCode);
+      setBackendUser(data.user);
+    } catch (err: any) {
+      // If auto-registration already fired via onAuthStateChanged, just fetch existing user
+      if (err?.status === 409 || err?.message?.includes('409') || err?.message?.includes('already exists')) {
+        const data = await getMe();
+        setBackendUser(data.user);
+      } else {
+        throw err;
+      }
+    }
   };
 
   const signInWithGoogle = async (username?: string) => {
