@@ -12,7 +12,12 @@ const MiniGamePlayPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [puzzle, setPuzzle] = useState<any>(null);
-  const [modalState, setModalState] = useState<{ open: boolean; correct: boolean }>({ open: false, correct: false });
+  const [modalState, setModalState] = useState<{
+    open: boolean;
+    correct: boolean;
+    pointsEarned: number;
+    submitError: string | null;
+  }>({ open: false, correct: false, pointsEarned: 0, submitError: null });
 
   useEffect(() => {
     async function fetchPuzzle() {
@@ -36,8 +41,9 @@ const MiniGamePlayPage: React.FC = () => {
   const { firebaseUser, refreshUser } = useAuth();
 
   const handleSolve = async (isCorrect: boolean) => {
-    console.log('[MiniGameDebug] Attempt Result:', isCorrect, 'Solution was:', puzzle?.solution);
-    
+    let pointsEarned = 0;
+    let submitError: string | null = null;
+
     if (firebaseUser) {
       try {
         const token = await firebaseUser.getIdToken();
@@ -48,26 +54,28 @@ const MiniGamePlayPage: React.FC = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            puzzle_id: id,
-            is_correct: isCorrect
-          })
+          body: JSON.stringify({ puzzle_id: id, is_correct: isCorrect })
         });
-        
+
         if (res.ok) {
           const data = await res.json();
-          console.log('[MiniGameDebug] Submit Response:', data);
-          if (isCorrect) {
+          pointsEarned = data.points_added ?? 0;
+          if (isCorrect && pointsEarned > 0) {
             localStorage.setItem(`minigame_completed_${id}`, 'true');
-            await refreshUser(); // Update points in header
+            await refreshUser();
           }
+        } else {
+          const body = await res.json().catch(() => ({}));
+          submitError = body.error || `שגיאה ${res.status}`;
         }
-      } catch (err) {
-        console.error('Failed to submit mini game result:', err);
+      } catch (err: any) {
+        submitError = 'לא ניתן להתחבר לשרת';
       }
+    } else {
+      submitError = 'יש להתחבר כדי לצבור נקודות';
     }
-    
-    setModalState({ open: true, correct: isCorrect });
+
+    setModalState({ open: true, correct: isCorrect, pointsEarned, submitError });
   };
 
   const handleCloseModal = () => {
@@ -103,10 +111,12 @@ const MiniGamePlayPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-foreground pb-20 font-hebrew" dir="rtl">
       {renderGame()}
-      <ResultModal 
-        isOpen={modalState.open} 
-        isCorrect={modalState.correct} 
+      <ResultModal
+        isOpen={modalState.open}
+        isCorrect={modalState.correct}
         solution={puzzle.solution.secret}
+        pointsEarned={modalState.pointsEarned}
+        submitError={modalState.submitError}
         onClose={handleCloseModal}
         onRetry={handleRetry}
       />

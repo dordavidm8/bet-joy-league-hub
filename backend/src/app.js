@@ -42,9 +42,11 @@ app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(morgan('dev'));
 app.use(express.json());
 
-app.get('/health', (req, res) =>
-  res.json({ status: 'ok', stub: process.env.STUB_MODE === 'true', ts: new Date() })
-);
+app.get('/health', (req, res) => {
+  const admin = require('./config/firebase');
+  const firebaseReady = admin.apps.length > 0;
+  res.json({ status: 'ok', stub: process.env.STUB_MODE === 'true', firebase: firebaseReady, ts: new Date() });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
