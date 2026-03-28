@@ -1,15 +1,17 @@
 import React from 'react';
-import { CheckCircle2, XCircle, ArrowRight, RotateCcw } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, RotateCcw, AlertCircle } from 'lucide-react';
 
 interface ResultModalProps {
   isOpen: boolean;
   isCorrect: boolean;
   solution: string;
+  pointsEarned?: number;
+  submitError?: string | null;
   onClose: () => void;
   onRetry?: () => void;
 }
 
-const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, onClose, onRetry }) => {
+const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, pointsEarned = 0, submitError, onClose, onRetry }) => {
   if (!isOpen) return null;
 
   return (
@@ -23,16 +25,27 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, 
           <h2 className="text-2xl font-black text-foreground">
             {isCorrect ? 'כל הכבוד!' : 'אופס, לא בדיוק...'}
           </h2>
+          {isCorrect && pointsEarned > 0 && (
+            <p className="text-green-500 text-xl font-black">+{pointsEarned} נקודות!</p>
+          )}
           <p className="text-muted-foreground text-sm font-medium px-4">
-            {isCorrect 
-              ? 'זיהיתם נכון! צברתם נקודות נוספות לדירוג שלכם.' 
+            {isCorrect
+              ? pointsEarned > 0
+                ? 'כל הנקודות נוספו לדירוג שלכם.'
+                : 'כבר ענית על אתגר זה היום.'
               : `התשובה הנכונה הייתה: ${solution}. אל תדאגו, תמיד יש אתגרים חדשים!`}
           </p>
+          {submitError && (
+            <div className="flex items-center gap-2 bg-destructive/10 text-destructive text-xs font-medium px-3 py-2 rounded-xl mt-1">
+              <AlertCircle size={14} />
+              <span>{submitError}</span>
+            </div>
+          )}
         </div>
 
         <div className="w-full flex flex-col gap-3 mt-2">
           {isCorrect ? (
-            <button 
+            <button
               onClick={onClose}
               className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg"
             >
@@ -41,14 +54,14 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, 
             </button>
           ) : (
             <>
-              <button 
+              <button
                 onClick={onRetry}
                 className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg"
               >
                 נסו שוב
                 <RotateCcw size={18} />
               </button>
-              <button 
+              <button
                 onClick={onClose}
                 className="w-full bg-secondary text-secondary-foreground py-4 rounded-2xl font-bold hover:opacity-90 active:scale-95 transition-all"
               >

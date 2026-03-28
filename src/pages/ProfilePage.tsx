@@ -17,11 +17,16 @@ const ProfilePage = () => {
   const { data: betsData } = useQuery({ queryKey: ["my-bets"], queryFn: getMyBets });
   const { data: referralData } = useQuery({ queryKey: ["my-referral"], queryFn: getMyReferralCode });
 
+  const [avatarSaveError, setAvatarSaveError] = useState<string | null>(null);
+
   const avatarMutation = useMutation({
     mutationFn: (url: string) => updateAvatar(url),
     onSuccess: () => {
       setShowAvatarUploader(false);
       window.location.reload();
+    },
+    onError: (err: any) => {
+      setAvatarSaveError(err?.message || 'שמירת התמונה נכשלה — נסה שוב');
     },
   });
 
@@ -54,12 +59,15 @@ const ProfilePage = () => {
             ) : <span>👤</span>}
           </div>
           <button
-            onClick={() => setShowAvatarUploader(true)}
+            onClick={() => { setShowAvatarUploader(true); setAvatarSaveError(null); }}
             className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow"
           >
             <Camera size={13} />
           </button>
         </div>
+        {avatarSaveError && (
+          <p className="text-xs text-destructive text-center">{avatarSaveError}</p>
+        )}
 
         <h2 className="text-xl font-black">
           {firebaseUser?.displayName || backendUser?.username || firebaseUser?.email?.split("@")[0] || "משתמש"}
