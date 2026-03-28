@@ -43,9 +43,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const name = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
             const regData = await registerUser(name, undefined, fbUser.photoURL || undefined);
             setBackendUser(regData.user);
-          } catch (regErr) {
-            console.error('Auto-registration failed:', regErr);
-            setBackendUser(null);
+          } catch (regErr: any) {
+            // 409 = user already registered by signUp — just fetch the existing user
+            if (regErr?.message?.includes('409') || regErr?.message?.includes('already exists')) {
+              try {
+                const data = await getMe();
+                setBackendUser(data.user);
+              } catch {
+                setBackendUser(null);
+              }
+            } else {
+              console.error('Auto-registration failed:', regErr);
+              setBackendUser(null);
+            }
           }
         }
       } else {
@@ -57,9 +67,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-    const data = await getMe();
-    setBackendUser(data.user);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    try {
+      const data = await getMe();
+      setBackendUser(data.user);
+    } catch {
+      // Backend user missing (e.g. account was deleted) — re-register with 5000 pts
+      const name = cred.user.displayName || cred.user.email?.split('@')[0] || 'User';
+      const data = await registerUser(name, undefined, cred.user.photoURL || undefined);
+      setBackendUser(data.user);
+    }
   };
 
   const signUp = async (email: string, password: string, username: string, referralCode?: string) => {
