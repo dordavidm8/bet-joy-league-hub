@@ -17,12 +17,12 @@ const MiniGamePlayPage: React.FC = () => {
   useEffect(() => {
     async function fetchPuzzle() {
       try {
-        const res = await fetch('/api/minigames/today');
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${apiUrl}/api/minigames/today`);
         if (res.ok) {
           const list = await res.json();
           const target = list.find((p: any) => p.id === id);
           if (target) {
-            console.log('[MiniGameDebug] Puzzle:', target);
             setPuzzle(target);
           } else navigate('/minigames');
         }
@@ -41,7 +41,8 @@ const MiniGamePlayPage: React.FC = () => {
     if (firebaseUser) {
       try {
         const token = await firebaseUser.getIdToken();
-        const res = await fetch('/api/minigames/submit', {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${apiUrl}/api/minigames/submit`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
