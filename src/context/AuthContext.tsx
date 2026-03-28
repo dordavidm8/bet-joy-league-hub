@@ -38,25 +38,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const data = await getMe();
           setBackendUser(data.user);
         } catch (err: any) {
-          // If user exists in Firebase but not in backend (e.g. DB wiped), try auto-registration
-          try {
-            const name = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
-            const regData = await registerUser(name, undefined, fbUser.photoURL || undefined);
-            setBackendUser(regData.user);
-          } catch (regErr: any) {
-            // 409 = user already registered by signUp — just fetch the existing user
-            if (regErr?.message?.includes('409') || regErr?.message?.includes('already exists')) {
-              try {
-                const data = await getMe();
-                setBackendUser(data.user);
-              } catch {
+          // User exists in Firebase but not in backend — try auto-registration
+          const baseName = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
+          const tryRegister = async (username: string): Promise<void> => {
+            try {
+              const regData = await registerUser(username, undefined, fbUser.photoURL || undefined);
+              setBackendUser(regData.user);
+            } catch (regErr: any) {
+              if (regErr?.message?.includes('already exists')) {
+                // Could be same Firebase UID already registered — try getMe first
+                try {
+                  const data = await getMe();
+                  setBackendUser(data.user);
+                } catch {
+                  // Username or email conflict with a different account — retry with unique suffix
+                  if (username === baseName) {
+                    const suffix = Math.random().toString(36).slice(-4);
+                    await tryRegister(`${baseName.replace(/\s+/g, '')}_${suffix}`);
+                  } else {
+                    console.error('Auto-registration failed after retry:', regErr);
+                    setBackendUser(null);
+                  }
+                }
+              } else {
+                console.error('Auto-registration failed:', regErr);
                 setBackendUser(null);
               }
-            } else {
-              console.error('Auto-registration failed:', regErr);
-              setBackendUser(null);
             }
-          }
+          };
+          await tryRegister(baseName);
         }
       } else {
         setBackendUser(null);

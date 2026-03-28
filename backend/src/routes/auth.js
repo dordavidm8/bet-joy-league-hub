@@ -15,8 +15,8 @@ router.post('/register', async (req, res, next) => {
     const decoded = await admin.auth().verifyIdToken(header.split(' ')[1]);
 
     const existing = await pool.query(
-      'SELECT id FROM users WHERE username = $1 OR firebase_uid = $2',
-      [username, decoded.uid]
+      'SELECT id, firebase_uid FROM users WHERE username = $1 OR firebase_uid = $2 OR (email = $3 AND email != \'\')',
+      [username, decoded.uid, decoded.email || '']
     );
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Username or account already exists' });

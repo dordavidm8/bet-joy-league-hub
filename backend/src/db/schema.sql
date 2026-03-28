@@ -175,6 +175,18 @@ CREATE TABLE IF NOT EXISTS daily_mini_games (
 
 CREATE INDEX IF NOT EXISTS idx_daily_mini_games_date ON daily_mini_games(play_date, game_type);
 
+CREATE TABLE IF NOT EXISTS mini_game_attempts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  puzzle_id UUID NOT NULL REFERENCES daily_mini_games(id) ON DELETE CASCADE,
+  is_correct BOOLEAN NOT NULL DEFAULT FALSE,
+  points_earned INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, puzzle_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_mini_game_attempts_user ON mini_game_attempts(user_id);
+
 CREATE TABLE IF NOT EXISTS player_clubs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   player_name VARCHAR(100) NOT NULL,
