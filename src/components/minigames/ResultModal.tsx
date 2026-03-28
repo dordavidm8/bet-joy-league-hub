@@ -32,7 +32,9 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, 
             {isCorrect
               ? pointsEarned > 0
                 ? 'כל הנקודות נוספו לדירוג שלכם.'
-                : 'כבר ענית על אתגר זה היום.'
+                : submitError
+                  ? 'התשובה נכונה, אך לא הצלחנו לשמור את הנקודות.'
+                  : 'כבר ענית על אתגר זה היום.'
               : `התשובה הנכונה הייתה: ${solution}. אל תדאגו, תמיד יש אתגרים חדשים!`}
           </p>
           {submitError && (

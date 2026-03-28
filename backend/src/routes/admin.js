@@ -95,4 +95,47 @@ router.post('/quiz', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── Ops routes (secret-key protected, no Firebase auth required) ───────────────
+const opsRouter = express.Router();
+
+function requireOpsKey(req, res, next) {
+  const secret = process.env.OPS_SECRET;
+  if (!secret || req.headers['x-ops-key'] !== secret) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+}
+
+opsRouter.use(requireOpsKey);
+
+// DELETE /api/ops/users/:username — remove a user by username (for cleanup)
+opsRouter.delete('/users/:username', async (req, res, next) => {
+  const { username } = req.params;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const user = await client.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (!user.rows[0]) return res.status(404).json({ error: 'User not found' });
+    const userId = user.rows[0].id;
+    await client.query(`DELETE FROM mini_game_attempts WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM quiz_attempts WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM point_transactions WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM league_members WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+    await client.query('COMMIT');
+    res.json({ message: `User '${username}' deleted` });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
+});
+
+// POST /api/ops/generate-minigames — trigger mini-game regeneration
+opsRouter.post('/generate-minigames', async (req, res) => {
+  const { generateAllMiniGames } = require('../jobs/generateMiniGames');
+  res.json({ message: 'Mini-game generation started' });
+  generateAllMiniGames().catch(err => console.error('[ops] Mini-game generation error:', err.message));
+});
+
 module.exports = router;
+module.exports.opsRouter = opsRouter;

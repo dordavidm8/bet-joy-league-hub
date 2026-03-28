@@ -216,8 +216,9 @@ async function generateWhoAreYa() {
   
   const getInfoboxData = (label) => {
     const row = infobox.find('tr').filter((i, el) => $(el).text().toLowerCase().includes(label.toLowerCase()));
-    const data = row.find('.infobox-data').text().trim() || row.find('td').text().trim();
-    return data;
+    const cell = row.find('.infobox-data').length ? row.find('.infobox-data') : row.find('td');
+    cell.find('style, script, sup').remove();
+    return cell.text().trim();
   };
 
   let image_url = infobox.find('.infobox-image img').attr('src');
