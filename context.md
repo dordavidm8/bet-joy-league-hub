@@ -239,15 +239,16 @@ npm run dev            # starts server on port 3000
 
 ---
 
-## What's Left To Build
-- [ ] Firebase project setup (Auth)
-- [ ] Railway project setup (PostgreSQL + deploy)
-- [ ] API-Football key registration
-- [ ] AI Advisor route (`/api/advisor`) using Claude API
-- [ ] Push notifications (Firebase Cloud Messaging)
-- [ ] Connect frontend (Loveable) to backend API
-- [ ] Frontend: replace mock data with real API calls
-- [ ] Onboarding flow
+## What's Left To Build (Phase 1 & 2 Remaining Tasks)
+- [x] Firebase project setup (Auth)
+- [x] Railway project setup (PostgreSQL + deploy)
+- [x] Frontend connected to backend API
+- [x] Auto-generation of Daily Mini Games (Box2Box, MissingXI, WhoAreYa, GuessClub)
+- [ ] Implement AI Advisor route (`/api/advisor`) using Claude API
+- [ ] Push notifications (Firebase Cloud Messaging) for bet results and game updates
+- [ ] Complete real API implementation (API-Football) for Live Betting and Odds
+- [ ] Private League settlement and prize distribution logic
+- [ ] WhatsApp bot integration for League management (Phase 2)
 
 ---
 
@@ -268,14 +269,25 @@ npm run dev            # starts server on port 3000
 
 ---
 
-## Mini Games Engine Updates (2026-04-07)
-We have made significant improvements to the daily mini-games:
-- **GuessClub**: Now fetches club logos directly from ESPN scoreboard API (real base64 images).
-- **WhoAreYa**: Hardcoded curated player list with accurate Wikidata IDs, overriding fragile Wikipedia HTML scraping but keeping reliable Wikipedia images.
-- **MissingXI**: Dynamically fetches rosters for recent games across top 5 leagues to avoid outdated player lists.
-- **Anti-repeat**: Added strict checks (30/7 days) to Box2Box and CareerPath so users don't see the same puzzles.
-- **Ops Triggers**: Added `/api/ops/generate-minigames` and `/api/ops/reset-minigame-attempts` via `admin.js` for manual testing and regeneration.
-- **Node Environment**: Fixed Railway crash by enforcing `"node": ">=18"`.
+## Mini Games Engine Updates (Implemented April 2026)
+We completely refactored the Daily Mini Games architecture (`/backend/src/jobs/generateMiniGames.js` and `/src/components/minigames/`) to be highly reliable, dynamic, and bug-free.
+
+### Implementation Details:
+1. **GuessClub (נחשו את המועדון)**
+   - **Backend**: Uses `fetchRecentEspnMatchIds` to fetch the scoreboard for a random Top 5 league, extracts real team logos from the competitors array, blurs them using `sharp`, and saves as Base64 to `daily_mini_games`.
+   - **Frontend**: `CLUB_ALIASES` mapping was added to `GuessClubGame.tsx` (e.g., "wolves", "man utd", "spurs") so users aren't forced to guess exact official names.
+2. **WhoAreYa (מי אתה?)**
+   - **Backend**: Overrode fragile Wikipedia HTML parsing. `PLAYERS` is now a curated, hardcoded list mapping names to Wikidata QIDs, Clubs, Nationalities, and Positions. Wikipedia is only used to extract the high-quality image URL (via cheerio), which is returned to the client and blurred via CSS.
+3. **MissingXI (ההרכב החסר)**
+   - **Backend**: Checks ESPN match summaries dynamically for valid recent lineups. We extract the `opponentName` and `league` to construct `matchContext` (e.g., "שוחק נגד Liverpool (Premier League)"). This context explicitly grounds the lineup in time (resolving confusion if players transferred clubs recently).
+   - **Frontend**: Displays `matchContext` beneath the team name in `MissingXIGame.tsx` for absolute clarity.
+4. **Box2Box (בוקס2בוקס)**
+   - **Backend**: Replaced the faulty `player_clubs` database query (which was unseeded and stuck on Juventus/Real Madrid) with a heavily curated `PAIRS` array inside `generateBox2Box`. Implements a 30-day anti-repeat check against `daily_mini_games` history.
+5. **Admin Ops API**
+   - **Backend**: Added protected routes `/api/ops/generate-minigames` and `/api/ops/reset-minigame-attempts` in `admin.js` to allow easy triggering and QA. Authorized via the `x-ops-key` header.
+6. **Infrastructure (Railway)**
+   - Configured `helmet` CSP to explicitly allow `upload.wikimedia.org` and `*.wikimedia.org` images.
+   - Enforced Node version `>=18` to fix deploy crashes on Railway.
 
 ---
 
