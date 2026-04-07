@@ -23,21 +23,42 @@ const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, solution, onSolve }) 
   const [imgError, setImgError] = useState(false);
   const navigate = useNavigate();
 
-  const normalize = (s: string) => 
+  const normalize = (s: string) =>
     s.toLowerCase()
      .normalize("NFD")
      .replace(/[\u0300-\u036f]/g, "")
+     // Expand common abbreviations
+     .replace(/\bjr\.?\b/g, 'junior')
+     .replace(/\bsr\.?\b/g, 'senior')
      .trim();
 
-  const handleSubmit = () => {
-    const userGuess = normalize(guess);
-    const correctSecret = normalize(solution.secret);
-    
-    const isCorrect = userGuess === correctSecret || 
-                     (userGuess.length >= 3 && correctSecret.split(' ').some(part => part === userGuess));
-    
-    onSolve(isCorrect);
+  const isAnswerCorrect = (guess: string, secret: string): boolean => {
+    const g = normalize(guess);
+    const s = normalize(secret);
+
+    // 1. Exact match
+    if (g === s) return true;
+
+    const gWords = g.split(/\s+/).filter(w => w.length >= 3);
+    const sWords = s.split(/\s+/);
+
+    // 2. Every meaningful word in the guess matches some word in the answer
+    if (gWords.length > 0 && gWords.every(gw => sWords.some(sw => sw === gw || sw.startsWith(gw)))) {
+      return true;
+    }
+
+    // 3. Single word guess ≥4 chars that matches any word in the answer
+    if (gWords.length === 1 && gWords[0].length >= 4 && sWords.some(w => w === gWords[0])) {
+      return true;
+    }
+
+    return false;
   };
+
+  const handleSubmit = () => {
+    onSolve(isAnswerCorrect(guess, solution.secret));
+  };
+
 
   const hasImage = data.image_url && !imgError;
 
