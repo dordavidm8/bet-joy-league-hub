@@ -145,21 +145,21 @@ async function generateMissingXI() {
 // ── generateWhoAreYa (fixed image + position) ────────────────────────────────
 
 async function generateWhoAreYa() {
-  // A curated list of active star players with their correct Wikipedia page slugs
+  // Curated active star players with their Wikidata Q-IDs for reliable data
   const PLAYERS = [
-    { slug: 'Kylian_Mbappé',    name: 'Kylian Mbappé' },
-    { slug: 'Vinícius_Júnior',  name: 'Vinícius Júnior' },
-    { slug: 'Mohamed_Salah',    name: 'Mohamed Salah' },
-    { slug: 'Erling_Haaland',   name: 'Erling Haaland' },
-    { slug: 'Jude_Bellingham',  name: 'Jude Bellingham' },
-    { slug: 'Harry_Kane',       name: 'Harry Kane' },
-    { slug: 'Rodri',            name: 'Rodri' },
-    { slug: 'Lamine_Yamal',     name: 'Lamine Yamal' },
-    { slug: 'Phil_Foden',       name: 'Phil Foden' },
-    { slug: 'Bukayo_Saka',      name: 'Bukayo Saka' },
+    { name: 'Kylian Mbappé',    wikiSlug: 'Kylian_Mbappé',    qid: 'Q622294',  club: 'Real Madrid',      nat: 'France',    pos: 'Forward' },
+    { name: 'Vinícius Júnior', wikiSlug: 'Vinícius_Júnior',  qid: 'Q4103216', club: 'Real Madrid',      nat: 'Brazil',    pos: 'Forward' },
+    { name: 'Mohamed Salah',   wikiSlug: 'Mohamed_Salah',    qid: 'Q355767',  club: 'Liverpool',        nat: 'Egypt',     pos: 'Forward' },
+    { name: 'Erling Haaland',  wikiSlug: 'Erling_Haaland',   qid: 'Q3373974', club: 'Manchester City',  nat: 'Norway',    pos: 'Striker' },
+    { name: 'Jude Bellingham', wikiSlug: 'Jude_Bellingham',  qid: 'Q82513545',club: 'Real Madrid',      nat: 'England',   pos: 'Midfielder' },
+    { name: 'Harry Kane',      wikiSlug: 'Harry_Kane',        qid: 'Q614977',  club: 'Bayern Munich',   nat: 'England',   pos: 'Striker' },
+    { name: 'Rodri',           wikiSlug: 'Rodrigo_Hernández_Cascante', qid: 'Q20705898', club: 'Manchester City', nat: 'Spain', pos: 'Midfielder' },
+    { name: 'Lamine Yamal',    wikiSlug: 'Lamine_Yamal',     qid: 'Q117374879', club: 'Barcelona',      nat: 'Spain',     pos: 'Forward' },
+    { name: 'Phil Foden',      wikiSlug: 'Phil_Foden',        qid: 'Q26827088', club: 'Manchester City', nat: 'England',  pos: 'Midfielder' },
+    { name: 'Bukayo Saka',     wikiSlug: 'Bukayo_Saka',       qid: 'Q58397482', club: 'Arsenal',         nat: 'England',  pos: 'Forward' },
   ];
 
-  // Avoid repeating the same player as yesterday
+  // Avoid repeating the same player from last 7 days
   let recentPlayers = [];
   try {
     const { rows } = await pool.query(`
@@ -177,76 +177,39 @@ async function generateWhoAreYa() {
   const pool2 = available.length > 0 ? available : PLAYERS;
   const player = pool2[Math.floor(Math.random() * pool2.length)];
 
-  const url = `https://en.wikipedia.org/wiki/${player.slug}`;
-  console.log(`[generateMiniGames] Fetching Wikipedia player: ${url}`);
-
-  const res = await axios.get(url, axiosConfig(url));
-  const $ = cheerio.load(res.data);
-  const infobox = $('.infobox').first();
-
-  // Helper: get clean text from an infobox row matching a label
-  const getInfoboxData = (label) => {
-    const row = infobox.find('tr').filter((i, el) => {
-      return $(el).find('th').text().toLowerCase().includes(label.toLowerCase());
-    }).first();
-    const cell = row.find('.infobox-data').length ? row.find('.infobox-data') : row.find('td').first();
-    cell.find('style, script, sup, .reference, .noprint').remove();
-    // Get only text, strip references like [1], [2]
-    return cell.text().trim().replace(/\[\d+\]/g, '').trim();
-  };
-
-  // Extract image URL
-  let image_url = infobox.find('.infobox-image img').attr('src') || '';
-  if (image_url && !image_url.startsWith('http')) {
-    image_url = 'https:' + image_url;
-  }
-  // Use higher resolution version if available
-  if (image_url) {
-    image_url = image_url.replace(/\/\d+px-/, '/400px-');
+  // Try to get the player's photo from Wikipedia
+  let image_url = '';
+  try {
+    const wikiUrl = `https://en.wikipedia.org/wiki/${player.wikiSlug}`;
+    console.log(`[generateWhoAreYa] Fetching Wikipedia image for ${player.name}`);
+    const res = await axios.get(wikiUrl, axiosConfig(wikiUrl));
+    const $ = cheerio.load(res.data);
+    const infobox = $('.infobox').first();
+    let src = infobox.find('.infobox-image img').first().attr('src') || '';
+    if (src && !src.startsWith('http')) src = 'https:' + src;
+    if (src && src.includes('/')) {
+      // Get 400px version for better quality
+      image_url = src.replace(/\/\d+px-/, '/400px-');
+    }
+  } catch (e) {
+    console.warn(`[generateWhoAreYa] Could not fetch Wikipedia image: ${e.message}`);
   }
 
-  // Extract nationality from "Place of birth" or "National team"
-  let nationality = '';
-  const birthRow = infobox.find('tr').filter((i, el) => $(el).find('th').text().includes('Place of birth')).first();
-  if (birthRow.length) {
-    // Take the last link in the place of birth (usually country)
-    nationality = birthRow.find('a').last().text().trim();
-  }
-  if (!nationality) {
-    // Fallback: nationality row
-    const natRow = infobox.find('tr').filter((i, el) => $(el).find('th').text().toLowerCase().includes('national team')).first();
-    nationality = natRow.find('a').first().text().trim();
-  }
-
-  // Extract current team
-  let club = getInfoboxData('Current team');
-  if (!club) club = getInfoboxData('Club');
-
-  // Extract position — look for the "Position(s)" or "Position" row
-  let position = '';
-  const posRow = infobox.find('tr').filter((i, el) => {
-    const th = $(el).find('th').text().toLowerCase();
-    return th.includes('position');
-  }).first();
-  if (posRow.length) {
-    posRow.find('style, script, sup, .reference, .hlist, dl, dt, dd').remove();
-    position = posRow.find('td').text().trim().replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
-    // Take only the first position if multiple
-    position = position.split(/[,;\/]/)[0].trim();
-  }
+  console.log(`[generateWhoAreYa] Player: ${player.name}, Club: ${player.club}, Nat: ${player.nat}, Image: ${image_url ? 'found' : 'none'}`);
 
   return {
     game_type: 'who_are_ya',
     puzzle_data: {
       image_url,
-      nationality: nationality || 'Unknown',
-      club: club ? club.split(/[[(]/)[0].trim() : 'Unknown',
-      position: position || 'Forward',
-      age: 26
+      nationality: player.nat,
+      club: player.club,
+      position: player.pos,
+      age: null
     },
     solution: { secret: player.name }
   };
 }
+
 
 // ── generateCareerPath ────────────────────────────────────────────────────────
 
@@ -382,33 +345,42 @@ async function generateBox2Box() {
   };
 }
 
-// ── generateGuessClub (dynamic ESPN) ──────────────────────────────────────────
+// ── generateGuessClub (uses ESPN scoreboard team logos directly) ───────────────
 
 async function generateGuessClub() {
-  try {
-    const leagues = ['eng.1', 'esp.1', 'ger.1', 'ita.1'];
-    const league = leagues[Math.floor(Math.random() * leagues.length)];
+  const leagues = ['eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1'];
+  const shuffled = [...leagues].sort(() => Math.random() - 0.5);
 
-    let recentMatches = [];
+  for (const league of shuffled) {
     try {
-      recentMatches = await fetchRecentEspnMatchIds(league);
-    } catch (e) {
-      console.warn(`[generateGuessClub] Could not fetch scoreboard: ${e.message}`);
-    }
+      // Get scoreboard - competitors have team info including logos
+      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard`;
+      console.log(`[generateGuessClub] Fetching scoreboard ${league}`);
+      const res = await axios.get(url, { timeout: 10000 });
+      const events = res.data?.events || [];
 
-    if (recentMatches.length === 0) throw new Error('No recent matches');
+      if (events.length === 0) continue;
 
-    const match = recentMatches[Math.floor(Math.random() * recentMatches.length)];
-    const data = await fetchEspnMatch(league, match.id);
+      // Try a few random events
+      const candidates = events.sort(() => Math.random() - 0.5).slice(0, 5);
+      for (const event of candidates) {
+        const comp = event.competitions?.[0];
+        if (!comp?.competitors) continue;
 
-    if (data.rosters && data.rosters.length > 0) {
-      const roster = data.rosters[Math.floor(Math.random() * data.rosters.length)];
-      const club_name = roster.team.displayName;
-      const logoUrl = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href);
+        // Pick one random team from the match
+        const teams = comp.competitors;
+        const team = teams[Math.floor(Math.random() * teams.length)];
+        const club_name = team.team.displayName;
+        const logoUrl = team.team.logo || (team.team.logos?.[0]?.href);
 
-      if (logoUrl) {
+        if (!logoUrl) continue;
+
+        console.log(`[generateGuessClub] Blurring logo for ${club_name}: ${logoUrl}`);
         const imgRes = await axios.get(logoUrl, { responseType: 'arraybuffer', timeout: 10000 });
-        const blurredBuffer = await sharp(imgRes.data).blur(30).toBuffer();
+        const blurredBuffer = await sharp(Buffer.from(imgRes.data))
+          .blur(20)
+          .toFormat('png')
+          .toBuffer();
         const base64 = `data:image/png;base64,${blurredBuffer.toString('base64')}`;
 
         return {
@@ -417,17 +389,31 @@ async function generateGuessClub() {
           solution: { secret: club_name }
         };
       }
+    } catch (e) {
+      console.warn(`[generateGuessClub] Failed league ${league}: ${e.message}`);
     }
-  } catch (e) {
-    console.error('[generateGuessClub] error:', e.message);
   }
 
-  return {
-    game_type: 'guess_club',
-    puzzle_data: { logo_data: 'https://placehold.co/100x100?text=GuessTheClub' },
-    solution: { secret: 'Real Madrid' }
-  };
+  // Hard fallback with known working ESPN logo
+  console.error('[generateGuessClub] All leagues failed, using hardcoded fallback');
+  try {
+    const fallbackUrl = 'https://a.espncdn.com/i/teamlogos/soccer/500/86.png'; // Barcelona
+    const imgRes = await axios.get(fallbackUrl, { responseType: 'arraybuffer', timeout: 8000 });
+    const blurredBuffer = await sharp(Buffer.from(imgRes.data)).blur(20).toFormat('png').toBuffer();
+    return {
+      game_type: 'guess_club',
+      puzzle_data: { logo_data: `data:image/png;base64,${blurredBuffer.toString('base64')}` },
+      solution: { secret: 'Barcelona' }
+    };
+  } catch (e2) {
+    return {
+      game_type: 'guess_club',
+      puzzle_data: { logo_data: 'https://a.espncdn.com/i/teamlogos/soccer/500/86.png' },
+      solution: { secret: 'Barcelona' }
+    };
+  }
 }
+
 
 // ── saveMiniGame ──────────────────────────────────────────────────────────────
 
