@@ -157,6 +157,8 @@ async function generateWhoAreYa() {
     { name: 'Lamine Yamal',    wikiSlug: 'Lamine_Yamal',     qid: 'Q117374879', club: 'Barcelona',      nat: 'Spain',     pos: 'Forward' },
     { name: 'Phil Foden',      wikiSlug: 'Phil_Foden',        qid: 'Q26827088', club: 'Manchester City', nat: 'England',  pos: 'Midfielder' },
     { name: 'Bukayo Saka',     wikiSlug: 'Bukayo_Saka',       qid: 'Q58397482', club: 'Arsenal',         nat: 'England',  pos: 'Forward' },
+    { name: 'Pedri',           wikiSlug: 'Pedri',             qid: 'Q104913567', club: 'Barcelona',      nat: 'Spain',    pos: 'Midfielder' },
+    { name: 'Trent Alexander-Arnold', wikiSlug: 'Trent_Alexander-Arnold', qid: 'Q49095226', club: 'Real Madrid', nat: 'England', pos: 'Midfielder' },
   ];
 
   // Avoid repeating the same player from last 7 days
