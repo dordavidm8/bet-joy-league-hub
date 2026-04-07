@@ -23,14 +23,14 @@ function startJobs() {
     catch (err) { console.error('[cron:dailySync]', err.message); }
   });
 
-  // Generate daily mini games at 03:00
-  cron.schedule('0 3 * * *', async () => {
-    console.log('[cron] Daily minigames generation');
+  // Generate daily mini games at 00:00 (midnight)
+  cron.schedule('0 0 * * *', async () => {
+    console.log('[cron] Daily minigames generation (midnight reset)');
     try { await generateAllMiniGames(); }
     catch (err) { console.error('[cron:generateMiniGames]', err.message); }
   });
 
-  console.log('[jobs] Cron jobs started: syncGames (1min), settleBets (5min), dailySync (04:00), generateMiniGames (03:00)');
+  console.log('[jobs] Cron jobs started: syncGames (1min), settleBets (5min), dailySync (04:00), generateMiniGames (00:00)');
 }
 
 module.exports = { startJobs, startCronJobs: startJobs };

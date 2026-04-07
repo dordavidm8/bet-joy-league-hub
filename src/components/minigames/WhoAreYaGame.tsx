@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface WhoAreYaGameProps {
   data: {
+    image_url?: string;
     nationality: string;
     club: string;
     position: string;
@@ -19,6 +20,7 @@ interface WhoAreYaGameProps {
 
 const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, solution, onSolve }) => {
   const [guess, setGuess] = useState('');
+  const [imgError, setImgError] = useState(false);
   const navigate = useNavigate();
 
   const normalize = (s: string) => 
@@ -37,6 +39,8 @@ const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, solution, onSolve }) 
     onSolve(isCorrect);
   };
 
+  const hasImage = data.image_url && !imgError;
+
   return (
     <div className="w-full h-full flex flex-col pt-4">
       <header className="flex items-center justify-between px-4 mb-4">
@@ -49,12 +53,21 @@ const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, solution, onSolve }) 
       </header>
 
       <main className="px-4 pb-8 max-w-sm mx-auto w-full flex flex-col gap-6">
-        {/* Pixelated Portrait Mock */}
-        <section className="relative group mx-auto w-48 h-48 sm:w-64 sm:h-64 rounded-2xl overflow-hidden shadow-soft bg-card border border-border flex items-center justify-center">
-           {/* Fallback pattern if no image */}
-           <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-             <User size={80} className="text-primary/30 blur-sm" />
-           </div>
+        {/* Player Portrait */}
+        <section className="relative mx-auto w-48 h-48 sm:w-64 sm:h-64 rounded-2xl overflow-hidden shadow-soft bg-card border border-border flex items-center justify-center">
+          {hasImage ? (
+            <img
+              src={data.image_url}
+              alt="Who is this player?"
+              onError={() => setImgError(true)}
+              className="w-full h-full object-cover"
+              style={{ filter: 'blur(12px)', transform: 'scale(1.1)' }}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+              <User size={80} className="text-primary/30 blur-sm" />
+            </div>
+          )}
            
            <div className="absolute bottom-4 right-4 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-border">
              <span className="text-xs font-bold text-foreground">מי זה?</span>
@@ -86,6 +99,7 @@ const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, solution, onSolve }) 
               <input 
                 value={guess}
                 onChange={e => setGuess(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                 className="w-full bg-card border-none rounded-full py-4 px-6 text-center focus:ring-2 focus:ring-primary text-foreground font-medium shadow-sm outline-none" 
                 placeholder="הקלד את השם כאן..." 
               />
