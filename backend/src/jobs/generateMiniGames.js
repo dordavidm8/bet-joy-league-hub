@@ -11,9 +11,9 @@ const pool = new Pool({
 });
 
 const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 ];
 
 function getRandomUserAgent() {
@@ -21,11 +21,6 @@ function getRandomUserAgent() {
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const randomSleep = async () => {
-  const delay = Math.floor(Math.random() * 2000) + 3000;
-  console.log(`[generateMiniGames] Sleeping ${delay}ms...`);
-  await sleep(delay);
-};
 
 const axiosConfig = (url) => {
   const domain = new URL(url).hostname;
@@ -33,164 +28,108 @@ const axiosConfig = (url) => {
     headers: {
       'User-Agent': getRandomUserAgent(),
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9,he;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
       'Accept-Encoding': 'gzip, deflate, br',
       'Referer': `https://${domain}/`,
-      'sec-ch-ua': '"Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"',
-      'sec-ch-ua-mobile': '?0',
-      'sec-ch-ua-platform': '"macOS"',
-      'sec-fetch-dest': 'document',
-      'sec-fetch-mode': 'navigate',
-      'sec-fetch-site': 'same-origin',
-      'sec-fetch-user': '?1',
       'Upgrade-Insecure-Requests': '1'
     },
-    timeout: 10000
+    timeout: 15000
   };
 };
 
-async function fetchHtml(url) {
-  // Wait a bit longer and more randomly to avoid being flagged
-  const delay = Math.floor(Math.random() * 5000) + 5000; // 5-10 seconds
-  console.log(`[generateMiniGames] Fetching ${url}... (delay ${delay}ms)`);
-  await sleep(delay);
-  
-  const res = await axios.get(url, axiosConfig(url));
-  return cheerio.load(res.data);
+// ── ESPN API helpers ───────────────────────────────────────────────────────────
+
+/**
+ * Fetch a list of recently completed matches from ESPN for a given league.
+ * Returns an array of { id, name } objects.
+ */
+async function fetchRecentEspnMatchIds(league) {
+  const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard`;
+  console.log(`[generateMiniGames] Fetching recent scoreboard for ${league}`);
+  const res = await axios.get(url, { timeout: 10000 });
+  const events = res.data?.events || [];
+  // Keep only STATUS_FINAL matches (completed)
+  return events
+    .filter(e => e.status?.type?.completed === true)
+    .map(e => ({ id: e.id, name: e.name }));
 }
-
-const KNOWN_PLAYERS = [
-  { id: 'd70ce98e', name: 'Lionel Messi' },
-  { id: 'dea698d9', name: 'Cristiano Ronaldo' },
-  { id: 'e46012d4', name: 'Kevin De Bruyne' },
-  { id: '1f44ac21', name: 'Erling Haaland' },
-  { id: '69233f98', name: 'Neymar' },
-  { id: '438b3a51', name: 'Kylian Mbappe' },
-  { id: '0972cb76', name: 'Robert Lewandowski' }
-];
-
-const HISTORICAL_MATCHES = [
-  { id: 'c9e9008d', slug: 'Real-Madrid-Atletico-Madrid-May-24-2014-Champions-League' },
-  { id: '47d0e808', slug: 'Liverpool-Tottenham-Hotspur-June-1-2019-Champions-League' },
-  { id: '3da31e77', slug: 'Barcelona-Juventus-June-6-2015-Champions-League' },
-  { id: 'e86ee094', slug: 'Real-Madrid-Liverpool-May-26-2018-Champions-League' }
-];
-
-async function ensurePlayerClub(player_name, club_name) {
-  try {
-     await pool.query('INSERT INTO player_clubs (player_name, club_name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [player_name, club_name]);
-  } catch(e) { } // ignore
-}
-
-async function generateCareerPath() {
-  const players = [
-    'Cristiano_Ronaldo', 'Lionel_Messi', 'Zlatan_Ibrahimović', 
-    'Robert_Lewandowski', 'Luka_Modrić', 'Karim_Benzema', 'Erling_Haaland'
-  ];
-  const playerName = players[Math.floor(Math.random() * players.length)];
-  const url = `https://en.wikipedia.org/wiki/${playerName}`;
-  
-  console.log(`[generateMiniGames] Fetching Wikipedia career: ${url}`);
-  const res = await axios.get(url, axiosConfig(url));
-  const $ = cheerio.load(res.data);
-  const transfers = [];
-
-  $('.infobox tr').each((i, el) => {
-    const yearText = $(el).find('th').text().trim();
-    if (/^\d{4}–(\d{4}|present)?$/.test(yearText) || /^\d{4}–$/.test(yearText)) {
-       const tds = $(el).find('td');
-       if (tds.length >= 2) {
-          const club = $(tds[0]).text().trim().replace(/\[\d+\]/g, '');
-          const stats = $(tds[1]).text().trim();
-          const match = stats.match(/\((\d+)\)/);
-          const appearances = stats.split('(')[0].trim();
-          const goals = match ? match[1] : '0';
-          
-          if (club && club !== 'Total') {
-            const clubSlug = club.toLowerCase().replace(/[`']/g, '').replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-            // Using clearbit as a better fallback than fastly
-            const clubLogo = `https://logo.clearbit.com/${clubSlug.replace(/-/g, '')}.com?size=100`;
-            
-            transfers.push({ 
-              season: yearText, 
-              club, 
-              clubLogo,
-              appearances: parseInt(appearances) || 0, 
-              goals: parseInt(goals) || 0 
-            });
-          }
-       }
-    }
-  });
-
-  return {
-    game_type: 'career_path',
-    puzzle_data: { transfers },
-    solution: { secret: playerName.replace(/_/g, ' ') }
-  };
-}
-
-const ESPN_LEAGUES = ['eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1', 'uefa.champions'];
 
 async function fetchEspnMatch(league, eventId) {
   const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/summary?event=${eventId}`;
-  console.log(`[generateMiniGames] Fetching ESPN match: ${url}`);
+  console.log(`[generateMiniGames] Fetching ESPN match summary: event=${eventId} league=${league}`);
   const res = await axios.get(url, { timeout: 10000 });
   return res.data;
 }
 
+// ── generateMissingXI (dynamic ESPN matches) ─────────────────────────────────
+
 async function generateMissingXI() {
-  const verifiedMatches = [
-    { league: 'eng.1', id: '671404' }, // Man City vs West Ham
-    { league: 'eng.1', id: '671405' }, // Arsenal vs Everton
-    { league: 'eng.1', id: '671406' }, // Liverpool vs Wolves
-    { league: 'eng.1', id: '671413' }  // Chelsea vs Bournemouth
-  ];
+  const leagues = ['eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1'];
 
   let starters = [];
   let teamName = '';
   let teamLogo = '';
-  
-  // Shuffle and try them all until one works
-  const shuffled = [...verifiedMatches].sort(() => Math.random() - 0.5);
 
-  for (const match of shuffled) {
-    console.log(`[generateMissingXI] Attempting verified match ${match.id} in ${match.league}...`);
+  // Shuffle leagues and try each until we find a match with rosters
+  const shuffledLeagues = [...leagues].sort(() => Math.random() - 0.5);
+
+  for (const league of shuffledLeagues) {
+    let recentMatches = [];
     try {
-      const data = await fetchEspnMatch(match.league, match.id);
-      if (data.rosters && data.rosters.length >= 2) {
-        const teamIdx = Math.random() < 0.5 ? 0 : 1;
-        const roster = data.rosters[teamIdx];
-        teamName = roster.team.displayName;
-        teamLogo = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href) || '';
-        
-        const allPlayers = (roster.roster || roster.entries || [])
-          .map(e => ({
-            name: e.athlete.displayName,
-            shirt: e.jersey || '?',
-            position: e.athlete.position?.abbreviation,
-            starter: e.starter
-          }));
-
-        starters = allPlayers.filter(p => p.starter === true);
-        if (starters.length < 11) starters = allPlayers.slice(0, 11);
-
-        if (starters.length >= 11) break; 
-      }
+      recentMatches = await fetchRecentEspnMatchIds(league);
     } catch (e) {
-      console.warn(`[generateMissingXI] Failed match ${match.id}: ${e.message}`);
+      console.warn(`[generateMissingXI] Could not fetch scoreboard for ${league}: ${e.message}`);
+      continue;
     }
+
+    if (recentMatches.length === 0) continue;
+
+    // Shuffle and try up to 5 matches from this league
+    const shuffled = recentMatches.sort(() => Math.random() - 0.5).slice(0, 5);
+
+    for (const match of shuffled) {
+      console.log(`[generateMissingXI] Trying match "${match.name}" (${match.id}) in ${league}...`);
+      try {
+        const data = await fetchEspnMatch(league, match.id);
+        if (data.rosters && data.rosters.length >= 2) {
+          const teamIdx = Math.random() < 0.5 ? 0 : 1;
+          const roster = data.rosters[teamIdx];
+          teamName = roster.team.displayName;
+          teamLogo = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href) || '';
+
+          const allPlayers = (roster.roster || roster.entries || [])
+            .map(e => ({
+              name: e.athlete.displayName,
+              shirt: e.jersey || '?',
+              position: e.athlete.position?.abbreviation,
+              starter: e.starter
+            }));
+
+          starters = allPlayers.filter(p => p.starter === true);
+          if (starters.length < 11) starters = allPlayers.slice(0, 11);
+
+          if (starters.length >= 11) {
+            console.log(`[generateMissingXI] Found valid roster: ${teamName} (${starters.length} starters)`);
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn(`[generateMissingXI] Failed match ${match.id}: ${e.message}`);
+      }
+    }
+
+    if (starters.length >= 11) break;
   }
 
   if (starters.length < 11) {
-    throw new Error(`Could not find a match with rosters in any verified match.`);
+    throw new Error(`Could not find a match with rosters across all leagues.`);
   }
 
-  const formation = "4-3-3"; 
+  const formation = "4-3-3";
+  // Hide one of players 1-10 (not the goalkeeper at index 0)
   const hiddenIdx = Math.floor(Math.random() * 10) + 1;
   const hiddenPlayerName = starters[hiddenIdx].name;
-  
-  // Clean players array for puzzle (mask name)
+
   const puzzlePlayers = starters.map((p, idx) => ({
     shirt: p.shirt,
     name: idx === hiddenIdx ? '???' : p.name
@@ -203,52 +142,197 @@ async function generateMissingXI() {
   };
 }
 
+// ── generateWhoAreYa (fixed image + position) ────────────────────────────────
+
 async function generateWhoAreYa() {
-  const players = ['Kylian_Mbappé', 'Vinícius_Júnior', 'Kevin_De_Bruyne', 'Mohamed_Salah', 'Erling_Haaland'];
-  const playerName = players[Math.floor(Math.random() * players.length)];
-  const url = `https://en.wikipedia.org/wiki/${playerName}`;
-  
+  // A curated list of active star players with their correct Wikipedia page slugs
+  const PLAYERS = [
+    { slug: 'Kylian_Mbappé',    name: 'Kylian Mbappé' },
+    { slug: 'Vinícius_Júnior',  name: 'Vinícius Júnior' },
+    { slug: 'Mohamed_Salah',    name: 'Mohamed Salah' },
+    { slug: 'Erling_Haaland',   name: 'Erling Haaland' },
+    { slug: 'Jude_Bellingham',  name: 'Jude Bellingham' },
+    { slug: 'Harry_Kane',       name: 'Harry Kane' },
+    { slug: 'Rodri',            name: 'Rodri' },
+    { slug: 'Lamine_Yamal',     name: 'Lamine Yamal' },
+    { slug: 'Phil_Foden',       name: 'Phil Foden' },
+    { slug: 'Bukayo_Saka',      name: 'Bukayo Saka' },
+  ];
+
+  // Avoid repeating the same player as yesterday
+  let recentPlayers = [];
+  try {
+    const { rows } = await pool.query(`
+      SELECT solution->>'secret' AS player
+      FROM daily_mini_games
+      WHERE game_type = 'who_are_ya'
+        AND play_date >= CURRENT_DATE - INTERVAL '7 days'
+    `);
+    recentPlayers = rows.map(r => r.player).filter(Boolean);
+  } catch (e) {
+    console.warn('[generateWhoAreYa] Could not fetch recent players:', e.message);
+  }
+
+  const available = PLAYERS.filter(p => !recentPlayers.includes(p.name));
+  const pool2 = available.length > 0 ? available : PLAYERS;
+  const player = pool2[Math.floor(Math.random() * pool2.length)];
+
+  const url = `https://en.wikipedia.org/wiki/${player.slug}`;
   console.log(`[generateMiniGames] Fetching Wikipedia player: ${url}`);
+
   const res = await axios.get(url, axiosConfig(url));
   const $ = cheerio.load(res.data);
-
   const infobox = $('.infobox').first();
-  
+
+  // Helper: get clean text from an infobox row matching a label
   const getInfoboxData = (label) => {
-    const row = infobox.find('tr').filter((i, el) => $(el).text().toLowerCase().includes(label.toLowerCase()));
-    const cell = row.find('.infobox-data').length ? row.find('.infobox-data') : row.find('td');
-    cell.find('style, script, sup').remove();
-    return cell.text().trim();
+    const row = infobox.find('tr').filter((i, el) => {
+      return $(el).find('th').text().toLowerCase().includes(label.toLowerCase());
+    }).first();
+    const cell = row.find('.infobox-data').length ? row.find('.infobox-data') : row.find('td').first();
+    cell.find('style, script, sup, .reference, .noprint').remove();
+    // Get only text, strip references like [1], [2]
+    return cell.text().trim().replace(/\[\d+\]/g, '').trim();
   };
 
-  let image_url = infobox.find('.infobox-image img').attr('src');
+  // Extract image URL
+  let image_url = infobox.find('.infobox-image img').attr('src') || '';
   if (image_url && !image_url.startsWith('http')) {
     image_url = 'https:' + image_url;
   }
-
-  let nationality = getInfoboxData('National team') || getInfoboxData('Nationalité') || '';
-  if (!nationality || /\d{4}/.test(nationality)) {
-      const birthRow = infobox.find('tr').filter((i, el) => $(el).text().includes('Place of birth'));
-      nationality = birthRow.find('a').last().text().trim() || 'World';
+  // Use higher resolution version if available
+  if (image_url) {
+    image_url = image_url.replace(/\/\d+px-/, '/400px-');
   }
 
-  const club = getInfoboxData('Current team') || 'Liverpool';
-  const position = getInfoboxData('Position') || 'Forward';
+  // Extract nationality from "Place of birth" or "National team"
+  let nationality = '';
+  const birthRow = infobox.find('tr').filter((i, el) => $(el).find('th').text().includes('Place of birth')).first();
+  if (birthRow.length) {
+    // Take the last link in the place of birth (usually country)
+    nationality = birthRow.find('a').last().text().trim();
+  }
+  if (!nationality) {
+    // Fallback: nationality row
+    const natRow = infobox.find('tr').filter((i, el) => $(el).find('th').text().toLowerCase().includes('national team')).first();
+    nationality = natRow.find('a').first().text().trim();
+  }
+
+  // Extract current team
+  let club = getInfoboxData('Current team');
+  if (!club) club = getInfoboxData('Club');
+
+  // Extract position — look for the "Position(s)" or "Position" row
+  let position = '';
+  const posRow = infobox.find('tr').filter((i, el) => {
+    const th = $(el).find('th').text().toLowerCase();
+    return th.includes('position');
+  }).first();
+  if (posRow.length) {
+    posRow.find('style, script, sup, .reference, .hlist, dl, dt, dd').remove();
+    position = posRow.find('td').text().trim().replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
+    // Take only the first position if multiple
+    position = position.split(/[,;\/]/)[0].trim();
+  }
 
   return {
     game_type: 'who_are_ya',
     puzzle_data: {
       image_url,
-      nationality: nationality.replace(/\[\d+\]/g, '').split(/[()]/)[0].split(',').pop().trim(),
-      club: club.replace(/\[\d+\]/g, '').trim(),
-      position: position.split(',')[0].trim(),
-      age: 26 
+      nationality: nationality || 'Unknown',
+      club: club ? club.split(/[[(]/)[0].trim() : 'Unknown',
+      position: position || 'Forward',
+      age: 26
     },
-    solution: { secret: playerName.replace(/_/g, ' ') }
+    solution: { secret: player.name }
   };
 }
 
+// ── generateCareerPath ────────────────────────────────────────────────────────
+
+async function generateCareerPath() {
+  const PLAYERS = [
+    { slug: 'Cristiano_Ronaldo',   name: 'Cristiano Ronaldo' },
+    { slug: 'Lionel_Messi',        name: 'Lionel Messi' },
+    { slug: 'Zlatan_Ibrahimović',  name: 'Zlatan Ibrahimović' },
+    { slug: 'Robert_Lewandowski',  name: 'Robert Lewandowski' },
+    { slug: 'Luka_Modrić',         name: 'Luka Modrić' },
+    { slug: 'Karim_Benzema',       name: 'Karim Benzema' },
+    { slug: 'Erling_Haaland',      name: 'Erling Haaland' },
+    { slug: 'Harry_Kane',          name: 'Harry Kane' },
+    { slug: 'Kylian_Mbappé',       name: 'Kylian Mbappé' },
+  ];
+
+  // Avoid repeats from last 7 days
+  let recentPlayers = [];
+  try {
+    const { rows } = await pool.query(`
+      SELECT solution->>'secret' AS player
+      FROM daily_mini_games
+      WHERE game_type = 'career_path'
+        AND play_date >= CURRENT_DATE - INTERVAL '7 days'
+    `);
+    recentPlayers = rows.map(r => r.player).filter(Boolean);
+  } catch (e) {}
+
+  const available = PLAYERS.filter(p => !recentPlayers.includes(p.name));
+  const pool2 = available.length > 0 ? available : PLAYERS;
+  const player = pool2[Math.floor(Math.random() * pool2.length)];
+
+  const url = `https://en.wikipedia.org/wiki/${player.slug}`;
+  console.log(`[generateMiniGames] Fetching Wikipedia career: ${url}`);
+  const res = await axios.get(url, axiosConfig(url));
+  const $ = cheerio.load(res.data);
+  const transfers = [];
+
+  $('.infobox tr').each((i, el) => {
+    const yearText = $(el).find('th').text().trim();
+    if (/^\d{4}–(\d{4}|present)?$/.test(yearText) || /^\d{4}–$/.test(yearText)) {
+      const tds = $(el).find('td');
+      if (tds.length >= 2) {
+        const club = $(tds[0]).text().trim().replace(/\[\d+\]/g, '');
+        const stats = $(tds[1]).text().trim();
+        const match = stats.match(/\((\d+)\)/);
+        const appearances = stats.split('(')[0].trim();
+        const goals = match ? match[1] : '0';
+
+        if (club && club !== 'Total') {
+          transfers.push({
+            season: yearText,
+            club,
+            appearances: parseInt(appearances) || 0,
+            goals: parseInt(goals) || 0
+          });
+        }
+      }
+    }
+  });
+
+  return {
+    game_type: 'career_path',
+    puzzle_data: { transfers },
+    solution: { secret: player.name }
+  };
+}
+
+// ── generateBox2Box (with anti-repeat logic) ──────────────────────────────────
+
 async function generateBox2Box() {
+  // Fetch pair combinations used in last 30 days to avoid repeats
+  let recentPairs = [];
+  try {
+    const { rows } = await pool.query(`
+      SELECT puzzle_data->>'team1' AS t1, puzzle_data->>'team2' AS t2
+      FROM daily_mini_games
+      WHERE game_type = 'box2box'
+        AND play_date >= CURRENT_DATE - INTERVAL '30 days'
+    `);
+    recentPairs = rows.map(r => `${r.t1}|${r.t2}`);
+  } catch (e) {
+    console.warn('[generateBox2Box] Could not fetch recent pairs:', e.message);
+  }
+
+  // Query for a pair NOT used recently
   const query = `
     SELECT c1.club_name AS team1, c2.club_name AS team2
     FROM player_clubs c1
@@ -256,19 +340,35 @@ async function generateBox2Box() {
     GROUP BY c1.club_name, c2.club_name
     HAVING COUNT(DISTINCT c1.player_name) >= 1
     ORDER BY RANDOM()
-    LIMIT 1;
+    LIMIT 20;
   `;
   const { rows } = await pool.query(query);
+
+  // Pick the first pair not in the recent list
+  let chosen = null;
+  for (const row of rows) {
+    const key = `${row.team1}|${row.team2}`;
+    if (!recentPairs.includes(key)) {
+      chosen = row;
+      break;
+    }
+  }
+  // If all pairs were recently used, just pick randomly
+  if (!chosen && rows.length > 0) {
+    chosen = rows[Math.floor(Math.random() * rows.length)];
+  }
+
   let team1 = 'Real Madrid', team2 = 'Juventus', solutionInfo = 'Cristiano Ronaldo';
-  if (rows.length > 0) {
-    team1 = rows[0].team1;
-    team2 = rows[0].team2;
-    // Find who played in both
+
+  if (chosen) {
+    team1 = chosen.team1;
+    team2 = chosen.team2;
+
     const playerQuery = `
       SELECT c1.player_name 
       FROM player_clubs c1 
-      JOIN player_clubs c2 ON c1.player_name=c2.player_name 
-      WHERE c1.club_name=$1 AND c2.club_name=$2 
+      JOIN player_clubs c2 ON c1.player_name = c2.player_name 
+      WHERE c1.club_name = $1 AND c2.club_name = $2 
       LIMIT 1
     `;
     const playerRows = await pool.query(playerQuery, [team1, team2]);
@@ -282,22 +382,32 @@ async function generateBox2Box() {
   };
 }
 
+// ── generateGuessClub (dynamic ESPN) ──────────────────────────────────────────
+
 async function generateGuessClub() {
   try {
-    const verifiedMatches = [
-      { league: 'eng.1', id: '671413' }, { league: 'eng.1', id: '671404' },
-      { league: 'esp.1', id: '674034' }, { league: 'ger.1', id: '675845' }
-    ];
-    const match = verifiedMatches[Math.floor(Math.random() * verifiedMatches.length)];
-    const data = await fetchEspnMatch(match.league, match.id);
-    
+    const leagues = ['eng.1', 'esp.1', 'ger.1', 'ita.1'];
+    const league = leagues[Math.floor(Math.random() * leagues.length)];
+
+    let recentMatches = [];
+    try {
+      recentMatches = await fetchRecentEspnMatchIds(league);
+    } catch (e) {
+      console.warn(`[generateGuessClub] Could not fetch scoreboard: ${e.message}`);
+    }
+
+    if (recentMatches.length === 0) throw new Error('No recent matches');
+
+    const match = recentMatches[Math.floor(Math.random() * recentMatches.length)];
+    const data = await fetchEspnMatch(league, match.id);
+
     if (data.rosters && data.rosters.length > 0) {
       const roster = data.rosters[Math.floor(Math.random() * data.rosters.length)];
       const club_name = roster.team.displayName;
       const logoUrl = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href);
 
       if (logoUrl) {
-        const imgRes = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+        const imgRes = await axios.get(logoUrl, { responseType: 'arraybuffer', timeout: 10000 });
         const blurredBuffer = await sharp(imgRes.data).blur(30).toBuffer();
         const base64 = `data:image/png;base64,${blurredBuffer.toString('base64')}`;
 
@@ -308,7 +418,9 @@ async function generateGuessClub() {
         };
       }
     }
-  } catch(e) { console.error('[generateGuessClub] error:', e.message); }
+  } catch (e) {
+    console.error('[generateGuessClub] error:', e.message);
+  }
 
   return {
     game_type: 'guess_club',
@@ -316,6 +428,8 @@ async function generateGuessClub() {
     solution: { secret: 'Real Madrid' }
   };
 }
+
+// ── saveMiniGame ──────────────────────────────────────────────────────────────
 
 async function saveMiniGame(game) {
   const query = `
@@ -327,31 +441,40 @@ async function saveMiniGame(game) {
   `;
   try {
     await pool.query(query, [game.game_type, game.puzzle_data, game.solution]);
-    console.log(`[generateMiniGames] Saved/Updated ${game.game_type} in DB.`);
+    console.log(`[generateMiniGames] Saved/Updated ${game.game_type} for today.`);
   } catch (err) {
     console.error(`[generateMiniGames] Error saving ${game.game_type}:`, err.message);
     throw err;
   }
 }
 
-async function generateAllMiniGames() {
-  console.log('[generateMiniGames] Starting daily mini games generation part 2...');
-  try {
-    const games = [];
-    games.push(await generateMissingXI());
-    games.push(await generateWhoAreYa());
-    games.push(await generateCareerPath());
-    games.push(await generateBox2Box());
-    games.push(await generateGuessClub());
+// ── Main ──────────────────────────────────────────────────────────────────────
 
-    for (const game of games) {
+async function generateAllMiniGames() {
+  console.log('[generateMiniGames] Starting daily mini games generation...');
+  const results = { success: [], failed: [] };
+
+  const generators = [
+    { name: 'missing_xi',  fn: generateMissingXI },
+    { name: 'who_are_ya',  fn: generateWhoAreYa },
+    { name: 'career_path', fn: generateCareerPath },
+    { name: 'box2box',     fn: generateBox2Box },
+    { name: 'guess_club',  fn: generateGuessClub },
+  ];
+
+  for (const gen of generators) {
+    try {
+      console.log(`[generateMiniGames] Generating ${gen.name}...`);
+      const game = await gen.fn();
       await saveMiniGame(game);
+      results.success.push(gen.name);
+    } catch (error) {
+      console.error(`[generateMiniGames] Failed to generate ${gen.name}:`, error.stack || error.message);
+      results.failed.push(gen.name);
     }
-    
-    console.log('[generateMiniGames] Complete.');
-  } catch (error) {
-    console.error('[generateMiniGames] Error:', error.stack || error.message);
   }
+
+  console.log(`[generateMiniGames] Complete. Success: [${results.success.join(', ')}]  Failed: [${results.failed.join(', ')}]`);
 }
 
 module.exports = { generateAllMiniGames };
