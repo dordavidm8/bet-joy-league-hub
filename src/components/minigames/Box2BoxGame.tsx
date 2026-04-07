@@ -17,21 +17,29 @@ const Box2BoxGame: React.FC<Box2BoxGameProps> = ({ data, solution, onSolve }) =>
   const [guess, setGuess] = useState('');
   const navigate = useNavigate();
 
-  const normalize = (s: string) => 
+  const normalize = (s: string) =>
     s.toLowerCase()
      .normalize("NFD")
      .replace(/[\u0300-\u036f]/g, "")
+     .replace(/\bjr\.?\b/g, 'junior')
+     .replace(/\bsr\.?\b/g, 'senior')
      .trim();
 
-  const handleSubmit = () => {
-    const userGuess = normalize(guess);
-    const correctSecret = normalize(solution.secret);
-    
-    const isCorrect = userGuess === correctSecret || 
-                     (userGuess.length >= 3 && correctSecret.split(' ').some(part => part === userGuess));
-    
-    onSolve(isCorrect);
+  const isAnswerCorrect = (guess: string, secret: string): boolean => {
+    const g = normalize(guess);
+    const s = normalize(secret);
+    if (g === s) return true;
+    const gWords = g.split(/\s+/).filter(w => w.length >= 3);
+    const sWords = s.split(/\s+/);
+    if (gWords.length > 0 && gWords.every(gw => sWords.some(sw => sw === gw || sw.startsWith(gw)))) return true;
+    if (gWords.length === 1 && gWords[0].length >= 4 && sWords.some(w => w === gWords[0])) return true;
+    return false;
   };
+
+  const handleSubmit = () => {
+    onSolve(isAnswerCorrect(guess, solution.secret));
+  };
+
 
   return (
     <div className="w-full h-full flex flex-col pt-4">
