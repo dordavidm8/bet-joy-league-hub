@@ -268,4 +268,15 @@ npm run dev            # starts server on port 3000
 
 ---
 
-*Last updated: 2026-03-17*
+## Mini Games Engine Updates (2026-04-07)
+We have made significant improvements to the daily mini-games:
+- **GuessClub**: Now fetches club logos directly from ESPN scoreboard API (real base64 images).
+- **WhoAreYa**: Hardcoded curated player list with accurate Wikidata IDs, overriding fragile Wikipedia HTML scraping but keeping reliable Wikipedia images.
+- **MissingXI**: Dynamically fetches rosters for recent games across top 5 leagues to avoid outdated player lists.
+- **Anti-repeat**: Added strict checks (30/7 days) to Box2Box and CareerPath so users don't see the same puzzles.
+- **Ops Triggers**: Added `/api/ops/generate-minigames` and `/api/ops/reset-minigame-attempts` via `admin.js` for manual testing and regeneration.
+- **Node Environment**: Fixed Railway crash by enforcing `"node": ">=18"`.
+
+---
+
+*Last updated: 2026-04-07*

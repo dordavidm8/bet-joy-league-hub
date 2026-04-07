@@ -69,6 +69,7 @@ async function generateMissingXI() {
   let starters = [];
   let teamName = '';
   let teamLogo = '';
+  let matchContext = '';
 
   // Shuffle leagues and try each until we find a match with rosters
   const shuffledLeagues = [...leagues].sort(() => Math.random() - 0.5);
@@ -94,8 +95,17 @@ async function generateMissingXI() {
         if (data.rosters && data.rosters.length >= 2) {
           const teamIdx = Math.random() < 0.5 ? 0 : 1;
           const roster = data.rosters[teamIdx];
+          const opponentRoster = data.rosters[teamIdx === 0 ? 1 : 0];
           teamName = roster.team.displayName;
           teamLogo = roster.team.logo || (roster.team.logos && roster.team.logos[0]?.href) || '';
+          
+          let leagueName = league.toUpperCase();
+          if (league === 'eng.1') leagueName = 'Premier League';
+          else if (league === 'esp.1') leagueName = 'La Liga';
+          else if (league === 'ita.1') leagueName = 'Serie A';
+          else if (league === 'ger.1') leagueName = 'Bundesliga';
+
+          matchContext = `טריווית הרכב: שוחק נגד ${opponentRoster.team.displayName} (${leagueName})`;
 
           const allPlayers = (roster.roster || roster.entries || [])
             .map(e => ({
@@ -137,7 +147,7 @@ async function generateMissingXI() {
 
   return {
     game_type: 'missing_xi',
-    puzzle_data: { teamName, teamLogo, formation, players: puzzlePlayers, hidden_idx: hiddenIdx },
+    puzzle_data: { teamName, teamLogo, matchContext, formation, players: puzzlePlayers, hidden_idx: hiddenIdx },
     solution: { secret: hiddenPlayerName }
   };
 }
@@ -297,48 +307,56 @@ async function generateBox2Box() {
     console.warn('[generateBox2Box] Could not fetch recent pairs:', e.message);
   }
 
-  // Query for a pair NOT used recently
-  const query = `
-    SELECT c1.club_name AS team1, c2.club_name AS team2
-    FROM player_clubs c1
-    JOIN player_clubs c2 ON c1.player_name = c2.player_name AND c1.club_name < c2.club_name
-    GROUP BY c1.club_name, c2.club_name
-    HAVING COUNT(DISTINCT c1.player_name) >= 1
-    ORDER BY RANDOM()
-    LIMIT 20;
-  `;
-  const { rows } = await pool.query(query);
+  // Curated list of Box2Box pairs (since player_clubs table might not be seeded)
+  const PAIRS = [
+    { team1: 'Real Madrid', team2: 'Juventus', player: 'Cristiano Ronaldo' },
+    { team1: 'Real Madrid', team2: 'Juventus', player: 'Zinedine Zidane' },
+    { team1: 'Barcelona', team2: 'Paris Saint-Germain', player: 'Lionel Messi' },
+    { team1: 'Barcelona', team2: 'Paris Saint-Germain', player: 'Neymar' },
+    { team1: 'Manchester United', team2: 'Real Madrid', player: 'Cristiano Ronaldo' },
+    { team1: 'Manchester United', team2: 'Real Madrid', player: 'David Beckham' },
+    { team1: 'Arsenal', team2: 'Chelsea', player: 'Ashley Cole' },
+    { team1: 'Arsenal', team2: 'Chelsea', player: 'Cesc Fàbregas' },
+    { team1: 'Arsenal', team2: 'Chelsea', player: 'Petr Čech' },
+    { team1: 'Liverpool', team2: 'Chelsea', player: 'Fernando Torres' },
+    { team1: 'Liverpool', team2: 'Manchester City', player: 'Raheem Sterling' },
+    { team1: 'Liverpool', team2: 'Manchester City', player: 'James Milner' },
+    { team1: 'Bayern Munich', team2: 'Borussia Dortmund', player: 'Robert Lewandowski' },
+    { team1: 'Bayern Munich', team2: 'Borussia Dortmund', player: 'Mario Götze' },
+    { team1: 'Bayern Munich', team2: 'Borussia Dortmund', player: 'Mats Hummels' },
+    { team1: 'AC Milan', team2: 'Juventus', player: 'Andrea Pirlo' },
+    { team1: 'AC Milan', team2: 'Inter Milan', player: 'Zlatan Ibrahimović' },
+    { team1: 'AC Milan', team2: 'Inter Milan', player: 'Ronaldo' },
+    { team1: 'Barcelona', team2: 'Real Madrid', player: 'Luís Figo' },
+    { team1: 'Barcelona', team2: 'Real Madrid', player: 'Ronaldo' },
+    { team1: 'Atletico Madrid', team2: 'Real Madrid', player: 'Thibaut Courtois' },
+    { team1: 'Atletico Madrid', team2: 'Real Madrid', player: 'Álvaro Morata' },
+    { team1: 'Tottenham Hotspur', team2: 'Real Madrid', player: 'Gareth Bale' },
+    { team1: 'Tottenham Hotspur', team2: 'Real Madrid', player: 'Luka Modrić' },
+    { team1: 'Manchester United', team2: 'Juventus', player: 'Paul Pogba' },
+    { team1: 'Arsenal', team2: 'Barcelona', player: 'Thierry Henry' },
+    { team1: 'Arsenal', team2: 'Barcelona', player: 'Alexis Sánchez' },
+    { team1: 'Chelsea', team2: 'Real Madrid', player: 'Eden Hazard' },
+    { team1: 'Chelsea', team2: 'Real Madrid', player: 'Thibaut Courtois' },
+    { team1: 'Liverpool', team2: 'Bayern Munich', player: 'Sadio Mané' },
+    { team1: 'Manchester City', team2: 'Bayern Munich', player: 'Leroy Sané' },
+    { team1: 'Paris Saint-Germain', team2: 'Juventus', player: 'Ángel Di María' },
+    { team1: 'Manchester United', team2: 'Paris Saint-Germain', player: 'Ángel Di María' },
+    { team1: 'Ajax', team2: 'Juventus', player: 'Matthijs de Ligt' },
+    { team1: 'AC Milan', team2: 'Chelsea', player: 'Andriy Shevchenko' },
+    { team1: 'AC Milan', team2: 'Paris Saint-Germain', player: 'Thiago Silva' },
+  ];
 
-  // Pick the first pair not in the recent list
-  let chosen = null;
-  for (const row of rows) {
-    const key = `${row.team1}|${row.team2}`;
-    if (!recentPairs.includes(key)) {
-      chosen = row;
-      break;
-    }
-  }
-  // If all pairs were recently used, just pick randomly
-  if (!chosen && rows.length > 0) {
-    chosen = rows[Math.floor(Math.random() * rows.length)];
-  }
+  // Pick pairs not in the recent list
+  const availablePairs = PAIRS.filter(p => !recentPairs.includes(`${p.team1}|${p.team2}`) && !recentPairs.includes(`${p.team2}|${p.team1}`));
+  
+  // If all exhausted, fall back to full array
+  const poolPAIRS = availablePairs.length > 0 ? availablePairs : PAIRS;
+  const chosen = poolPAIRS[Math.floor(Math.random() * poolPAIRS.length)];
 
-  let team1 = 'Real Madrid', team2 = 'Juventus', solutionInfo = 'Cristiano Ronaldo';
-
-  if (chosen) {
-    team1 = chosen.team1;
-    team2 = chosen.team2;
-
-    const playerQuery = `
-      SELECT c1.player_name 
-      FROM player_clubs c1 
-      JOIN player_clubs c2 ON c1.player_name = c2.player_name 
-      WHERE c1.club_name = $1 AND c2.club_name = $2 
-      LIMIT 1
-    `;
-    const playerRows = await pool.query(playerQuery, [team1, team2]);
-    if (playerRows.rows.length > 0) solutionInfo = playerRows.rows[0].player_name;
-  }
+  let team1 = chosen.team1;
+  let team2 = chosen.team2;
+  let solutionInfo = chosen.player;
 
   return {
     game_type: 'box2box',

@@ -6,6 +6,7 @@ interface MissingXIGameProps {
   data: {
     teamName: string;
     teamLogo?: string;
+    matchContext?: string;
     formation: string;
     players: { name: string; shirt: string }[];
     hidden_idx: number;
@@ -78,7 +79,12 @@ const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, solution, onSolve }
              {data.teamLogo && <img src={data.teamLogo} alt={data.teamName} className="w-10 h-10 object-contain drop-shadow-sm" />}
              <div className="text-right">
                 <h1 className="font-bold text-lg text-primary leading-tight">{data.teamName}</h1>
-                <p className="text-[10px] text-muted-foreground uppercase">ההרכב החסר • {data.formation}</p>
+                <p className="text-[10px] text-muted-foreground uppercase mb-1">ההרכב החסר • {data.formation}</p>
+                {data.matchContext && (
+                  <p className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block">
+                    {data.matchContext}
+                  </p>
+                )}
              </div>
           </div>
          <button className="p-2 bg-card rounded-full shadow-sm"><HelpCircle size={20} /></button>
