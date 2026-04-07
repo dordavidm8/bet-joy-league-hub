@@ -137,5 +137,21 @@ opsRouter.post('/generate-minigames', async (req, res) => {
   generateAllMiniGames().catch(err => console.error('[ops] Mini-game generation error:', err.message));
 });
 
+// POST /api/ops/reset-minigame-attempts — clear all attempts for today's puzzles (lets users replay)
+opsRouter.post('/reset-minigame-attempts', async (req, res, next) => {
+  try {
+    // Delete all attempts linked to today's daily mini games
+    const result = await pool.query(`
+      DELETE FROM mini_game_attempts
+      WHERE puzzle_id IN (
+        SELECT id FROM daily_mini_games WHERE play_date = CURRENT_DATE
+      )
+    `);
+    // Also update users' points_balance to remove points earned from today's minigames
+    // (optional: only remove if explicitly requested)
+    res.json({ message: 'Mini-game attempts reset for today', deleted: result.rowCount });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
 module.exports.opsRouter = opsRouter;
