@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <clipPath id="ball"><circle cx="50" cy="50" r="46"/></clipPath>
+  </defs>
+
+  <!-- Ball base -->
+  <circle cx="50" cy="50" r="46" fill="white" stroke="#111" stroke-width="4"/>
+
+  <!-- Center black pentagon -->
+  <polygon points="50,30 66,41 60,58 40,58 34,41" fill="#111" clip-path="url(#ball)"/>
+
+  <!-- 5 edge patches (black pentagons at the boundary) -->
+  <!-- Top -->
+  <polygon points="50,4 64,17 50,30 36,17" fill="#111" clip-path="url(#ball)"/>
+  <!-- Upper-right -->
+  <polygon points="95,32 81,44 66,41 72,24" fill="#111" clip-path="url(#ball)"/>
+  <!-- Lower-right -->
+  <polygon points="79,82 60,80 60,58 76,52" fill="#111" clip-path="url(#ball)"/>
+  <!-- Lower-left -->
+  <polygon points="21,82 40,80 40,58 24,52" fill="#111" clip-path="url(#ball)"/>
+  <!-- Upper-left -->
+  <polygon points="5,32 28,41 34,41 28,24" fill="#111" clip-path="url(#ball)"/>
+</svg>

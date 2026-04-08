@@ -1,104 +1,58 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Sparkles, TrendingUp, BarChart3 } from "lucide-react";
-import { mockGames } from "@/lib/mockData";
+import { Send, Sparkles, User, ChevronDown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getGames, askAdvisor, AdvisorMessage, Game } from "@/lib/api";
 
-interface ChatMessage {
+interface ChatMessage extends AdvisorMessage {
   id: string;
-  role: "user" | "assistant";
-  content: string;
-  stats?: StatCard[];
   timestamp: Date;
 }
 
-interface StatCard {
-  label: string;
-  value: string;
-  icon: "trend" | "chart";
-}
-
-const mockExpertResponses: Record<string, { content: string; stats: StatCard[] }> = {
-  default: {
-    content: "שלום! אני המומחה שלך להימורי ספורט 🧠\nשאל אותי על כל משחק — אני אציג לך סטטיסטיקות מתקדמות, מגמות וניתוחים שיעזרו לך להחליט.\n\nנסה לשאול: \"מי ינצח בין מכבי תל אביב להפועל באר שבע?\"",
-    stats: [],
-  },
-  win: {
-    content: "בהתבסס על הנתונים, הנה הניתוח שלי:",
-    stats: [
-      { label: "ניצחונות בבית (5 אחרונים)", value: "4/5 (80%)", icon: "trend" },
-      { label: "ממוצע שערים למשחק", value: "2.4", icon: "chart" },
-      { label: "מפגשים ישירים אחרונים", value: "3W-1D-1L", icon: "trend" },
-      { label: "אחוז החזקת כדור", value: "58%", icon: "chart" },
-    ],
-  },
-  goals: {
-    content: "הנה הסטטיסטיקות על שערים:",
-    stats: [
-      { label: "ממוצע שערים במשחק", value: "2.7", icon: "chart" },
-      { label: "מעל 2.5 שערים", value: "67% מהמשחקים", icon: "trend" },
-      { label: "שני הצדדים מבקיעים", value: "55%", icon: "chart" },
-      { label: "שער ראשון לפני דקה 30", value: "72%", icon: "trend" },
-    ],
-  },
-  corners: {
-    content: "סטטיסטיקות קרנות:",
-    stats: [
-      { label: "ממוצע קרנות למשחק", value: "9.3", icon: "chart" },
-      { label: "מעל 8.5 קרנות", value: "61%", icon: "trend" },
-      { label: "קרנות מחצית ראשונה", value: "4.1 ממוצע", icon: "chart" },
-      { label: "קבוצת בית - ממוצע קרנות", value: "5.8", icon: "trend" },
-    ],
-  },
-};
-
-function getExpertResponse(message: string): { content: string; stats: StatCard[] } {
-  const lower = message.toLowerCase();
-  if (lower.includes("שער") || lower.includes("גול") || lower.includes("יבקיע")) {
-    return mockExpertResponses.goals;
-  }
-  if (lower.includes("קרנ") || lower.includes("קורנר")) {
-    return mockExpertResponses.corners;
-  }
-  if (lower.includes("ינצח") || lower.includes("מי") || lower.includes("תוצאה") || lower.includes("מנצח")) {
-    return mockExpertResponses.win;
-  }
-  return {
-    content: `ניתוח מעניין! הנה מה שאני רואה בנתונים לגבי "${message}":`,
-    stats: [
-      { label: "מגמה אחרונה", value: "חיובית ↑", icon: "trend" },
-      { label: "רמת ביטחון", value: "68%", icon: "chart" },
-      { label: "דגימת משחקים", value: "42 משחקים", icon: "chart" },
-    ],
-  };
-}
-
-const suggestedQuestions = [
-  "מי ינצח היום?",
-  "כמה שערים יהיו?",
-  "כמה קרנות צפויות?",
-  "איזו קבוצה בפורמה הכי טובה?",
+const SUGGESTED = [
+  "על מי כדאי להמר?",
+  "כמה שערים צפויים?",
+  "מה הסיכוי שיהיה תיקו?",
+  "איזו קבוצה בפורמה טובה יותר?",
 ];
 
+const WELCOME_GENERIC = `שלום! אני יועץ ה-AI של Kickoff 🤖\nבחר משחק למעלה ואני אעזור לך לנתח אותו לפני שתמר.`;
+
+const WELCOME_GAME = (home: string, away: string) =>
+  `מוכן לנתח את **${home}** נגד **${away}**! שאל אותי כל דבר שיעזור לך להחליט.`;
+
 const ExpertChatPage = () => {
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: mockExpertResponses.default.content,
-      stats: [],
-      timestamp: new Date(),
-    },
+    { id: "welcome", role: "assistant", content: WELCOME_GENERIC, timestamp: new Date() },
   ]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { data } = useQuery({
+    queryKey: ["games-advisor"],
+    queryFn: () => getGames({ status: "scheduled" }),
+  });
+  const upcomingGames = data?.games ?? [];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, isLoading]);
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
+  const handleSelectGame = (game: Game) => {
+    setSelectedGame(game);
+    setShowPicker(false);
+    setMessages([
+      { id: "welcome", role: "assistant", content: WELCOME_GAME(game.home_team, game.away_team), timestamp: new Date() },
+    ]);
+    setRemaining(null);
+  };
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading || !selectedGame) return;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -106,130 +60,150 @@ const ExpertChatPage = () => {
       content: text.trim(),
       timestamp: new Date(),
     };
-
+    const nextMessages = [...messages.filter((m) => m.id !== "welcome"), userMsg];
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setIsTyping(true);
+    setIsLoading(true);
 
-    setTimeout(() => {
-      const response = getExpertResponse(text);
-      const botMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: response.content,
-        stats: response.stats,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botMsg]);
-      setIsTyping(false);
-    }, 1200);
+    try {
+      const apiMessages: AdvisorMessage[] = nextMessages.map(({ role, content }) => ({ role, content }));
+      const { reply, remaining: rem } = await askAdvisor(selectedGame.id, apiMessages);
+      setRemaining(rem);
+      setMessages((prev) => [
+        ...prev,
+        { id: (Date.now() + 1).toString(), role: "assistant", content: reply, timestamp: new Date() },
+      ]);
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: err?.message?.includes("20 הודעות")
+            ? "הגעת למגבלת ה-20 הודעות להיום. נתראה מחר! 👋"
+            : "אירעה שגיאה. נסה שוב בעוד רגע.",
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const userMessageCount = messages.filter((m) => m.role === "user").length;
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-border">
-        <div className="flex items-center gap-3">
+      <div className="px-5 py-4 border-b border-border shrink-0">
+        <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bot size={22} className="text-primary" />
+            <Sparkles size={20} className="text-primary" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="font-black text-base">שאל את המומחה</h1>
-            <p className="text-xs text-muted-foreground">סטטיסטיקות מתקדמות • ניתוח משחקים</p>
+            <p className="text-xs text-muted-foreground">
+              {remaining !== null ? `${remaining} הודעות נותרו היום` : "ניתוח משחקים · מבוסס AI"}
+            </p>
           </div>
-          <div className="mr-auto">
-            <span className="flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-              פעיל
+          <span className="flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+            פעיל
+          </span>
+        </div>
+
+        {/* Game picker */}
+        <div className="relative">
+          <button
+            onClick={() => setShowPicker((v) => !v)}
+            className="w-full flex items-center justify-between bg-secondary rounded-xl px-4 py-2.5 text-sm font-medium"
+          >
+            <span className={selectedGame ? "text-foreground" : "text-muted-foreground"}>
+              {selectedGame
+                ? `${selectedGame.home_team} נגד ${selectedGame.away_team}`
+                : "בחר משחק לניתוח..."}
             </span>
-          </div>
+            <ChevronDown
+              size={16}
+              className={`text-muted-foreground transition-transform ${showPicker ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          <AnimatePresence>
+            {showPicker && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
+                className="absolute top-full mt-1 left-0 right-0 bg-card border border-border rounded-xl shadow-elevated z-10 max-h-52 overflow-y-auto"
+              >
+                {upcomingGames.length === 0 ? (
+                  <p className="text-sm text-muted-foreground px-4 py-3">אין משחקים מתוכננים</p>
+                ) : (
+                  upcomingGames.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => handleSelectGame(g)}
+                      className="w-full text-right px-4 py-3 text-sm hover:bg-secondary transition-colors flex flex-col gap-0.5 border-b border-border last:border-0"
+                    >
+                      <span className="font-semibold">{g.home_team} נגד {g.away_team}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {g.competition_name} · {new Date(g.start_time).toLocaleDateString("he-IL")}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 min-h-0">
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.18 }}
               className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
             >
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1 ${
-                  msg.role === "assistant"
-                    ? "bg-primary/10"
-                    : "bg-secondary"
+                  msg.role === "assistant" ? "bg-primary/10" : "bg-secondary"
                 }`}
               >
                 {msg.role === "assistant" ? (
-                  <Sparkles size={14} className="text-primary" />
+                  <Sparkles size={13} className="text-primary" />
                 ) : (
-                  <User size={14} className="text-muted-foreground" />
+                  <User size={13} className="text-muted-foreground" />
                 )}
               </div>
-
               <div
-                className={`flex flex-col gap-2 max-w-[80%] ${
-                  msg.role === "user" ? "items-end" : "items-start"
+                className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line max-w-[80%] ${
+                  msg.role === "user"
+                    ? "bg-primary text-primary-foreground rounded-br-md"
+                    : "bg-secondary text-foreground rounded-bl-md"
                 }`}
               >
-                <div
-                  className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-secondary text-foreground rounded-bl-md"
-                  }`}
-                >
-                  {msg.content}
-                </div>
-
-                {/* Stat Cards */}
-                {msg.stats && msg.stats.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 w-full">
-                    {msg.stats.map((stat, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.1 + i * 0.08 }}
-                        className="bg-card border border-border rounded-xl p-3 flex flex-col gap-1"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          {stat.icon === "trend" ? (
-                            <TrendingUp size={12} className="text-primary" />
-                          ) : (
-                            <BarChart3 size={12} className="text-primary" />
-                          )}
-                          <span className="text-[10px] text-muted-foreground font-medium">
-                            {stat.label}
-                          </span>
-                        </div>
-                        <span className="text-sm font-black">{stat.value}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-
-                <span className="text-[10px] text-muted-foreground">
-                  {msg.timestamp.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}
-                </span>
+                {msg.content}
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
 
         {/* Typing indicator */}
-        {isTyping && (
+        {isLoading && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex items-center gap-2"
           >
             <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles size={14} className="text-primary" />
+              <Sparkles size={13} className="text-primary" />
             </div>
             <div className="bg-secondary rounded-2xl rounded-bl-md px-4 py-3 flex gap-1">
               <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0ms]" />
@@ -243,13 +217,14 @@ const ExpertChatPage = () => {
       </div>
 
       {/* Suggested questions */}
-      {messages.length <= 1 && (
-        <div className="px-4 pb-2 flex flex-wrap gap-2">
-          {suggestedQuestions.map((q) => (
+      {selectedGame && userMessageCount === 0 && (
+        <div className="px-4 pb-2 flex flex-wrap gap-2 shrink-0">
+          {SUGGESTED.map((q) => (
             <button
               key={q}
               onClick={() => sendMessage(q)}
-              className="text-xs bg-secondary text-foreground px-3 py-1.5 rounded-full font-medium hover:bg-secondary/80 transition-colors"
+              disabled={isLoading}
+              className="text-xs bg-secondary text-foreground px-3 py-1.5 rounded-full font-medium hover:bg-secondary/80 transition-colors disabled:opacity-40"
             >
               {q}
             </button>
@@ -258,32 +233,30 @@ const ExpertChatPage = () => {
       )}
 
       {/* Input */}
-      <div className="px-4 pb-4 pt-2 border-t border-border">
+      <div className="px-4 pb-4 pt-2 border-t border-border shrink-0">
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage(input);
-          }}
+          onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}
           className="flex items-center gap-2"
         >
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="שאל על משחק, קבוצה או סטטיסטיקה..."
-            className="flex-1 bg-secondary rounded-full px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-shadow"
-            disabled={isTyping}
+            placeholder={selectedGame ? "שאל על המשחק..." : "בחר משחק קודם..."}
+            maxLength={500}
+            className="flex-1 bg-secondary rounded-full px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-shadow disabled:opacity-50"
+            disabled={isLoading || !selectedGame}
           />
           <button
             type="submit"
-            disabled={!input.trim() || isTyping}
+            disabled={!input.trim() || isLoading || !selectedGame}
             className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-40 transition-opacity"
           >
-            <Send size={18} />
+            <Send size={17} />
           </button>
         </form>
         <p className="text-[10px] text-muted-foreground text-center mt-2">
-          ⚠️ בהתבסס על נתוני העבר בלבד. אין זה מהווה ייעוץ הימורים.
+          ⚠️ בהתבסס על נתוני עבר בלבד. אין זה מהווה ייעוץ הימורים.
         </p>
       </div>
     </div>

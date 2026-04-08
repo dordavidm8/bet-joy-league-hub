@@ -20,6 +20,7 @@ const adminModule = require('./routes/admin');
 const adminRoutes = adminModule;
 const opsRouter = adminModule.opsRouter;
 const minigamesRoutes = require('./routes/minigames');
+const advisorRoutes = require('./routes/advisor');
 
 const app = express();
 const server = http.createServer(app);
@@ -60,6 +61,7 @@ app.use('/api/quiz', quizRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ops', opsRouter);
 app.use('/api/minigames', minigamesRoutes);
+app.use('/api/advisor', advisorRoutes);
 
 app.use(errorHandler);
 

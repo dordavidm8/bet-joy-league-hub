@@ -198,3 +198,10 @@ CREATE TABLE IF NOT EXISTS player_clubs (
 
 CREATE INDEX IF NOT EXISTS idx_player_clubs_name ON player_clubs(player_name);
 CREATE INDEX IF NOT EXISTS idx_player_clubs_club ON player_clubs(club_name);
+
+CREATE TABLE IF NOT EXISTS advisor_usage (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  message_count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, usage_date)
+);

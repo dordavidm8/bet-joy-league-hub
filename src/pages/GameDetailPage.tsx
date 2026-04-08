@@ -196,6 +196,7 @@ const GameDetailPage = () => {
 
       {showAi && (
         <AiAdvisor
+          gameId={game.id}
           homeTeam={game.home_team}
           awayTeam={game.away_team}
           onClose={() => setShowAi(false)}

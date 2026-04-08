@@ -97,6 +97,14 @@ export const answerQuestion = (id: string, selected_option: string) =>
     `/quiz/${id}/answer`, { method: 'POST', body: JSON.stringify({ selected_option }) }
   );
 
+// ── AI Advisor ────────────────────────────────────────────────────────────────
+export interface AdvisorMessage { role: 'user' | 'assistant'; content: string; }
+export const askAdvisor = (gameId: string, messages: AdvisorMessage[]) =>
+  request<{ reply: string; remaining: number }>(`/advisor/${gameId}`, {
+    method: 'POST',
+    body: JSON.stringify({ messages }),
+  });
+
 // ── User ──────────────────────────────────────────────────────────────────────
 export const getMyStats = () => request<UserStats>('/users/me/stats');
 export const deleteAccount = () => request<{ message: string }>('/users/me', { method: 'DELETE' });
