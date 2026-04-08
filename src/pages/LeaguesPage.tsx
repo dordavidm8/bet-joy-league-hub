@@ -14,6 +14,16 @@ const DEFAULT_DISTRIBUTION = [
   { place: 3, pct: 10 },
 ];
 
+const KNOWN_COMPETITIONS = [
+  { slug: 'fifa.world',      name: 'גביע העולם 2026' },
+  { slug: 'uefa.champions',  name: 'ליגת האלופות' },
+  { slug: 'eng.1',           name: 'פרמייר ליג' },
+  { slug: 'esp.1',           name: 'לה ליגה' },
+  { slug: 'ger.1',           name: 'בונדסליגה' },
+  { slug: 'ita.1',           name: 'סריה א' },
+  { slug: 'fra.1',           name: 'ליג 1' },
+];
+
 const LeaguesPage = () => {
   const [tab, setTab] = useState<Tab>("leagues");
   const [showCreate, setShowCreate] = useState(false);
@@ -25,10 +35,15 @@ const LeaguesPage = () => {
   // Create form state
   const [name, setName] = useState("");
   const [access, setAccess] = useState<"invite" | "public">("invite");
-  const [format, setFormat] = useState<"pool" | "per_game">("pool");
+  const [format, setFormat] = useState<"pool" | "per_game" | "tournament">("pool");
   const [duration, setDuration] = useState("full_season");
   const [entryFee, setEntryFee] = useState("0");
   const [distribution, setDistribution] = useState(DEFAULT_DISTRIBUTION);
+  // Tournament-specific
+  const [tournamentSlug, setTournamentSlug] = useState("fifa.world");
+  const [stakePerMatch, setStakePerMatch] = useState("50");
+  const [joinPolicy, setJoinPolicy] = useState<"before_start" | "anytime">("before_start");
+  const [autoSettle, setAutoSettle] = useState(true);
 
   const { data: leaguesData, isLoading: leaguesLoading } = useQuery({
     queryKey: ["my-leagues"],
@@ -52,10 +67,16 @@ const LeaguesPage = () => {
       createLeague({
         name,
         format,
-        duration_type: duration,
+        duration_type: format === "tournament" ? "tournament" : duration,
         access_type: access,
         entry_fee: parseInt(entryFee) || 0,
-        distribution: format === "pool" && parseInt(entryFee) > 0 ? distribution : undefined,
+        distribution: (format === "pool" || format === "tournament") && parseInt(entryFee) > 0 ? distribution : undefined,
+        ...(format === "tournament" && {
+          tournament_slug: tournamentSlug,
+          stake_per_match: parseInt(stakePerMatch) || 0,
+          join_policy: joinPolicy,
+          auto_settle: autoSettle,
+        }),
       }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["my-leagues"] });
@@ -79,6 +100,8 @@ const LeaguesPage = () => {
     setName(""); setAccess("invite"); setFormat("pool");
     setDuration("full_season"); setEntryFee("0");
     setDistribution(DEFAULT_DISTRIBUTION);
+    setTournamentSlug("fifa.world"); setStakePerMatch("50");
+    setJoinPolicy("before_start"); setAutoSettle(true);
   };
 
   const distTotal = distribution.reduce((s, d) => s + d.pct, 0);
@@ -138,17 +161,62 @@ const LeaguesPage = () => {
               {/* Format */}
               <select value={format} onChange={(e) => setFormat(e.target.value as any)}
                 className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
-                <option value="pool">פורמט: קופה משותפת</option>
-                <option value="per_game">פורמט: תשלום למשחק</option>
+                <option value="pool">קופה משותפת</option>
+                <option value="per_game">תשלום למשחק</option>
+                <option value="tournament">🏆 ליגת טורניר</option>
               </select>
 
-              {/* Duration */}
-              <select value={duration} onChange={(e) => setDuration(e.target.value)}
-                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
-                <option value="full_season">עונה מלאה</option>
-                <option value="single_round">סבב בודד</option>
-                <option value="cup">גביע</option>
-              </select>
+              {/* Tournament fields */}
+              {format === "tournament" && (
+                <div className="flex flex-col gap-3 border border-primary/20 rounded-xl p-3 bg-primary/5">
+                  <p className="text-xs font-bold text-primary">הגדרות טורניר</p>
+
+                  <select value={tournamentSlug} onChange={(e) => setTournamentSlug(e.target.value)}
+                    className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
+                    {KNOWN_COMPETITIONS.map(c => (
+                      <option key={c.slug} value={c.slug}>{c.name}</option>
+                    ))}
+                  </select>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground shrink-0">stake מינימלי למשחק</span>
+                    <input type="number" min={0} value={stakePerMatch}
+                      onChange={(e) => setStakePerMatch(e.target.value)}
+                      className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs text-muted-foreground">הצטרפות לליגה</p>
+                    <div className="flex gap-2">
+                      {(["before_start", "anytime"] as const).map(p => (
+                        <button key={p} onClick={() => setJoinPolicy(p)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-colors ${
+                            joinPolicy === p ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"
+                          }`}>
+                          {p === "before_start" ? "לפני תחילת הטורניר בלבד" : "בכל שלב"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={autoSettle} onChange={(e) => setAutoSettle(e.target.checked)}
+                      className="w-4 h-4 accent-primary" />
+                    <span className="text-sm">סיום וחלוקה אוטומטיים עם סיום הטורניר</span>
+                  </label>
+                </div>
+              )}
+
+              {/* Duration (non-tournament only) */}
+              {format !== "tournament" && (
+                <select value={duration} onChange={(e) => setDuration(e.target.value)}
+                  className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
+                  <option value="full_season">עונה מלאה</option>
+                  <option value="single_round">סבב בודד</option>
+                  <option value="cup">גביע</option>
+                </select>
+              )}
 
               {/* Entry fee */}
               <div className="flex items-center gap-2">

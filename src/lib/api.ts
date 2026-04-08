@@ -92,6 +92,9 @@ export const settleLeague = (id: string) =>
 export const leaveLeague = (id: string) =>
   request<{ message: string }>(`/leagues/${id}/leave`, { method: 'POST' });
 
+export const getLeagueMatches = (id: string) =>
+  request<{ matches: TournamentMatch[]; stake_per_match: number }>(`/leagues/${id}/matches`);
+
 // ── Quiz ──────────────────────────────────────────────────────────────────────
 export const getNextQuestion = () => request<{ question: QuizQuestion | null }>('/quiz/next');
 
@@ -201,6 +204,23 @@ export interface LeaderboardEntry {
   rank: number;
 }
 
+export interface TournamentMatch {
+  id: string;
+  home_team: string;
+  away_team: string;
+  home_team_logo?: string;
+  away_team_logo?: string;
+  start_time: string;
+  status: string;
+  score_home?: number | null;
+  score_away?: number | null;
+  bet_id?: string | null;
+  selected_outcome?: string | null;
+  stake?: number | null;
+  bet_status?: string | null;
+  actual_payout?: number | null;
+}
+
 export interface League {
   id: string;
   name: string;
@@ -219,6 +239,10 @@ export interface League {
   member_count?: number;
   points_in_league?: number;
   is_active?: boolean;
+  tournament_slug?: string | null;
+  stake_per_match?: number;
+  join_policy?: 'before_start' | 'anytime';
+  auto_settle?: boolean;
   created_at: string;
 }
 
@@ -234,7 +258,7 @@ export interface LeagueMember {
 export interface CreateLeagueInput {
   name: string;
   description?: string;
-  format: 'pool' | 'per_game';
+  format: 'pool' | 'per_game' | 'tournament';
   duration_type: string;
   access_type?: 'invite' | 'public';
   min_bet?: number;
@@ -242,6 +266,10 @@ export interface CreateLeagueInput {
   distribution?: { place: number; pct: number }[];
   allowed_competitions?: string[];
   season_end_date?: string;
+  tournament_slug?: string;
+  stake_per_match?: number;
+  join_policy?: 'before_start' | 'anytime';
+  auto_settle?: boolean;
 }
 
 export interface QuizQuestion {

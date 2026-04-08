@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeague, settleLeague, leaveLeague } from "@/lib/api";
+import { getLeague, settleLeague, leaveLeague, getLeagueMatches, TournamentMatch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
-import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag } from "lucide-react";
+import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +26,14 @@ const LeagueDetailPage = () => {
     queryKey: ["league", leagueId],
     queryFn: () => getLeague(leagueId!),
     enabled: !!leagueId,
+  });
+
+  const isTournament = data?.league.format === "tournament";
+
+  const { data: matchesData } = useQuery({
+    queryKey: ["league-matches", leagueId],
+    queryFn: () => getLeagueMatches(leagueId!),
+    enabled: !!leagueId && isTournament,
   });
 
   const settleMutation = useMutation({
@@ -188,6 +196,94 @@ const LeagueDetailPage = () => {
             })}
         </div>
       </div>
+
+      {/* Tournament matches */}
+      {isTournament && matchesData && (
+        <div className="px-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="section-label">משחקי הטורניר</h2>
+            {matchesData.stake_per_match > 0 && (
+              <span className="text-xs text-muted-foreground">מינימום {matchesData.stake_per_match} נק׳ למשחק</span>
+            )}
+          </div>
+
+          {/* Summary bar */}
+          {(() => {
+            const started = matchesData.matches.filter(m => m.status !== 'scheduled');
+            const bet = matchesData.matches.filter(m => m.bet_id);
+            const missed = started.filter(m => !m.bet_id);
+            return (
+              <div className="flex gap-2 mb-3">
+                <div className="flex-1 bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-center">
+                  <p className="text-lg font-black text-green-600">{bet.length}</p>
+                  <p className="text-[10px] text-green-600">הומר</p>
+                </div>
+                <div className="flex-1 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-center">
+                  <p className="text-lg font-black text-red-500">{missed.length}</p>
+                  <p className="text-[10px] text-red-500">פוספס</p>
+                </div>
+                <div className="flex-1 bg-secondary rounded-xl px-3 py-2 text-center">
+                  <p className="text-lg font-black">{matchesData.matches.filter(m => m.status === 'scheduled').length}</p>
+                  <p className="text-[10px] text-muted-foreground">ממתין</p>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="flex flex-col gap-2">
+            {matchesData.matches.map((match: TournamentMatch) => {
+              const hasBet = !!match.bet_id;
+              const isScheduled = match.status === 'scheduled';
+              const isLive = match.status === 'live';
+              return (
+                <div key={match.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border ${
+                    hasBet ? 'border-green-200 bg-green-50/50'
+                    : !isScheduled ? 'border-red-200 bg-red-50/50'
+                    : 'border-border bg-card'
+                  }`}
+                >
+                  {/* Status icon */}
+                  <div className="shrink-0">
+                    {hasBet
+                      ? <CheckCircle2 size={18} className="text-green-500" />
+                      : isScheduled
+                        ? <Circle size={18} className="text-muted-foreground/40" />
+                        : <Clock size={18} className="text-red-400" />}
+                  </div>
+
+                  {/* Teams */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold truncate">
+                      {match.home_team_logo && <img src={match.home_team_logo} className="w-4 h-3 object-contain" alt="" />}
+                      <span className="truncate">{match.home_team}</span>
+                      <span className="text-muted-foreground shrink-0">נגד</span>
+                      {match.away_team_logo && <img src={match.away_team_logo} className="w-4 h-3 object-contain" alt="" />}
+                      <span className="truncate">{match.away_team}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(match.start_time).toLocaleDateString("he-IL", { day: "numeric", month: "short" })}
+                        {isLive && <span className="text-primary font-bold mr-1">· LIVE</span>}
+                        {match.status === 'finished' && match.score_home != null && (
+                          <span className="mr-1">{match.score_home}–{match.score_away}</span>
+                        )}
+                      </span>
+                      {hasBet && (
+                        <span className="text-[10px] font-bold text-green-600">
+                          {match.selected_outcome} · {match.stake} נק׳
+                          {match.bet_status === 'won' && ` ✓ +${match.actual_payout}`}
+                          {match.bet_status === 'lost' && ' ✗'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       {!isFinished && (

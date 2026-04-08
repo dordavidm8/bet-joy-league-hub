@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const { calculatePayout } = require('../services/bettingService');
+const { settleLeaguePool } = require('../routes/leagues');
 
 // ── Resolve a bet_question's correct_outcome based on final score ─────────────
 // Returns the winning outcome label, or null if we can't determine yet.
@@ -130,6 +131,9 @@ async function settleBets() {
       client.release();
     }
   }
+
+  // Auto-settle tournament leagues where all games are finished and bets cleared
+  await autoSettleTournamentLeagues();
 }
 
 // ── Settle parlays: a parlay wins only if ALL its legs win ────────────────────
@@ -174,6 +178,48 @@ async function settleParlays(client, gameId, correctOutcomeMap) {
         [parlay.user_id, payout, parlayId]
       );
     }
+  }
+}
+
+// ── Auto-settle tournament leagues ────────────────────────────────────────────
+async function autoSettleTournamentLeagues() {
+  try {
+    // Find tournament leagues with auto_settle=true where every game in the
+    // tournament is finished AND has no pending bets
+    const leaguesRes = await pool.query(
+      `SELECT l.* FROM leagues l
+       WHERE l.format = 'tournament'
+         AND l.status = 'active'
+         AND l.auto_settle = true
+         AND l.tournament_slug IS NOT NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM games g
+           JOIN competitions c ON c.id = g.competition_id
+           WHERE c.slug = l.tournament_slug
+             AND (
+               g.status != 'finished'
+               OR EXISTS (SELECT 1 FROM bets b WHERE b.game_id = g.id AND b.status = 'pending')
+             )
+         )`
+    );
+
+    for (const league of leaguesRes.rows) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        console.log(`[settleBets] Auto-settling tournament league: ${league.name}`);
+        await settleLeaguePool(client, league);
+        await client.query('COMMIT');
+        console.log(`[settleBets] Tournament league settled: ${league.name}`);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`[settleBets] Auto-settle failed for ${league.name}:`, err.message);
+      } finally {
+        client.release();
+      }
+    }
+  } catch (err) {
+    console.error('[settleBets] autoSettleTournamentLeagues error:', err.message);
   }
 }
 
