@@ -89,6 +89,9 @@ export const joinLeague = (invite_code: string) =>
 export const settleLeague = (id: string) =>
   request<{ message: string }>(`/leagues/${id}/settle`, { method: 'POST' });
 
+export const leaveLeague = (id: string) =>
+  request<{ message: string }>(`/leagues/${id}/leave`, { method: 'POST' });
+
 // ── Quiz ──────────────────────────────────────────────────────────────────────
 export const getNextQuestion = () => request<{ question: QuizQuestion | null }>('/quiz/next');
 
@@ -202,13 +205,20 @@ export interface League {
   id: string;
   name: string;
   description?: string;
+  creator_id: string;
   invite_code: string;
   format: 'pool' | 'per_game';
+  duration_type: string;
+  access_type: 'invite' | 'public';
   status: 'active' | 'finished';
+  min_bet: number;
   entry_fee: number;
   pool_total: number;
+  distribution?: { place: number; pct: number }[] | null;
+  season_end_date?: string | null;
   member_count?: number;
   points_in_league?: number;
+  is_active?: boolean;
   created_at: string;
 }
 

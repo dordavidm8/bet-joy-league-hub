@@ -11,6 +11,7 @@ import HomePage from "@/pages/HomePage";
 import GameDetailPage from "@/pages/GameDetailPage";
 import BetSlipPage from "@/pages/BetSlipPage";
 import LeaguesPage from "@/pages/LeaguesPage";
+import LeagueDetailPage from "@/pages/LeagueDetailPage";
 import QuizPage from "@/pages/QuizPage";
 import ProfilePage from "@/pages/ProfilePage";
 import ExpertChatPage from "@/pages/ExpertChatPage";
@@ -59,6 +60,7 @@ function AuthGate() {
       <Route path="/minigames" element={<AppLayout><MiniGamesHubPage /></AppLayout>} />
       <Route path="/minigames/play/:id" element={<AppLayout><MiniGamePlayPage /></AppLayout>} />
       <Route path="/leagues" element={<AppLayout><LeaguesPage /></AppLayout>} />
+      <Route path="/leagues/:leagueId" element={<AppLayout><LeagueDetailPage /></AppLayout>} />
       <Route path="/quiz" element={<AppLayout><QuizPage /></AppLayout>} />
       <Route path="/expert" element={<AppLayout><ExpertChatPage /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
