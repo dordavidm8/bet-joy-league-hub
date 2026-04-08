@@ -14,14 +14,34 @@ const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 
 // Map common competition slugs to ESPN league paths
 const LEAGUE_SLUGS = {
-  'eng.1':   'eng.1',   // Premier League
-  'esp.1':   'esp.1',   // La Liga
-  'ger.1':   'ger.1',   // Bundesliga
-  'ita.1':   'ita.1',   // Serie A
-  'fra.1':   'fra.1',   // Ligue 1
+  'eng.1':        'eng.1',        // Premier League
+  'esp.1':        'esp.1',        // La Liga
+  'ger.1':        'ger.1',        // Bundesliga
+  'ita.1':        'ita.1',        // Serie A
+  'fra.1':        'fra.1',        // Ligue 1
   'uefa.champions': 'uefa.champions',
+  'fifa.world':   'fifa.world',   // FIFA World Cup 2026
   // isr.1 removed — ESPN data for Israeli league is unreliable
 };
+
+// ESPN team abbreviation → flagcdn.com ISO2 code (for national teams)
+const NATIONAL_TEAM_FLAGS = {
+  ALG: 'dz', ARG: 'ar', AUS: 'au', AUT: 'at', BEL: 'be',
+  BIH: 'ba', BRA: 'br', CAN: 'ca', CIV: 'ci', COD: 'cd',
+  COL: 'co', CPV: 'cv', CRO: 'hr', CUR: 'cw', CZE: 'cz',
+  ECU: 'ec', EGY: 'eg', ENG: 'gb-eng', ESP: 'es', FRA: 'fr',
+  GER: 'de', GHA: 'gh', HAI: 'ht', IRN: 'ir', IRQ: 'iq',
+  JOR: 'jo', JPN: 'jp', KOR: 'kr', KSA: 'sa', MAR: 'ma',
+  MEX: 'mx', NED: 'nl', NOR: 'no', NZL: 'nz', PAN: 'pa',
+  PAR: 'py', POR: 'pt', QAT: 'qa', RSA: 'za', SCO: 'gb-sct',
+  SEN: 'sn', SUI: 'ch', SWE: 'se', TUN: 'tn', TUR: 'tr',
+  URU: 'uy', USA: 'us', UZB: 'uz',
+};
+
+function flagUrl(abbrev) {
+  const iso = NATIONAL_TEAM_FLAGS[abbrev?.toUpperCase()];
+  return iso ? `https://flagcdn.com/w80/${iso}.png` : null;
+}
 
 const DEFAULT_LEAGUES = Object.values(LEAGUE_SLUGS);
 
@@ -29,7 +49,7 @@ const DEFAULT_LEAGUES = Object.values(LEAGUE_SLUGS);
 async function fetchScoreboard(leagueSlug) {
   const now = new Date();
   const past   = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-  const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const future = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
   const pastStr = past.toISOString().slice(0, 10).replace(/-/g, '');
   const fromStr = now.toISOString().slice(0, 10).replace(/-/g, '');
   const toStr   = future.toISOString().slice(0, 10).replace(/-/g, '');
@@ -80,8 +100,8 @@ function mapEvent(event, leagueSlug) {
     competition_slug: leagueSlug,
     home_team:      home.team.displayName,
     away_team:      away.team.displayName,
-    home_team_logo: home.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${home.team.id}.png`,
-    away_team_logo: away.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${away.team.id}.png`,
+    home_team_logo: (leagueSlug === 'fifa.world' ? flagUrl(home.team.abbreviation) : null) || home.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${home.team.id}.png`,
+    away_team_logo: (leagueSlug === 'fifa.world' ? flagUrl(away.team.abbreviation) : null) || away.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${away.team.id}.png`,
     start_time:     new Date(event.date),
     status:         gameStatus,
     minute:         minute,
