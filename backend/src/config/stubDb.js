@@ -3,6 +3,8 @@
 
 const { v4: uuid } = require('uuid');
 
+let stubAdvisorCount = 0;
+
 // Mutable so in-memory updates (avatar, points) persist within the process lifetime
 const STUB_USER = {
   id: 'aaaaaaaa-0000-0000-0000-000000000001',
@@ -301,6 +303,13 @@ async function q(sql, params = []) {
   // Aggregate queries (stats)
   if (s.includes('count(*)') || s.includes('coalesce(')) {
     return { rows: [{ total_bets: '18', wins: '12', losses: '6', total_won: '4200', total_lost: '900', total_users: '5', new_today: '1', new_this_month: '5' }] };
+  }
+
+  // Advisor usage (rate limiting)
+  if (s.includes('advisor_usage')) {
+    stubAdvisorCount++;
+    if (stubAdvisorCount > 20) return { rows: [], rowCount: 0 };
+    return { rows: [{ message_count: stubAdvisorCount }], rowCount: 1 };
   }
 
   // Daily mini games
