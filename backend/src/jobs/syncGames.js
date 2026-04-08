@@ -35,13 +35,14 @@ async function upsertGame(client, game) {
 // ── Ensure default competitions exist ─────────────────────────────────────────
 async function ensureCompetitions(client, slugs) {
   const names = {
-    'eng.1':   'Premier League',
-    'esp.1':   'La Liga',
-    'ger.1':   'Bundesliga',
-    'ita.1':   'Serie A',
-    'fra.1':   'Ligue 1',
+    'eng.1':        'Premier League',
+    'esp.1':        'La Liga',
+    'ger.1':        'Bundesliga',
+    'ita.1':        'Serie A',
+    'fra.1':        'Ligue 1',
     'uefa.champions': 'UEFA Champions League',
-    'isr.1':   'Israeli Premier League',
+    'isr.1':        'Israeli Premier League',
+    'fifa.world':   'גביע העולם 2026',
   };
   for (const slug of slugs) {
     await client.query(

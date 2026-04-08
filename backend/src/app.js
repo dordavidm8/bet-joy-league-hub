@@ -34,7 +34,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https://firebasestorage.googleapis.com', 'https://a.espncdn.com', 'https://*.espncdn.com', 'https://lh3.googleusercontent.com', 'https://upload.wikimedia.org', 'https://*.wikimedia.org'],
+      imgSrc: ["'self'", 'data:', 'https://firebasestorage.googleapis.com', 'https://a.espncdn.com', 'https://*.espncdn.com', 'https://lh3.googleusercontent.com', 'https://upload.wikimedia.org', 'https://*.wikimedia.org', 'https://flagcdn.com'],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
     },
