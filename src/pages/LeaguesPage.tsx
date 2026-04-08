@@ -1,21 +1,34 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Trophy, Lock, Globe, Medal } from "lucide-react";
+import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
 type Tab = "leagues" | "leaderboard";
 
+const DEFAULT_DISTRIBUTION = [
+  { place: 1, pct: 60 },
+  { place: 2, pct: 30 },
+  { place: 3, pct: 10 },
+];
+
 const LeaguesPage = () => {
   const [tab, setTab] = useState<Tab>("leagues");
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [newLeagueName, setNewLeagueName] = useState("");
-  const [newLeagueAccess, setNewLeagueAccess] = useState<"invite" | "public">("invite");
-  const [newLeagueFormat, setNewLeagueFormat] = useState<"pool" | "per_game">("pool");
   const [joinCode, setJoinCode] = useState("");
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Create form state
+  const [name, setName] = useState("");
+  const [access, setAccess] = useState<"invite" | "public">("invite");
+  const [format, setFormat] = useState<"pool" | "per_game">("pool");
+  const [duration, setDuration] = useState("full_season");
+  const [entryFee, setEntryFee] = useState("0");
+  const [distribution, setDistribution] = useState(DEFAULT_DISTRIBUTION);
 
   const { data: leaguesData, isLoading: leaguesLoading } = useQuery({
     queryKey: ["my-leagues"],
@@ -37,27 +50,38 @@ const LeaguesPage = () => {
   const createMutation = useMutation({
     mutationFn: () =>
       createLeague({
-        name: newLeagueName,
-        format: newLeagueFormat,
-        duration_type: "full_season",
-        access_type: newLeagueAccess,
+        name,
+        format,
+        duration_type: duration,
+        access_type: access,
+        entry_fee: parseInt(entryFee) || 0,
+        distribution: format === "pool" && parseInt(entryFee) > 0 ? distribution : undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["my-leagues"] });
       setShowCreate(false);
-      setNewLeagueName("");
+      resetForm();
+      navigate(`/leagues/${data.league.id}`);
     },
   });
 
   const joinMutation = useMutation({
     mutationFn: () => joinLeague(joinCode),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["my-leagues"] });
       setShowJoin(false);
       setJoinCode("");
+      navigate(`/leagues/${data.league.id}`);
     },
   });
 
+  const resetForm = () => {
+    setName(""); setAccess("invite"); setFormat("pool");
+    setDuration("full_season"); setEntryFee("0");
+    setDistribution(DEFAULT_DISTRIBUTION);
+  };
+
+  const distTotal = distribution.reduce((s, d) => s + d.pct, 0);
   const leagues = leaguesData?.leagues ?? [];
   const leaderboard = leaderboardData?.leaderboard ?? [];
 
@@ -66,9 +90,7 @@ const LeaguesPage = () => {
       {/* Tabs */}
       <div className="flex border-b border-border px-5 pt-4">
         {(["leagues", "leaderboard"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
+          <button key={t} onClick={() => setTab(t)}
             className={`flex-1 pb-2.5 text-sm font-bold transition-colors ${
               tab === t ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
             }`}
@@ -92,50 +114,72 @@ const LeaguesPage = () => {
 
           {/* Create Form */}
           {showCreate && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
               className="card-kickoff flex flex-col gap-3 overflow-hidden"
             >
               <h3 className="font-bold">ליגה חדשה</h3>
-              <input
-                placeholder="שם הליגה"
-                value={newLeagueName}
-                onChange={(e) => setNewLeagueName(e.target.value)}
-                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              />
+
+              <input placeholder="שם הליגה" value={name} onChange={(e) => setName(e.target.value)}
+                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+
+              {/* Access */}
               <div className="flex gap-2">
-                <button
-                  onClick={() => setNewLeagueAccess("invite")}
-                  className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                    newLeagueAccess === "invite" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"
-                  }`}
-                >
-                  <Lock size={14} /> הזמנה בלבד
-                </button>
-                <button
-                  onClick={() => setNewLeagueAccess("public")}
-                  className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                    newLeagueAccess === "public" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"
-                  }`}
-                >
-                  <Globe size={14} /> פתוחה
-                </button>
+                {(["invite", "public"] as const).map((a) => (
+                  <button key={a} onClick={() => setAccess(a)}
+                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                      access === a ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"
+                    }`}
+                  >
+                    {a === "invite" ? <><Lock size={13} /> הזמנה בלבד</> : <><Globe size={13} /> פתוחה</>}
+                  </button>
+                ))}
               </div>
-              <select
-                value={newLeagueFormat}
-                onChange={(e) => setNewLeagueFormat(e.target.value as any)}
-                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none"
-              >
+
+              {/* Format */}
+              <select value={format} onChange={(e) => setFormat(e.target.value as any)}
+                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
                 <option value="pool">פורמט: קופה משותפת</option>
                 <option value="per_game">פורמט: תשלום למשחק</option>
               </select>
-              <Button
-                variant="cta"
-                size="lg"
-                onClick={() => createMutation.mutate()}
-                disabled={!newLeagueName || createMutation.isPending}
-              >
+
+              {/* Duration */}
+              <select value={duration} onChange={(e) => setDuration(e.target.value)}
+                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
+                <option value="full_season">עונה מלאה</option>
+                <option value="single_round">סבב בודד</option>
+                <option value="cup">גביע</option>
+              </select>
+
+              {/* Entry fee */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground shrink-0">דמי כניסה</span>
+                <input type="number" min={0} value={entryFee} onChange={(e) => setEntryFee(e.target.value)}
+                  placeholder="0"
+                  className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+              </div>
+
+              {/* Distribution (pool + entry fee > 0) */}
+              {format === "pool" && parseInt(entryFee) > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-bold text-muted-foreground">חלוקת פרסים (סה״כ: {distTotal}%)</p>
+                  {distribution.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground w-16 shrink-0">מקום {d.place}</span>
+                      <input type="number" min={0} max={100} value={d.pct}
+                        onChange={(e) => setDistribution(prev => prev.map((x, j) => j === i ? { ...x, pct: parseInt(e.target.value) || 0 } : x))}
+                        className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <span className="text-sm text-muted-foreground shrink-0">%</span>
+                    </div>
+                  ))}
+                  {distTotal !== 100 && (
+                    <p className="text-xs text-destructive">סה״כ חייב להיות 100% (כרגע: {distTotal}%)</p>
+                  )}
+                </div>
+              )}
+
+              <Button variant="cta" size="lg" onClick={() => createMutation.mutate()}
+                disabled={!name || createMutation.isPending || (format === "pool" && parseInt(entryFee) > 0 && distTotal !== 100)}>
                 {createMutation.isPending ? "יוצר..." : "צור ליגה"}
               </Button>
               {createMutation.isError && (
@@ -146,24 +190,15 @@ const LeaguesPage = () => {
 
           {/* Join Form */}
           {showJoin && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
               className="card-kickoff flex flex-col gap-3 overflow-hidden"
             >
               <h3 className="font-bold">הצטרף לליגה</h3>
-              <input
-                placeholder="קוד הזמנה"
-                value={joinCode}
+              <input placeholder="קוד הזמנה" value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 tracking-widest"
-              />
-              <Button
-                variant="cta"
-                size="lg"
-                onClick={() => joinMutation.mutate()}
-                disabled={!joinCode || joinMutation.isPending}
-              >
+                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 tracking-widest" />
+              <Button variant="cta" size="lg" onClick={() => joinMutation.mutate()}
+                disabled={!joinCode || joinMutation.isPending}>
                 {joinMutation.isPending ? "מצטרף..." : "הצטרף"}
               </Button>
               {joinMutation.isError && (
@@ -176,36 +211,38 @@ const LeaguesPage = () => {
           {leaguesLoading ? (
             <p className="text-sm text-muted-foreground">טוען ליגות...</p>
           ) : leagues.length === 0 ? (
-            <p className="text-sm text-muted-foreground">עדיין לא חבר בליגות. צור ליגה או הצטרף לאחת!</p>
+            <div className="card-kickoff flex flex-col items-center gap-3 py-8 text-center">
+              <Trophy size={32} className="text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">עדיין לא חבר בליגות.<br />צור ליגה או הצטרף לאחת!</p>
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
               {leagues.map((league, i) => (
-                <motion.div
-                  key={league.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                <motion.button key={league.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="card-kickoff flex items-center justify-between"
+                  onClick={() => navigate(`/leagues/${league.id}`)}
+                  className="card-kickoff flex items-center gap-3 w-full text-right hover:border-primary/30 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                      <Trophy size={18} className="text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-sm flex items-center gap-1">
-                        {league.name}
-                        {league.access_type === "invite" && <Lock size={12} className="text-muted-foreground" />}
-                      </p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Users size={12} /> {league.member_count ?? "?"} חברים
-                        {league.invite_code && <span className="ml-2 font-mono text-[10px]">{league.invite_code}</span>}
-                      </p>
-                    </div>
+                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                    <Trophy size={18} className="text-primary" />
                   </div>
-                  <div className="text-left">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm flex items-center gap-1">
+                      {league.name}
+                      {league.access_type === "invite" && <Lock size={11} className="text-muted-foreground" />}
+                      {league.status === "finished" && <span className="text-[10px] text-muted-foreground font-normal">· הסתיים</span>}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                      <span className="flex items-center gap-0.5"><Users size={11} /> {league.member_count ?? "?"}</span>
+                      {league.entry_fee > 0 && <span className="flex items-center gap-0.5"><Coins size={11} /> {league.entry_fee} נק׳</span>}
+                      {league.pool_total > 0 && <span>קופה: {league.pool_total.toLocaleString()}</span>}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
                     <p className="text-sm font-black text-primary">{(league.points_in_league ?? 0).toLocaleString()} נק׳</p>
+                    <ChevronRight size={16} className="text-muted-foreground" />
                   </div>
-                </motion.div>
+                </motion.button>
               ))}
             </div>
           )}
@@ -224,17 +261,12 @@ const LeaguesPage = () => {
               </div>
             </div>
           )}
-
           {lbLoading ? (
-            <p className="text-sm text-muted-foreground">טוען לידרבורד...</p>
+            <p className="text-sm text-muted-foreground">טוען...</p>
           ) : (
             leaderboard.map((entry, i) => (
-              <motion.div
-                key={entry.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="card-kickoff flex items-center gap-3"
+              <motion.div key={entry.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }} className="card-kickoff flex items-center gap-3"
               >
                 <div className="w-8 text-center">
                   {i === 0 ? <Medal size={18} className="text-yellow-500 mx-auto" /> :
@@ -242,9 +274,7 @@ const LeaguesPage = () => {
                    i === 2 ? <Medal size={18} className="text-amber-600 mx-auto" /> :
                    <span className="text-sm font-bold text-muted-foreground">#{entry.rank}</span>}
                 </div>
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-sm">
-                  👤
-                </div>
+                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-sm">👤</div>
                 <div className="flex-1">
                   <p className="text-sm font-bold">{entry.username}</p>
                   <p className="text-xs text-muted-foreground">{entry.total_wins}/{entry.total_bets} ניצחונות</p>
