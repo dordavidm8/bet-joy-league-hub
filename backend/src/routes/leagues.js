@@ -12,7 +12,8 @@ router.post('/', authenticate, async (req, res, next) => {
   const {
     name, description, format, duration_type, access_type,
     min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
-    tournament_slug, stake_per_match, join_policy, auto_settle,
+    tournament_slug, stake_per_match, join_policy, auto_settle, penalty_per_missed_bet,
+    max_members,
   } = req.body;
 
   if (!name || !format || !duration_type) {
@@ -21,7 +22,7 @@ router.post('/', authenticate, async (req, res, next) => {
   if (!['pool', 'per_game', 'tournament'].includes(format)) {
     return res.status(400).json({ error: 'format must be pool, per_game, or tournament' });
   }
-  if (format === 'pool' && distribution) {
+  if (['pool', 'tournament'].includes(format) && distribution) {
     const total = distribution.reduce((sum, d) => sum + d.pct, 0);
     if (total !== 100) return res.status(400).json({ error: 'Distribution must sum to 100' });
   }
@@ -42,8 +43,8 @@ router.post('/', authenticate, async (req, res, next) => {
       `INSERT INTO leagues
          (name, description, creator_id, invite_code, format, duration_type, access_type,
           min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
-          tournament_slug, stake_per_match, join_policy, auto_settle)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+          tournament_slug, stake_per_match, join_policy, auto_settle, penalty_per_missed_bet, max_members)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
       [
         name, description || null, req.user.id, invite_code, format,
         duration_type, access_type || 'invite',
@@ -55,6 +56,8 @@ router.post('/', authenticate, async (req, res, next) => {
         stake_per_match || 0,
         join_policy || 'anytime',
         auto_settle || false,
+        penalty_per_missed_bet || 0,
+        max_members || null,
       ]
     );
     const league = leagueRes.rows[0];
@@ -101,6 +104,16 @@ router.post('/join', authenticate, async (req, res, next) => {
       `SELECT id FROM league_members WHERE league_id = $1 AND user_id = $2`, [league.id, req.user.id]
     );
     if (memberCheck.rows[0]) return res.status(409).json({ error: 'Already a member' });
+
+    // Max members check
+    if (league.max_members) {
+      const countRes = await client.query(
+        `SELECT COUNT(*) FROM league_members WHERE league_id = $1 AND is_active = true`, [league.id]
+      );
+      if (parseInt(countRes.rows[0].count) >= league.max_members) {
+        return res.status(400).json({ error: 'הליגה מלאה — הגיעה למספר המקסימלי של חברים' });
+      }
+    }
 
     // Tournament join_policy enforcement
     if (league.format === 'tournament' && league.join_policy === 'before_start' && league.tournament_slug) {
@@ -240,6 +253,45 @@ router.post('/:id/settle', authenticate, async (req, res, next) => {
   } finally { client.release(); }
 });
 
+// POST /api/leagues/:id/invite — invite a user by username
+router.post('/:id/invite', authenticate, async (req, res, next) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+
+  try {
+    const leagueRes = await pool.query(`SELECT * FROM leagues WHERE id = $1`, [req.params.id]);
+    const league = leagueRes.rows[0];
+    if (!league) return res.status(404).json({ error: 'League not found' });
+
+    const memberCheck = await pool.query(
+      `SELECT id FROM league_members WHERE league_id = $1 AND user_id = $2 AND is_active = true`,
+      [league.id, req.user.id]
+    );
+    if (!memberCheck.rows[0]) return res.status(403).json({ error: 'Not a member of this league' });
+
+    const targetRes = await pool.query(`SELECT id, username FROM users WHERE username ILIKE $1`, [username]);
+    const target = targetRes.rows[0];
+    if (!target) return res.status(404).json({ error: 'משתמש לא נמצא' });
+    if (target.id === req.user.id) return res.status(400).json({ error: 'לא ניתן להזמין את עצמך' });
+
+    const alreadyMember = await pool.query(
+      `SELECT id FROM league_members WHERE league_id = $1 AND user_id = $2`,
+      [league.id, target.id]
+    );
+    if (alreadyMember.rows[0]) return res.status(409).json({ error: 'משתמש כבר חבר בליגה' });
+
+    const { createNotification } = require('../services/notificationService');
+    await createNotification(target.id, {
+      type: 'league_invite',
+      title: `הוזמנת לליגה "${league.name}"`,
+      body: `${req.user.username} מזמין אותך להצטרף`,
+      data: { league_id: league.id, league_name: league.name, invite_code: league.invite_code, inviter: req.user.username },
+    });
+
+    res.json({ message: `הזמנה נשלחה ל-${target.username}` });
+  } catch (err) { next(err); }
+});
+
 // ── Shared settlement logic (also used by auto-settle) ────────────────────────
 async function settleLeaguePool(client, league) {
   const membersRes = await client.query(
@@ -249,16 +301,41 @@ async function settleLeaguePool(client, league) {
   );
 
   const dist = league.distribution || [{ place: 1, pct: 100 }];
-  for (let i = 0; i < dist.length && i < membersRes.rows.length; i++) {
-    const payout = Math.floor((dist[i].pct / 100) * league.pool_total);
-    const winnerId = membersRes.rows[i].user_id;
-    await client.query(`UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`, [payout, winnerId]);
-    await client.query(
-      `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
-       VALUES ($1,$2,'league_payout',$3,$4)`,
-      [winnerId, payout, league.id, `League payout: ${league.name} - Place ${i + 1}`]
-    );
+  const rankEmoji = ['🥇', '🥈', '🥉'];
+
+  for (let i = 0; i < membersRes.rows.length; i++) {
+    const memberId = membersRes.rows[i].user_id;
+    const rank = i + 1;
+    const payout = i < dist.length ? Math.floor((dist[i].pct / 100) * league.pool_total) : 0;
+
+    if (payout > 0) {
+      await client.query(`UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`, [payout, memberId]);
+      await client.query(
+        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+         VALUES ($1,$2,'league_payout',$3,$4)`,
+        [memberId, payout, league.id, `League payout: ${league.name} - Place ${rank}`]
+      );
+    }
+
+    // Award league_champion achievement to first place (best-effort)
+    if (rank === 1) {
+      const { checkAndAwardAchievements } = require('../services/achievementService');
+      checkAndAwardAchievements(memberId, 'league_champion').catch(() => {});
+    }
+
+    // Notifications fire outside the transaction (best effort)
+    const { createNotification } = require('../services/notificationService');
+    const emoji = rankEmoji[i] || `#${rank}`;
+    createNotification(memberId, {
+      type: 'league_result',
+      title: `${emoji} הליגה "${league.name}" הסתיימה!`,
+      body: payout > 0
+        ? `סיימת במקום ${rank} וקיבלת ${payout.toLocaleString()} נק׳!`
+        : `סיימת במקום ${rank}`,
+      data: { league_id: league.id, rank, payout },
+    }).catch(() => {});
   }
+
   await client.query(`UPDATE leagues SET status = 'finished' WHERE id = $1`, [league.id]);
 }
 

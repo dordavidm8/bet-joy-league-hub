@@ -22,6 +22,7 @@ const BetSlipPage = () => {
   const [isParlay, setIsParlay] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [shareText, setShareText] = useState("");
 
   const totalStake = betSlip.reduce((sum, b) => sum + b.points, 0);
   const userPoints = backendUser?.points_balance ?? 0;
@@ -60,6 +61,13 @@ const BetSlipPage = () => {
           });
         }
       }
+      // Build share text before clearing slip
+      const text = isParlay
+        ? `🎯 פרלאי של ${betSlip.length} הימורים עם מכפיל ×${combinedOdds.toFixed(2)} — ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🏆`
+        : betSlip.length === 1
+          ? `🎯 הימרתי על ${betSlip[0].selectedOption} (×${betSlip[0].odds}) ב-${betSlip[0].gameLabel} — ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🏆`
+          : `🎯 שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-Kickoff 🏆`;
+      setShareText(text);
       clearBetSlip();
       await refreshUser();
       queryClient.invalidateQueries({ queryKey: ["my-bets"] });
@@ -88,6 +96,16 @@ const BetSlipPage = () => {
         <span className="text-5xl">🎉</span>
         <h2 className="text-xl font-black">{result.message}</h2>
         <p className="text-muted-foreground text-sm text-center">ההימורים שלך נשלחו ומחכים לתוצאות</p>
+        {shareText && (
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full max-w-xs py-3 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors"
+          >
+            שתף בוואטסאפ
+          </a>
+        )}
       </div>
     );
   }

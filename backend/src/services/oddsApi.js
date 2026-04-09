@@ -15,30 +15,56 @@ const SPORT_MAP = {
   'uefa.champions': 'soccer_uefa_champs_league',
 };
 
-// Fetch odds for a sport, returns map: `${homeTeam}|${awayTeam}` → { h2h: [homeOdds, drawOdds, awayOdds] }
+// Fetch odds for a sport, returns map: `${homeTeam}|${awayTeam}` → { home_odds, draw_odds, away_odds, btts_yes, btts_no, over_2_5, under_2_5 }
 async function fetchOddsForSport(sportKey) {
   if (!API_KEY) return {};
   try {
     const { data } = await axios.get(`${ODDS_API_BASE}/sports/${sportKey}/odds`, {
-      params: { apiKey: API_KEY, regions: 'eu', markets: 'h2h', oddsFormat: 'decimal' },
+      params: { apiKey: API_KEY, regions: 'eu', markets: 'h2h,btts,totals', oddsFormat: 'decimal' },
       timeout: 10000,
     });
     const map = {};
     for (const event of data) {
       const bookie = event.bookmakers?.[0];
       if (!bookie) continue;
-      const market = bookie.markets?.find(m => m.key === 'h2h');
-      if (!market) continue;
-      const home = market.outcomes?.find(o => o.name === event.home_team);
-      const away = market.outcomes?.find(o => o.name === event.away_team);
-      const draw = market.outcomes?.find(o => o.name === 'Draw');
-      if (!home || !away) continue;
+
       const key = `${event.home_team}|${event.away_team}`;
-      map[key] = {
-        home_odds: parseFloat(home.price.toFixed(2)),
-        draw_odds: draw ? parseFloat(draw.price.toFixed(2)) : 3.2,
-        away_odds: parseFloat(away.price.toFixed(2)),
-      };
+      map[key] = {};
+
+      const h2h = bookie.markets?.find(m => m.key === 'h2h');
+      if (h2h) {
+        const home = h2h.outcomes?.find(o => o.name === event.home_team);
+        const away = h2h.outcomes?.find(o => o.name === event.away_team);
+        const draw = h2h.outcomes?.find(o => o.name === 'Draw');
+        if (home && away) {
+          map[key].home_odds = parseFloat(home.price.toFixed(2));
+          map[key].away_odds = parseFloat(away.price.toFixed(2));
+          map[key].draw_odds = draw ? parseFloat(draw.price.toFixed(2)) : 3.2;
+        }
+      }
+
+      const btts = bookie.markets?.find(m => m.key === 'btts');
+      if (btts) {
+        const yes = btts.outcomes?.find(o => o.name === 'Yes');
+        const no  = btts.outcomes?.find(o => o.name === 'No');
+        if (yes && no) {
+          map[key].btts_yes = parseFloat(yes.price.toFixed(2));
+          map[key].btts_no  = parseFloat(no.price.toFixed(2));
+        }
+      }
+
+      const totals = bookie.markets?.find(m => m.key === 'totals');
+      if (totals) {
+        // Use 2.5 goal line (most common)
+        const over  = totals.outcomes?.find(o => o.name === 'Over'  && Math.abs((o.point ?? 2.5) - 2.5) < 0.01);
+        const under = totals.outcomes?.find(o => o.name === 'Under' && Math.abs((o.point ?? 2.5) - 2.5) < 0.01);
+        if (over && under) {
+          map[key].over_2_5  = parseFloat(over.price.toFixed(2));
+          map[key].under_2_5 = parseFloat(under.price.toFixed(2));
+        }
+      }
+
+      if (Object.keys(map[key]).length === 0) delete map[key];
     }
     return map;
   } catch (err) {

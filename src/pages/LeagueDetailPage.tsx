@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeague, settleLeague, leaveLeague, getLeagueMatches, TournamentMatch } from "@/lib/api";
+import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, TournamentMatch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
-import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock } from "lucide-react";
+import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -21,6 +21,8 @@ const LeagueDetailPage = () => {
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [showSettle, setShowSettle] = useState(false);
+  const [inviteUsername, setInviteUsername] = useState("");
+  const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["league", leagueId],
@@ -53,6 +55,19 @@ const LeagueDetailPage = () => {
     },
   });
 
+  const inviteMutation = useMutation({
+    mutationFn: () => inviteToLeague(leagueId!, inviteUsername.trim()),
+    onSuccess: (res) => {
+      setInviteMsg({ ok: true, text: res.message });
+      setInviteUsername("");
+      setTimeout(() => setInviteMsg(null), 4000);
+    },
+    onError: (err: any) => {
+      setInviteMsg({ ok: false, text: err.message });
+      setTimeout(() => setInviteMsg(null), 4000);
+    },
+  });
+
   const copyCode = () => {
     if (!data?.league.invite_code) return;
     navigator.clipboard.writeText(data.league.invite_code);
@@ -80,7 +95,9 @@ const LeagueDetailPage = () => {
           <div className="flex items-start justify-between gap-2 mb-3">
             <div>
               <h1 className="font-black text-lg leading-tight">{league.name}</h1>
-              {league.description && <p className="text-xs text-muted-foreground mt-0.5">{league.description}</p>}
+              {league.description && (
+                <p className="text-sm text-muted-foreground mt-1 leading-snug">{league.description}</p>
+              )}
             </div>
             <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded-full ${
               isFinished ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
@@ -104,7 +121,7 @@ const LeagueDetailPage = () => {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 px-5">
         {[
-          { icon: <Users size={16} className="text-primary" />, label: "חברים", value: members.filter(m => m.is_active).length },
+          { icon: <Users size={16} className="text-primary" />, label: "חברים", value: league.max_members ? `${members.filter(m => m.is_active).length}/${league.max_members}` : members.filter(m => m.is_active).length },
           { icon: <Coins size={16} className="text-primary" />, label: "קופה", value: `${league.pool_total.toLocaleString()} נק׳` },
           { icon: <Trophy size={16} className="text-primary" />, label: "דמי כניסה", value: league.entry_fee > 0 ? `${league.entry_fee} נק׳` : "חינם" },
         ].map((s, i) => (
@@ -121,7 +138,7 @@ const LeagueDetailPage = () => {
         <div className="px-5">
           <div className="card-kickoff">
             <p className="text-xs text-muted-foreground mb-2">קוד הזמנה — שתף עם חברים</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-2">
               <span className="flex-1 bg-secondary rounded-xl px-4 py-2.5 font-mono font-bold tracking-widest text-center text-base">
                 {league.invite_code}
               </span>
@@ -131,6 +148,41 @@ const LeagueDetailPage = () => {
               >
                 {copied ? <Check size={18} className="text-primary" /> : <Copy size={18} className="text-primary" />}
               </button>
+            </div>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`הצטרף לליגה שלי ב-Kickoff! 🏆\nשם: ${league.name}\nקוד: ${league.invite_code}\nפתח את האפליקציה → ליגות → הצטרף לליגה`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors"
+            >
+              <Share2 size={15} />
+              שתף בוואטסאפ
+            </a>
+
+            {/* Invite by username */}
+            <div className="mt-3">
+              <p className="text-xs text-muted-foreground mb-1.5">הזמן לפי שם משתמש</p>
+              <div className="flex gap-2">
+                <input
+                  placeholder="שם משתמש..."
+                  value={inviteUsername}
+                  onChange={(e) => setInviteUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && inviteUsername.trim() && inviteMutation.mutate()}
+                  className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <button
+                  onClick={() => inviteMutation.mutate()}
+                  disabled={!inviteUsername.trim() || inviteMutation.isPending}
+                  className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors disabled:opacity-40"
+                >
+                  <UserPlus size={16} className="text-primary" />
+                </button>
+              </div>
+              {inviteMsg && (
+                <p className={`text-xs mt-1.5 ${inviteMsg.ok ? "text-green-600" : "text-destructive"}`}>
+                  {inviteMsg.text}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -183,7 +235,16 @@ const LeagueDetailPage = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold truncate flex items-center gap-1">
-                      {member.username}
+                      {isMe ? (
+                        <span>{member.username}</span>
+                      ) : (
+                        <button
+                          onClick={() => navigate(`/profile/${member.username}`)}
+                          className="hover:text-primary transition-colors truncate"
+                        >
+                          {member.username}
+                        </button>
+                      )}
                       {member.id === league.creator_id && <Crown size={11} className="text-amber-500 shrink-0" />}
                       {isMe && <span className="text-[10px] text-primary font-normal">(אני)</span>}
                     </p>
@@ -202,9 +263,14 @@ const LeagueDetailPage = () => {
         <div className="px-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="section-label">משחקי הטורניר</h2>
-            {matchesData.stake_per_match > 0 && (
-              <span className="text-xs text-muted-foreground">מינימום {matchesData.stake_per_match} נק׳ למשחק</span>
-            )}
+            <div className="flex flex-col items-end gap-0.5">
+              {matchesData.stake_per_match > 0 && (
+                <span className="text-xs text-muted-foreground">מינימום {matchesData.stake_per_match} נק׳ למשחק</span>
+              )}
+              {league.penalty_per_missed_bet != null && league.penalty_per_missed_bet > 0 && (
+                <span className="text-xs text-destructive/70">קנס אי-הימור: {league.penalty_per_missed_bet} נק׳</span>
+              )}
+            </div>
           </div>
 
           {/* Summary bar */}
@@ -288,7 +354,7 @@ const LeagueDetailPage = () => {
       {/* Actions */}
       {!isFinished && (
         <div className="px-5 flex flex-col gap-3">
-          {isCreator && league.format === "pool" && league.pool_total > 0 && (
+          {isCreator && (league.format === "pool" || league.format === "tournament") && league.pool_total > 0 && (
             <>
               {showSettle ? (
                 <div className="card-kickoff flex flex-col gap-3 border border-destructive/30">

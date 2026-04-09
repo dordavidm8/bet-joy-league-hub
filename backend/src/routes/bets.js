@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { calculatePayout } = require('../services/bettingService');
+const { checkAndAwardAchievements } = require('../services/achievementService');
 
 // POST /api/bets — place single bet
 router.post('/', authenticate, async (req, res, next) => {
@@ -46,7 +47,8 @@ router.post('/', authenticate, async (req, res, next) => {
     if (!chosen) throw Object.assign(new Error('Invalid option'), { status: 400 });
 
     const penaltyPct = 0;
-    const potentialPayout = calculatePayout(stake, parseFloat(chosen.odds), penaltyPct);
+    const effectiveOdds = parseFloat(chosen.odds) * (1 + (game.is_featured ? (game.featured_bonus_pct || 0) : 0) / 100);
+    const potentialPayout = calculatePayout(stake, effectiveOdds, penaltyPct);
 
     const balRes = await client.query(
       `UPDATE users SET points_balance = points_balance - $1, total_bets = total_bets + 1
@@ -71,6 +73,11 @@ router.post('/', authenticate, async (req, res, next) => {
     );
 
     await client.query('COMMIT');
+
+    // Achievement checks (best-effort, after commit)
+    checkAndAwardAchievements(req.user.id, 'bet_placed').catch(() => {});
+    if (stake >= 1000) checkAndAwardAchievements(req.user.id, 'high_roller').catch(() => {});
+
     res.status(201).json({ bet, new_balance: balRes.rows[0].points_balance });
   } catch (err) {
     await client.query('ROLLBACK');

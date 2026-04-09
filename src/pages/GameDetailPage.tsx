@@ -19,6 +19,7 @@ const GameDetailPage = () => {
     queryKey: ["game", gameId],
     queryFn: () => getGame(gameId!),
     enabled: !!gameId,
+    refetchInterval: (query) => query.state.data?.game.status === "live" ? 30_000 : false,
   });
 
   const [stakes, setStakes] = useState<Record<string, string>>({});
