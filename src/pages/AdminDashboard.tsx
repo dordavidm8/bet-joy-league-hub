@@ -11,6 +11,7 @@ import {
   adminGetStats, adminGetUsers, adminGetBets, adminGetGames, adminGetLeagues,
   adminGetQuiz, adminGetCompetitions, adminGetLog,
   adminAdjustPoints, adminSendNotification, adminAddQuizQuestion, adminDeleteQuizQuestion,
+  adminGenerateQuiz, adminGenerateMiniGames,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
@@ -23,7 +24,7 @@ export const ADMIN_EMAILS = [
   "kickoffsportsapp@gmail.com",
 ];
 
-type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "quiz" | "advanced";
+type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "quiz" | "minigames" | "advanced";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "stats",         label: "סקירה",      icon: <BarChart2 size={14} /> },
@@ -33,6 +34,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "leagues",      label: "ליגות",      icon: <Trophy size={14} /> },
   { id: "notifications",label: "התראות",     icon: <Bell size={14} /> },
   { id: "quiz",         label: "קוויז",      icon: <HelpCircle size={14} /> },
+  { id: "minigames",    label: "מיני-גיימס", icon: <Target size={14} /> },
   { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
 ];
 
@@ -303,6 +305,22 @@ const GamesTab = () => {
   const [hoursBefore, setHoursBefore] = useState("2");
   const [featMsg, setFeatMsg] = useState("");
 
+  const [searchTeam, setSearchTeam] = useState("");
+  const [leagueFilter, setLeagueFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sortField, setSortField] = useState<"time" | "bets" | "score" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const toggleSort = (field: "time" | "bets" | "score") => {
+    if (sortField === field) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
+
   const { data, isLoading } = useQuery({ queryKey: ["admin-games"], queryFn: adminGetGames, staleTime: 30_000 });
   const { data: analyticsData } = useQuery({
     queryKey: ["admin-game-analytics", expandedId],
@@ -328,18 +346,84 @@ const GamesTab = () => {
   const games = data?.games ?? [];
   const featGame = games.find(g => g.id === featuredGameId);
 
+  const uniqueLeagues = Array.from(new Set(games.map(g => g.competition_name).filter(Boolean)));
+
+  let filteredGames = games.filter(g => {
+    if (searchTeam) {
+      const q = searchTeam.toLowerCase();
+      if (!g.home_team.toLowerCase().includes(q) && !g.away_team.toLowerCase().includes(q)) return false;
+    }
+    if (leagueFilter && g.competition_name !== leagueFilter) return false;
+    if (dateFrom && new Date(g.start_time) < new Date(dateFrom)) return false;
+    if (dateTo && new Date(g.start_time) > new Date(dateTo + "T23:59:59")) return false;
+    return true;
+  });
+
+  if (sortField) {
+    filteredGames.sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "time") {
+        cmp = new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+      } else if (sortField === "bets") {
+        cmp = Number(a.total_bets) - Number(b.total_bets);
+      } else if (sortField === "score") {
+        const scoreA = a.score_home != null ? a.score_home + a.score_away : -1;
+        const scoreB = b.score_home != null ? b.score_home + b.score_away : -1;
+        cmp = scoreA - scoreB;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2 items-center bg-secondary rounded-xl px-3 py-2">
+        <div className="flex items-center gap-2 flex-1 min-w-[150px]">
+          <Search size={16} className="text-muted-foreground shrink-0" />
+          <input value={searchTeam} onChange={e => setSearchTeam(e.target.value)}
+            placeholder="חיפוש קבוצה..." className="bg-transparent text-sm outline-none w-full" />
+        </div>
+        <select value={leagueFilter} onChange={e => setLeagueFilter(e.target.value)}
+          className="bg-background border rounded-lg px-2 py-1 text-xs outline-none max-w-[150px]">
+          <option value="">כל הליגות</option>
+          {uniqueLeagues.map(l => <option key={l} value={l}>{l}</option>)}
+        </select>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span>מ:</span>
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            className="bg-background border rounded-lg px-2 py-1 outline-none" />
+          <span>עד:</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            className="bg-background border rounded-lg px-2 py-1 outline-none" />
+        </div>
+        {(searchTeam || leagueFilter || dateFrom || dateTo) && (
+          <button onClick={() => { setSearchTeam(""); setLeagueFilter(""); setDateFrom(""); setDateTo(""); }}
+            className="text-xs text-primary underline">נקה סננים</button>
+        )}
+      </div>
+
       {isLoading ? <Loader /> : (
         <div className="border rounded-xl overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-muted/50"><tr>
-              {["", "משחק", "תחרות", "זמן", "סטטוס", "תוצאה", "הימורים", "featured", "אנליטיקות"].map(h => (
-                <th key={h} className="text-right px-2 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
-              ))}
+              <th className="px-2 py-2"></th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground">משחק</th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground">תחרות</th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => toggleSort("time")}>
+                זמן {sortField === "time" ? (sortDir === "asc" ? "↑" : "↓") : "⇅"}
+              </th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground">סטטוס</th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => toggleSort("score")}>
+                תוצאה {sortField === "score" ? (sortDir === "asc" ? "↑" : "↓") : "⇅"}
+              </th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => toggleSort("bets")}>
+                הימורים {sortField === "bets" ? (sortDir === "asc" ? "↑" : "↓") : "⇅"}
+              </th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground">featured</th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground">אנליטיקות</th>
             </tr></thead>
             <tbody>
-              {games.map(g => (
+              {filteredGames.map(g => (
                 <>
                   <tr key={g.id} className={`border-t border-border/50 hover:bg-muted/30 ${(g as any).is_featured ? "bg-amber-50/50" : ""}`}>
                     <td className="px-2 py-2">
@@ -410,7 +494,7 @@ const GamesTab = () => {
               ))}
             </tbody>
           </table>
-          {games.length === 0 && <p className="text-center text-sm text-muted-foreground py-6">אין משחקים</p>}
+          {filteredGames.length === 0 && <p className="text-center text-sm text-muted-foreground py-6">אין משחקים</p>}
         </div>
       )}
 
@@ -573,6 +657,18 @@ const QuizTab = () => {
     onError: (e: any) => setFormMsg(`❌ ${e.message}`),
   });
 
+  const aiMutation = useMutation({
+    mutationFn: () => adminGenerateQuiz(category),
+    onSuccess: (res) => {
+      if (res.question) {
+        setQText(res.question.question_text || "");
+        setOptions((res.question.options || []).map(o => o.substring(3).trim())); // strip "A. "
+        setCorrect(res.question.correct_option || "A");
+      }
+    },
+    onError: (e: any) => setFormMsg(`❌ שגיאת AI: ${e.message}`),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: adminDeleteQuizQuestion,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-quiz"] }),
@@ -610,6 +706,13 @@ const QuizTab = () => {
 
       {showForm && (
         <div className="border rounded-2xl p-4 flex flex-col gap-3">
+          <div className="flex gap-2 items-center justify-between">
+            <h3 className="font-bold text-sm">הוספת שאלה חדשה</h3>
+            <Button size="sm" variant="secondary" onClick={() => aiMutation.mutate()} disabled={aiMutation.isPending} className="h-8 gap-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-200">
+              <Star size={13} className="fill-indigo-600" />
+              {aiMutation.isPending ? "מייצר..." : "חולל שאלה עם AI (לפי הקטגוריה מטה)"}
+            </Button>
+          </div>
           <textarea value={qText} onChange={e => setQText(e.target.value)} placeholder="טקסט השאלה" rows={2}
             className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none resize-none" />
           {options.map((o, i) => (
@@ -687,6 +790,36 @@ const QuizTab = () => {
           {questions.length === 0 && <p className="text-center text-sm text-muted-foreground py-6">אין שאלות</p>}
         </div>
       )}
+    </div>
+  );
+};
+
+// ── MiniGames Tab ─────────────────────────────────────────────────────────────
+const MiniGamesTab = () => {
+  const [msg, setMsg] = useState("");
+  const generateMutation = useMutation({
+    mutationFn: adminGenerateMiniGames,
+    onSuccess: () => setMsg("✅ מיני-גיימס חוללו ונשמרו בהצלחה למסד הנתונים!"),
+    onError: (e: any) => setMsg(`❌ שגיאה: ${e.message}`),
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="border rounded-2xl p-4 flex flex-col gap-4">
+        <div className="flex gap-2 items-center justify-between">
+          <div>
+            <h3 className="font-bold text-sm">ניהול משחקי יום</h3>
+            <p className="text-xs text-muted-foreground mt-1">מכאן ניתן להריץ ידנית את מנוע החילול היומי למשחקי MissingXI, GuessClub, WhoAreYa וכולי. הפעולה סורקת נתונים מ-ESPN ומייצרת חידות מעודכנות להיום.</p>
+          </div>
+        </div>
+
+        {msg && <p className={`text-sm ${msg.includes("✅") ? "text-green-600" : "text-destructive"}`}>{msg}</p>}
+
+        <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending} className="bg-primary">
+          <Star size={16} className="ml-2" />
+          {generateMutation.isPending ? "סורק ומחולל קומבינציות בעזרת AI..." : "חולל ואשר משחקים יומיים כעת"}
+        </Button>
+      </div>
     </div>
   );
 };
@@ -794,7 +927,7 @@ const AdminDashboard = () => {
   const content: Record<Tab, React.ReactNode> = {
     stats: <StatsTab />, users: <UsersTab />, bets: <BetsTab />,
     games: <GamesTab />, leagues: <LeaguesTab />, notifications: <NotificationsTab />,
-    quiz: <QuizTab />, advanced: <AdvancedTab />,
+    quiz: <QuizTab />, minigames: <MiniGamesTab />, advanced: <AdvancedTab />,
   };
 
   return (

@@ -176,8 +176,17 @@ export const adminSendNotification = (data: { type: string; title: string; body?
 export const adminAddQuizQuestion = (data: {
   question_text: string; options: string[]; correct_option: string; category: string; points_reward: number;
 }) => request<{ question: AdminQuizQuestion }>('/admin/quiz', { method: 'POST', body: JSON.stringify(data) });
+
+export const adminGenerateQuiz = (category: string) =>
+  request<{ question: Partial<AdminQuizQuestion> }>('/admin/quiz/generate', {
+    method: 'POST', body: JSON.stringify({ category }),
+  });
+
 export const adminDeleteQuizQuestion = (id: string) =>
   request<{ message: string }>(`/admin/quiz/${id}`, { method: 'DELETE' });
+
+export const adminGenerateMiniGames = () =>
+  request<{ message: string }>('/admin/minigames/generate', { method: 'POST' });
 
 export const adminFeatureGame = (id: string, bonus_pct: number, hours_before: number) =>
   request<{ message: string }>(`/admin/games/${id}/feature`, {

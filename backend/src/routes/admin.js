@@ -128,12 +128,14 @@ router.post('/users/:id/adjust-points', async (req, res, next) => {
       [amount, req.params.id]
     );
     if (!userRes.rows[0]) return res.status(404).json({ error: 'User not found' });
+    const oldBalance = userRes.rows[0].points_balance - parseInt(amount);
     await client.query(
       `INSERT INTO point_transactions (user_id, amount, type, description)
        VALUES ($1, $2, 'admin_adjustment', $3)`,
       [req.params.id, amount, reason]
     );
     await client.query('COMMIT');
+    await logAdminAction(req.user.email, 'adjust_points', 'user', req.params.id, { username: userRes.rows[0].username, amount: parseInt(amount), old_balance: oldBalance, reason });
     res.json({ message: 'Points adjusted', user: userRes.rows[0] });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -180,6 +182,7 @@ router.get('/quiz', async (req, res, next) => {
 router.delete('/quiz/:id', async (req, res, next) => {
   try {
     await pool.query(`UPDATE quiz_questions SET is_active = false WHERE id = $1`, [req.params.id]);
+    await logAdminAction(req.user.email, 'delete_quiz_question', 'quiz_question', req.params.id, null);
     res.json({ message: 'Question deactivated' });
   } catch (err) { next(err); }
 });
@@ -196,7 +199,32 @@ router.post('/quiz', async (req, res, next) => {
        VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
       [question_text, JSON.stringify(options), correct_option, category || 'general', game_id || null, points_reward || 50]
     );
+    await logAdminAction(req.user.email, 'add_quiz_question', 'quiz_question', result.rows[0].id, { question_text });
     res.status(201).json({ question: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/quiz/generate — generate quiz question using AI
+router.post('/quiz/generate', async (req, res, next) => {
+  const { category } = req.body;
+  if (!category) return res.status(400).json({ error: 'category required' });
+  try {
+    const { generateQuizQuestion } = require('../services/aiAdminService');
+    const question = await generateQuizQuestion(category);
+    res.json({ question });
+  } catch (err) { next(err); }
+});
+
+// ── MiniGames ─────────────────────────────────────────────────────────────────
+
+// POST /api/admin/minigames/generate
+router.post('/minigames/generate', async (req, res, next) => {
+  try {
+    const { generateAllMiniGames } = require('../jobs/generateMiniGames');
+    // Start it asynchronously so we don't block the request if it's slow, or await it if we want immediate feedback.
+    // It takes some time due to multiple scrapes. We will await it for synchronous feedback.
+    await generateAllMiniGames();
+    res.json({ message: 'Mini-games generated successfully for today.' });
   } catch (err) { next(err); }
 });
 
