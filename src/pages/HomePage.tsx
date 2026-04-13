@@ -75,7 +75,7 @@ const HomePage = () => {
           className="col-span-2 flex items-center justify-center gap-2 bg-indigo-50/50 border border-indigo-100 rounded-xl px-4 py-3 font-bold text-sm text-indigo-700 hover:bg-indigo-100/50 transition-colors"
         >
           <span>🎁</span>
-          שחק במיני-גיימס וטריוויה יומית
+          שחק באתגרים
         </button>
       </div>
 

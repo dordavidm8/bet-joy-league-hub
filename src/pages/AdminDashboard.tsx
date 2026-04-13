@@ -32,7 +32,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "games",        label: "משחקים",     icon: <Trophy size={14} /> },
   { id: "leagues",      label: "ליגות",      icon: <Trophy size={14} /> },
   { id: "notifications",label: "התראות",     icon: <Bell size={14} /> },
-  { id: "minigames",    label: "מיני-גיימס וטריוויה", icon: <Target size={14} /> },
+  { id: "minigames",    label: "אתגרים", icon: <Target size={14} /> },
   { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
 ];
 
@@ -657,7 +657,7 @@ const MiniGamesTab = () => {
     <div className="flex flex-col gap-4">
       <div className="border rounded-2xl p-4 flex flex-col gap-4">
         <div>
-          <h3 className="font-bold text-sm">ניהול משחקי יום (Mini Games)</h3>
+          <h3 className="font-bold text-sm">ניהול אתגרים (Challenges)</h3>
           <p className="text-xs text-muted-foreground mt-1">
             ניתן לחולל שאלות עבור המצבים ולהכניס אותן לתור. בכל יום, המשחק במערכת ישלוף את המשחק הראשון בתור עבור כל קטגוריה!
           </p>
