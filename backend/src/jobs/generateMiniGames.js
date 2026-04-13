@@ -438,16 +438,32 @@ async function generateGuessClub() {
 // ── saveMiniGame ──────────────────────────────────────────────────────────────
 
 async function saveMiniGame(game) {
-  const query = `
-    INSERT INTO daily_mini_games (game_type, play_date, puzzle_data, solution)
-    VALUES ($1, CURRENT_DATE, $2, $3)
-    ON CONFLICT (game_type, play_date) DO UPDATE SET
-      puzzle_data = EXCLUDED.puzzle_data,
-      solution = EXCLUDED.solution
-  `;
+  const { pool } = require('../db'); // ensure pool is available
   try {
-    await pool.query(query, [game.game_type, game.puzzle_data, game.solution]);
-    console.log(`[generateMiniGames] Saved/Updated ${game.game_type} for today.`);
+    const maxDateResult = await pool.query(`SELECT MAX(play_date) as max_date FROM daily_mini_games WHERE game_type = $1`, [game.game_type]);
+    let nextDate = new Date();
+    // Normalize today to start of day
+    nextDate.setHours(0, 0, 0, 0);
+
+    if (maxDateResult.rows[0].max_date) {
+      const maxDate = new Date(maxDateResult.rows[0].max_date);
+      maxDate.setHours(0, 0, 0, 0);
+      if (maxDate >= nextDate) {
+        nextDate = new Date(maxDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+    }
+
+    const query = `
+      INSERT INTO daily_mini_games (game_type, play_date, puzzle_data, solution)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (game_type, play_date) DO UPDATE SET
+        puzzle_data = EXCLUDED.puzzle_data,
+        solution = EXCLUDED.solution
+    `;
+    const formattedDate = nextDate.toISOString().split('T')[0];
+    await pool.query(query, [game.game_type, formattedDate, game.puzzle_data, game.solution]);
+    console.log(`[generateMiniGames] Saved ${game.game_type} queued for ${formattedDate}.`);
   } catch (err) {
     console.error(`[generateMiniGames] Error saving ${game.game_type}:`, err.message);
     throw err;
@@ -482,7 +498,17 @@ async function generateAllMiniGames() {
   console.log(`[generateMiniGames] Complete. Success: [${results.success.join(', ')}]  Failed: [${results.failed.join(', ')}]`);
 }
 
-async function generateMiniGameDraft(type) {
+async function generateMiniGameDraft(type, options = {}) {
+  if (type === 'trivia') {
+    const { generateQuizQuestion } = require('../services/aiAdminService');
+    const q = await generateQuizQuestion(options.category || 'general');
+    return {
+      game_type: 'trivia',
+      puzzle_data: { question_text: q.question_text, options: q.options },
+      solution: { secret: q.correct_option }
+    };
+  }
+
   const generators = {
     'missing_xi': generateMissingXI,
     'who_are_ya': generateWhoAreYa,

@@ -185,8 +185,10 @@ export const adminGenerateQuiz = (category: string) =>
 export const adminDeleteQuizQuestion = (id: string) =>
   request<{ message: string }>(`/admin/quiz/${id}`, { method: 'DELETE' });
 
-export const adminGetMiniGameDraft = (type: string) =>
-  request<{ draft: any }>(`/admin/minigames/drafts/${type}`);
+export const adminGetMiniGameDraft = (type: string, options?: any) => {
+  const query = options ? '?' + new URLSearchParams(options).toString() : '';
+  return request<{ draft: any }>(`/admin/minigames/drafts/${type}${query}`);
+};
 
 export const adminSaveMiniGameDraft = (game: any) =>
   request<{ message: string }>('/admin/minigames/save-draft', { method: 'POST', body: JSON.stringify({ game }) });

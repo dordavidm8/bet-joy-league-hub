@@ -6,6 +6,7 @@ import WhoAreYaGame from '../components/minigames/WhoAreYaGame';
 import CareerPathGame from '../components/minigames/CareerPathGame';
 import Box2BoxGame from '../components/minigames/Box2BoxGame';
 import MissingXIGame from '../components/minigames/MissingXIGame';
+import TriviaGame from '../components/minigames/TriviaGame';
 import ResultModal from '../components/minigames/ResultModal';
 
 const MiniGamePlayPage: React.FC = () => {
@@ -103,6 +104,8 @@ const MiniGamePlayPage: React.FC = () => {
         return <Box2BoxGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
       case 'missing_xi':
         return <MissingXIGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
+      case 'trivia':
+        return <TriviaGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
       default:
         return <div>סוג משחק לא נתמך</div>;
     }

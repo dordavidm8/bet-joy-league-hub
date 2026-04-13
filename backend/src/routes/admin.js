@@ -217,12 +217,12 @@ router.post('/quiz/generate', async (req, res, next) => {
 
 // ── MiniGames ─────────────────────────────────────────────────────────────────
 
-// GET /api/admin/minigames/drafts
-router.get('/minigames/drafts', async (req, res, next) => {
+// GET /api/admin/minigames/drafts/:type
+router.get('/minigames/drafts/:type', async (req, res, next) => {
   try {
-    const { generateAllMiniGamesDrafts } = require('../jobs/generateMiniGames');
-    const drafts = await generateAllMiniGamesDrafts();
-    res.json({ drafts });
+    const { generateMiniGameDraft } = require('../jobs/generateMiniGames');
+    const draft = await generateMiniGameDraft(req.params.type, req.query);
+    res.json({ draft });
   } catch (err) { next(err); }
 });
 

@@ -9,9 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   adminGetStats, adminGetUsers, adminGetBets, adminGetGames, adminGetLeagues,
-  adminGetQuiz, adminGetCompetitions, adminGetLog,
-  adminAdjustPoints, adminSendNotification, adminAddQuizQuestion, adminDeleteQuizQuestion,
-  adminGenerateQuiz, adminGetMiniGameDraft, adminSaveMiniGameDraft,
+  adminGetCompetitions, adminGetLog,
+  adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
@@ -24,7 +23,7 @@ export const ADMIN_EMAILS = [
   "kickoffsportsapp@gmail.com",
 ];
 
-type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "quiz" | "minigames" | "advanced";
+type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "advanced";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "stats",         label: "סקירה",      icon: <BarChart2 size={14} /> },
@@ -33,8 +32,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "games",        label: "משחקים",     icon: <Trophy size={14} /> },
   { id: "leagues",      label: "ליגות",      icon: <Trophy size={14} /> },
   { id: "notifications",label: "התראות",     icon: <Bell size={14} /> },
-  { id: "quiz",         label: "קוויז",      icon: <HelpCircle size={14} /> },
-  { id: "minigames",    label: "מיני-גיימס", icon: <Target size={14} /> },
+  { id: "minigames",    label: "מיני-גיימס וטריוויה", icon: <Target size={14} /> },
   { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
 ];
 
@@ -621,187 +619,15 @@ const NotificationsTab = () => {
   );
 };
 
-// ── Quiz Tab ──────────────────────────────────────────────────────────────────
-const QuizTab = () => {
-  const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [qText, setQText] = useState("");
-  const [options, setOptions] = useState(["", "", "", ""]);
-  const [correct, setCorrect] = useState("A");
-  const [category, setCategory] = useState("general");
-  const [points, setPoints] = useState("50");
-  const [publishDate, setPublishDate] = useState("");
-  const [formMsg, setFormMsg] = useState("");
-  const [filterFuture, setFilterFuture] = useState(false);
-
-  const { data, isLoading } = useQuery({ queryKey: ["admin-quiz"], queryFn: adminGetQuiz });
-  const questions = (data?.questions ?? []).filter(q =>
-    filterFuture ? q.publish_date && new Date(q.publish_date) > new Date() : true
-  );
-
-  const addMutation = useMutation({
-    mutationFn: () => adminAddQuizQuestion({
-      question_text: qText,
-      options: options.map((o, i) => `${String.fromCharCode(65 + i)}. ${o}`),
-      correct_option: correct,
-      category,
-      points_reward: parseInt(points) || 50,
-      ...(publishDate ? { publish_date: publishDate } : {}),
-    } as any),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-quiz"] });
-      setFormMsg("✅ שאלה נוספה");
-      setQText(""); setOptions(["", "", "", ""]); setCorrect("A"); setPublishDate("");
-      setTimeout(() => { setShowForm(false); setFormMsg(""); }, 1500);
-    },
-    onError: (e: any) => setFormMsg(`❌ ${e.message}`),
-  });
-
-  const aiMutation = useMutation({
-    mutationFn: () => adminGenerateQuiz(category),
-    onSuccess: (res) => {
-      if (res.question) {
-        setQText(res.question.question_text || "");
-        setOptions((res.question.options || []).map(o => o.substring(3).trim())); // strip "A. "
-        setCorrect(res.question.correct_option || "A");
-      }
-    },
-    onError: (e: any) => setFormMsg(`❌ שגיאת AI: ${e.message}`),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: adminDeleteQuizQuestion,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-quiz"] }),
-  });
-
-  const today = new Date().toISOString().split("T")[0];
-  const upcoming = (data?.questions ?? []).filter(q => q.publish_date && q.publish_date > today).length;
-  const queued = (data?.questions ?? []).filter(q => !q.publish_date).length;
-
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Queue summary */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "שאלות פעילות", value: (data?.questions ?? []).filter(q => q.is_active).length },
-          { label: "בתור (עתידי)", value: upcoming, color: "text-primary" },
-          { label: "ללא תאריך", value: queued },
-        ].map((s, i) => (
-          <div key={i} className="bg-secondary rounded-xl p-2 text-center">
-            <p className={`text-lg font-black ${s.color ?? ""}`}>{s.value}</p>
-            <p className="text-[10px] text-muted-foreground">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex gap-2">
-        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "outline" : "default"} className="flex-1">
-          <Plus size={16} className="ml-2" /> {showForm ? "בטל" : "הוסף שאלה"}
-        </Button>
-        <button onClick={() => setFilterFuture(!filterFuture)}
-          className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${filterFuture ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
-          עתידיות בלבד
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="border rounded-2xl p-4 flex flex-col gap-3">
-          <div className="flex gap-2 items-center justify-between">
-            <h3 className="font-bold text-sm">הוספת שאלה חדשה</h3>
-            <Button size="sm" variant="secondary" onClick={() => aiMutation.mutate()} disabled={aiMutation.isPending} className="h-8 gap-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-200">
-              <Star size={13} className="fill-indigo-600" />
-              {aiMutation.isPending ? "מייצר..." : "חולל שאלה עם AI (לפי הקטגוריה מטה)"}
-            </Button>
-          </div>
-          <textarea value={qText} onChange={e => setQText(e.target.value)} placeholder="טקסט השאלה" rows={2}
-            className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none resize-none" />
-          {options.map((o, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="text-xs font-bold w-6 text-center shrink-0">{String.fromCharCode(65 + i)}</span>
-              <input value={o} onChange={e => setOptions(prev => prev.map((x, j) => j === i ? e.target.value : x))}
-                placeholder={`אפשרות ${String.fromCharCode(65 + i)}`}
-                className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none" />
-            </div>
-          ))}
-          <div className="flex gap-3 flex-wrap">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-muted-foreground">תשובה נכונה</p>
-              <div className="flex gap-1">
-                {["A", "B", "C", "D"].map(l => (
-                  <button key={l} onClick={() => setCorrect(l)}
-                    className={`w-9 py-1.5 rounded-lg text-xs font-bold border transition-colors ${correct === l ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-muted-foreground">נקודות</p>
-              <input type="number" value={points} onChange={e => setPoints(e.target.value)}
-                className="w-20 bg-secondary rounded-xl px-3 py-2 text-sm outline-none text-center" />
-            </div>
-            <div className="flex flex-col gap-1 flex-1">
-              <p className="text-xs text-muted-foreground">תאריך פרסום (לוח זמנים)</p>
-              <input type="date" value={publishDate} onChange={e => setPublishDate(e.target.value)}
-                className="bg-secondary rounded-xl px-3 py-2 text-sm outline-none" />
-            </div>
-          </div>
-          <select value={category} onChange={e => setCategory(e.target.value)}
-            className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
-            <option value="general">כללי</option>
-            <option value="history">היסטוריה</option>
-            <option value="players">שחקנים</option>
-            <option value="clubs">קבוצות</option>
-            <option value="world_cup">גביע העולם</option>
-          </select>
-          {publishDate && <p className="text-xs text-primary">⏰ תופיע למשתמשים ב-{new Date(publishDate).toLocaleDateString("he-IL")}</p>}
-          {formMsg && <p className="text-sm">{formMsg}</p>}
-          <Button onClick={() => addMutation.mutate()} disabled={!qText || options.some(o => !o) || addMutation.isPending}>
-            {addMutation.isPending ? "שומר..." : "הוסף שאלה"}
-          </Button>
-        </div>
-      )}
-
-      {isLoading ? <Loader /> : (
-        <div className="flex flex-col gap-2">
-          {questions.map(q => (
-            <div key={q.id} className={`border rounded-xl p-3 ${!q.is_active ? "opacity-40" : ""} ${q.publish_date && q.publish_date > today ? "border-primary/30 bg-primary/5" : ""}`}>
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-medium flex-1">{q.question_text}</p>
-                <button onClick={() => deleteMutation.mutate(q.id)} className="text-destructive/60 hover:text-destructive shrink-0"><Trash2 size={14} /></button>
-              </div>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {q.options.map((o, i) => (
-                  <span key={i} className={`text-[11px] px-2 py-0.5 rounded-full border ${
-                    q.correct_option === String.fromCharCode(65 + i) || o.startsWith(q.correct_option + ".")
-                      ? "bg-green-100 border-green-300 text-green-700 font-bold" : "bg-secondary border-border"}`}>
-                    {o}
-                  </span>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[10px] text-muted-foreground">{q.category}</span>
-                <span className="text-[10px] text-primary font-bold">{q.points_reward} נק׳</span>
-                {q.publish_date && <span className="text-[10px] text-primary">📅 {new Date(q.publish_date).toLocaleDateString("he-IL")}</span>}
-                {!q.is_active && <span className="text-[10px] text-destructive">לא פעיל</span>}
-              </div>
-            </div>
-          ))}
-          {questions.length === 0 && <p className="text-center text-sm text-muted-foreground py-6">אין שאלות</p>}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ── MiniGames Tab ─────────────────────────────────────────────────────────────
+// ── MiniGames Tab (with Trivia) ────────────────────────────────────────────────
 const MiniGamesTab = () => {
   const [msg, setMsg] = useState("");
   const [draft, setDraft] = useState<any | null>(null);
-  const [selectedType, setSelectedType] = useState<string>("missing_xi");
+  const [selectedType, setSelectedType] = useState<string>("trivia");
+  const [triviaCategory, setTriviaCategory] = useState<string>("general");
 
   const fetchDraftMutation = useMutation({
-    mutationFn: () => adminGetMiniGameDraft(selectedType),
+    mutationFn: () => adminGetMiniGameDraft(selectedType, selectedType === "trivia" ? { category: triviaCategory } : undefined),
     onSuccess: (data) => {
       setDraft(data.draft);
       setMsg("");
@@ -819,6 +645,7 @@ const MiniGamesTab = () => {
   });
 
   const MINIGAMES = [
+    { id: "trivia", name: "טריוויה יומית (AI)" },
     { id: "missing_xi", name: "Missing XI" },
     { id: "who_are_ya", name: "Who Are Ya?" },
     { id: "career_path", name: "Career Path" },
@@ -832,43 +659,76 @@ const MiniGamesTab = () => {
         <div>
           <h3 className="font-bold text-sm">ניהול משחקי יום (Mini Games)</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            ניתן לחולל שאלה עבור כל מצב משחק בנפרד, לעבור על התוצאה ולאשר אותה פרטנית.
+            ניתן לחולל שאלות עבור המצבים ולהכניס אותן לתור. בכל יום, המשחק במערכת ישלוף את המשחק הראשון בתור עבור כל קטגוריה!
           </p>
         </div>
 
         {msg && <p className={`text-sm font-bold ${msg.includes("✅") ? "text-green-600" : "text-destructive"}`}>{msg}</p>}
 
-        <div className="flex gap-2 items-center">
-          <select value={selectedType} onChange={e => { setSelectedType(e.target.value); setDraft(null); }}
-            className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none flex-1">
-            {MINIGAMES.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2 items-center">
+            <select value={selectedType} onChange={e => { setSelectedType(e.target.value); setDraft(null); }}
+              className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none flex-1 font-bold">
+              {MINIGAMES.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
 
-          <Button onClick={() => fetchDraftMutation.mutate()} disabled={fetchDraftMutation.isPending} variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">
-            <Star size={16} className="ml-2 fill-indigo-600" />
-            {fetchDraftMutation.isPending ? "סורק..." : "חולל שאלה"}
-          </Button>
+            <Button onClick={() => fetchDraftMutation.mutate()} disabled={fetchDraftMutation.isPending} variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">
+              <Star size={16} className="ml-2 fill-indigo-600" />
+              {fetchDraftMutation.isPending ? "טוען..." : "חולל משחק"}
+            </Button>
+          </div>
+          
+          {selectedType === "trivia" && (
+            <div className="flex bg-secondary/50 rounded-xl px-3 py-2 text-xs items-center gap-2">
+              <span className="text-muted-foreground">נושא (ל-AI):</span>
+              <select value={triviaCategory} onChange={e => setTriviaCategory(e.target.value)} className="bg-transparent font-bold outline-none flex-1">
+                <option value="general">⚽ כללי</option>
+                <option value="history">📅 היסטוריה</option>
+                <option value="players">🏃‍♂️ שחקנים</option>
+                <option value="clubs">🛡️ קבוצות</option>
+                <option value="world_cup">🌍 מונדיאל</option>
+              </select>
+            </div>
+          )}
         </div>
 
         {draft && (
           <div className="flex flex-col gap-3 mt-4 border-t pt-4">
-            <h4 className="text-sm font-bold">טיוטה נוכחית:</h4>
-            <div className="bg-secondary border rounded-xl p-3 text-xs flex flex-col gap-2">
-              <pre className="overflow-x-auto text-[11px] w-full" style={{ maxHeight: "250px" }}>
-                {JSON.stringify(draft.puzzle_data, null, 2)}
-              </pre>
-              <div className="mt-auto pt-2 border-t font-bold flex gap-2">
-                <span className="text-muted-foreground">תשובה נכונה:</span>
-                <span>{JSON.stringify(draft.solution.secret)}</span>
-              </div>
+            <h4 className="text-sm font-bold">טיוטה נוכחית ממתינה לאישור:</h4>
+            <div className="bg-secondary border rounded-xl p-4 text-sm flex flex-col gap-3">
+              {draft.game_type === "trivia" ? (
+                <>
+                  <div className="font-bold text-base">{draft.puzzle_data.question_text}</div>
+                  <div className="flex flex-col gap-1">
+                    {draft.puzzle_data.options.map((opt: string, i: number) => (
+                      <div key={i} className={`p-2 rounded-lg border ${opt.startsWith(draft.solution.secret) ? 'bg-green-100 border-green-300 font-bold' : 'bg-background'}`}>
+                        {opt}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-2 border-t text-muted-foreground">
+                    תשובה נכונה: <strong className="text-foreground">{draft.solution.secret}</strong>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <pre className="overflow-x-auto text-[11px] w-full" style={{ maxHeight: "250px" }}>
+                    {JSON.stringify(draft.puzzle_data, null, 2)}
+                  </pre>
+                  <div className="mt-auto pt-2 border-t font-bold flex gap-2">
+                    <span className="text-muted-foreground">תשובה נכונה / פתרון:</span>
+                    <span>{JSON.stringify(draft.solution.secret)}</span>
+                  </div>
+                </>
+              )}
             </div>
             
             <div className="flex gap-2">
-              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
-                {saveMutation.isPending ? "שומר..." : "👍 אשר שאלה ושמור למסד הנתונים"}
+              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-lg">
+                {saveMutation.isPending ? "שומר בתור..." : "✅ אשר משחק ושלח לתור (Queue)"}
               </Button>
               <Button onClick={() => setDraft(null)} variant="outline">
-                בטל
+                בטל טיוטה מחיקה
               </Button>
             </div>
           </div>
@@ -981,7 +841,7 @@ const AdminDashboard = () => {
   const content: Record<Tab, React.ReactNode> = {
     stats: <StatsTab />, users: <UsersTab />, bets: <BetsTab />,
     games: <GamesTab />, leagues: <LeaguesTab />, notifications: <NotificationsTab />,
-    quiz: <QuizTab />, minigames: <MiniGamesTab />, advanced: <AdvancedTab />,
+    minigames: <MiniGamesTab />, advanced: <AdvancedTab />,
   };
 
   return (
