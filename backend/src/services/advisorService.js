@@ -95,7 +95,7 @@ async function chat(gameId, userId, messages) {
   const trimmedMessages = messages.slice(-10);
 
   const completion = await getGroq().chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama-3.1-8b-instant',
     messages: [
       { role: 'system', content: systemPrompt },
       ...trimmedMessages,
