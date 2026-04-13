@@ -25,6 +25,9 @@ router.post('/', authenticate, async (req, res, next) => {
   if (['pool', 'tournament'].includes(format) && distribution) {
     const total = distribution.reduce((sum, d) => sum + d.pct, 0);
     if (total !== 100) return res.status(400).json({ error: 'Distribution must sum to 100' });
+    if (distribution.some(d => d.pct <= 0)) return res.status(400).json({ error: 'Distribution percentages must be greater than 0' });
+    const places = distribution.map(d => d.place);
+    if (new Set(places).size !== places.length) return res.status(400).json({ error: 'Duplicate places in distribution' });
   }
 
   const client = await pool.connect();
@@ -303,6 +306,8 @@ async function settleLeaguePool(client, league) {
   const dist = league.distribution || [{ place: 1, pct: 100 }];
   const rankEmoji = ['🥇', '🥈', '🥉'];
 
+  const notificationRows = []; // collected for bulk insert
+
   for (let i = 0; i < membersRes.rows.length; i++) {
     const memberId = membersRes.rows[i].user_id;
     const rank = i + 1;
@@ -323,20 +328,30 @@ async function settleLeaguePool(client, league) {
       checkAndAwardAchievements(memberId, 'league_champion').catch(() => {});
     }
 
-    // Notifications fire outside the transaction (best effort)
-    const { createNotification } = require('../services/notificationService');
     const emoji = rankEmoji[i] || `#${rank}`;
-    createNotification(memberId, {
+    notificationRows.push({
+      user_id: memberId,
       type: 'league_result',
       title: `${emoji} הליגה "${league.name}" הסתיימה!`,
-      body: payout > 0
-        ? `סיימת במקום ${rank} וקיבלת ${payout.toLocaleString()} נק׳!`
-        : `סיימת במקום ${rank}`,
-      data: { league_id: league.id, rank, payout },
-    }).catch(() => {});
+      body: payout > 0 ? `סיימת במקום ${rank} וקיבלת ${payout.toLocaleString()} נק׳!` : `סיימת במקום ${rank}`,
+      data: JSON.stringify({ league_id: league.id, rank, payout }),
+    });
   }
 
   await client.query(`UPDATE leagues SET status = 'finished' WHERE id = $1`, [league.id]);
+
+  // Bulk-insert all result notifications in a single query (best-effort, after transaction)
+  if (notificationRows.length > 0 && process.env.STUB_MODE !== 'true') {
+    const values = notificationRows.map((_, i) => {
+      const base = i * 5;
+      return `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5})`;
+    }).join(',');
+    const params = notificationRows.flatMap(r => [r.user_id, r.type, r.title, r.body, r.data]);
+    pool.query(
+      `INSERT INTO notifications (user_id, type, title, body, data) VALUES ${values}`,
+      params
+    ).catch(err => console.error('[leagues] Bulk notification insert failed:', err.message));
+  }
 }
 
 module.exports = router;

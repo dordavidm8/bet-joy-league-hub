@@ -181,9 +181,21 @@ router.get('/me/referral-code', authenticate, (req, res) => {
 
 // DELETE /api/users/me — delete account
 router.delete('/me', authenticate, async (req, res, next) => {
-  const admin = require('../config/firebase');
-  const client = await pool.connect();
+  const firebaseAdmin = require('../config/firebase');
   const firebaseUid = req.user.firebase_uid;
+
+  // Step 1: Delete Firebase account first. If this fails, abort — user can retry.
+  if (process.env.STUB_MODE !== 'true') {
+    try {
+      await firebaseAdmin.auth().deleteUser(firebaseUid);
+    } catch (fbErr) {
+      console.error('[deleteAccount] Firebase deletion failed — aborting:', fbErr.message);
+      return next(Object.assign(new Error('Failed to delete account. Please try again.'), { status: 500 }));
+    }
+  }
+
+  // Step 2: Delete DB record. Firebase is already gone at this point.
+  const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query(`UPDATE bets SET status = 'cancelled' WHERE user_id = $1 AND status = 'pending'`, [req.user.id]);
@@ -193,16 +205,11 @@ router.delete('/me', authenticate, async (req, res, next) => {
     await client.query(`DELETE FROM point_transactions WHERE user_id = $1`, [req.user.id]);
     await client.query(`DELETE FROM users WHERE id = $1`, [req.user.id]);
     await client.query('COMMIT');
-    if (process.env.STUB_MODE !== 'true') {
-      try {
-        await admin.auth().deleteUser(firebaseUid);
-      } catch (fbErr) {
-        console.error('[deleteAccount] Firebase deletion failed (DB already committed):', fbErr.message);
-      }
-    }
     res.json({ message: 'Account deleted' });
   } catch (err) {
     await client.query('ROLLBACK');
+    // Firebase is already deleted but DB failed — log prominently for manual cleanup
+    console.error(`[deleteAccount] CRITICAL: Firebase UID ${firebaseUid} deleted but DB cleanup failed:`, err.message);
     next(err);
   } finally { client.release(); }
 });

@@ -28,6 +28,7 @@ import BetHistoryPage from "@/pages/BetHistoryPage";
 import StatsPage from "@/pages/StatsPage";
 import { Navigate } from "react-router-dom";
 import { useState } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -90,7 +91,9 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AuthGate />
+            <ErrorBoundary>
+              <AuthGate />
+            </ErrorBoundary>
           </BrowserRouter>
         </AuthProvider>
       </AppProvider>

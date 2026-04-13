@@ -271,6 +271,12 @@ CREATE TABLE IF NOT EXISTS user_follows (
 CREATE INDEX IF NOT EXISTS idx_user_follows_follower ON user_follows(follower_id);
 CREATE INDEX IF NOT EXISTS idx_user_follows_followed ON user_follows(followed_id);
 
+-- Ensure points_balance cannot go negative
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT check_points_balance_non_negative CHECK (points_balance >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- Achievements
 CREATE TABLE IF NOT EXISTS user_achievements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

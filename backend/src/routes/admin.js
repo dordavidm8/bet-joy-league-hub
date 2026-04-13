@@ -6,24 +6,42 @@ const { logAdminAction } = require('../services/adminLogService');
 
 router.use(authenticate, requireAdmin);
 
-// GET /api/admin/stats
+// GET /api/admin/stats?from=YYYY-MM-DD&to=YYYY-MM-DD
 router.get('/stats', async (req, res, next) => {
   try {
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to   = req.query.to   ? new Date(req.query.to)   : null;
+    const dateFilter = (col) => {
+      if (from && to)   return `AND ${col} BETWEEN $1 AND $2`;
+      if (from)         return `AND ${col} >= $1`;
+      if (to)           return `AND ${col} <= $1`;
+      return '';
+    };
+    const dateParams = [from, to].filter(Boolean);
+
     const [users, bets, leagues, txByType] = await Promise.all([
       pool.query(`SELECT COUNT(*) AS total_users,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day') AS new_today,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') AS new_this_month
         FROM users`),
-      pool.query(`SELECT COUNT(*) AS total_bets,
-        COUNT(*) FILTER (WHERE status = 'pending') AS pending,
-        COUNT(*) FILTER (WHERE status = 'won') AS won,
-        COUNT(*) FILTER (WHERE status = 'lost') AS lost,
-        COUNT(*) FILTER (WHERE is_live_bet = true) AS live_bets,
-        COALESCE(SUM(stake), 0) AS total_staked,
-        COALESCE(SUM(actual_payout) FILTER (WHERE status = 'won'), 0) AS total_paid_out
-        FROM bets`),
+      pool.query(
+        `SELECT COUNT(*) AS total_bets,
+          COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+          COUNT(*) FILTER (WHERE status = 'won') AS won,
+          COUNT(*) FILTER (WHERE status = 'lost') AS lost,
+          COUNT(*) FILTER (WHERE is_live_bet = true) AS live_bets,
+          COALESCE(SUM(stake), 0) AS total_staked,
+          COALESCE(SUM(actual_payout) FILTER (WHERE status = 'won'), 0) AS total_paid_out
+         FROM bets WHERE true ${dateFilter('placed_at')}`,
+        dateParams
+      ),
       pool.query(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'active') AS active FROM leagues`),
-      pool.query(`SELECT type, SUM(ABS(amount)) AS volume, COUNT(*) AS count FROM point_transactions GROUP BY type ORDER BY volume DESC`),
+      pool.query(
+        `SELECT type, SUM(ABS(amount)) AS volume, COUNT(*) AS count
+         FROM point_transactions WHERE true ${dateFilter('created_at')}
+         GROUP BY type ORDER BY volume DESC`,
+        dateParams
+      ),
     ]);
     res.json({ users: users.rows[0], bets: bets.rows[0], leagues: leagues.rows[0], transactions_by_type: txByType.rows });
   } catch (err) { next(err); }

@@ -198,11 +198,30 @@ async function settleParlays(client, gameId, correctOutcomeMap) {
     const allSettled = legsRes.rows.every(l => l.status !== 'pending');
     if (!allSettled) continue;
 
-    const allWon = legsRes.rows.every(l => l.status === 'won');
     const parlayRow = await client.query(`SELECT * FROM parlays WHERE id = $1`, [parlayId]);
     const parlay = parlayRow.rows[0];
     if (!parlay) continue;
 
+    // If any leg was cancelled, refund the whole parlay stake
+    const anyCancelled = legsRes.rows.some(l => l.status === 'cancelled');
+    if (anyCancelled) {
+      await client.query(
+        `UPDATE parlays SET status = 'cancelled', actual_payout = $1, settled_at = NOW() WHERE id = $2`,
+        [parlay.total_stake, parlayId]
+      );
+      await client.query(
+        `UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`,
+        [parlay.total_stake, parlay.user_id]
+      );
+      await client.query(
+        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+         VALUES ($1,$2,'bet_cancelled',$3,'פרלאי בוטל — רגל אחת בוטלה, הסכום הוחזר')`,
+        [parlay.user_id, parlay.total_stake, parlayId]
+      );
+      continue;
+    }
+
+    const allWon = legsRes.rows.every(l => l.status === 'won');
     const payout = allWon ? parlay.potential_payout : 0;
 
     await client.query(
@@ -277,42 +296,48 @@ async function applyTournamentMissedBetPenalties(gameIds) {
           [league.id, penalty, game.id]
         );
 
-        for (const { user_id } of missedRes.rows) {
-          const client = await pool.connect();
-          try {
-            await client.query('BEGIN');
-            // Deduct penalty
-            await client.query(
-              `UPDATE users SET points_balance = points_balance - $1 WHERE id = $2`,
+        if (missedRes.rows.length === 0) continue;
+
+        // Batch all penalties for this (league, game) in a single transaction
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          let appliedCount = 0;
+          for (const { user_id } of missedRes.rows) {
+            // Guard against race condition — only deduct if user still has enough balance
+            const penaltyRes = await client.query(
+              `UPDATE users SET points_balance = points_balance - $1 WHERE id = $2 AND points_balance >= $1 RETURNING id`,
               [penalty, user_id]
             );
-            // Reduce points_in_league
+            if (!penaltyRes.rows[0]) {
+              console.log(`[settleBets] Skipping penalty for user ${user_id} — insufficient balance`);
+              continue;
+            }
             await client.query(
-              `UPDATE league_members SET points_in_league = points_in_league - $1
-               WHERE league_id = $2 AND user_id = $3`,
+              `UPDATE league_members SET points_in_league = points_in_league - $1 WHERE league_id = $2 AND user_id = $3`,
               [penalty, league.id, user_id]
             );
-            // Log transaction
             await client.query(
               `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
                VALUES ($1, $2, 'league_penalty', $3, $4)`,
               [user_id, -penalty, league.id, `ענישה על אי-הימור: ${league.name}`]
             );
-            // Record in missed bets table (prevent double-penalty)
             await client.query(
               `INSERT INTO tournament_missed_bets (league_id, user_id, game_id, penalty_applied)
-               VALUES ($1, $2, $3, $4)
-               ON CONFLICT (league_id, user_id, game_id) DO NOTHING`,
+               VALUES ($1, $2, $3, $4) ON CONFLICT (league_id, user_id, game_id) DO NOTHING`,
               [league.id, user_id, game.id, penalty]
             );
-            await client.query('COMMIT');
-            console.log(`[settleBets] Penalty ${penalty} applied to user ${user_id} for missing bet in league ${league.name}`);
-          } catch (err) {
-            await client.query('ROLLBACK');
-            console.error(`[settleBets] Penalty error for user ${user_id}:`, err.message);
-          } finally {
-            client.release();
+            appliedCount++;
           }
+          await client.query('COMMIT');
+          if (appliedCount > 0) {
+            console.log(`[settleBets] Penalty ${penalty} applied to ${appliedCount} users for game ${game.id} in league ${league.name}`);
+          }
+        } catch (err) {
+          await client.query('ROLLBACK');
+          console.error(`[settleBets] Batch penalty error for game ${game.id} in league ${league.name}:`, err.message);
+        } finally {
+          client.release();
         }
       }
     }
@@ -344,18 +369,26 @@ async function autoSettleTournamentLeagues() {
     );
 
     for (const league of leaguesRes.rows) {
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        console.log(`[settleBets] Auto-settling tournament league: ${league.name}`);
-        await settleLeaguePool(client, league);
-        await client.query('COMMIT');
-        console.log(`[settleBets] Tournament league settled: ${league.name}`);
-      } catch (err) {
-        await client.query('ROLLBACK');
-        console.error(`[settleBets] Auto-settle failed for ${league.name}:`, err.message);
-      } finally {
-        client.release();
+      let settled = false;
+      for (let attempt = 1; attempt <= 3 && !settled; attempt++) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          console.log(`[settleBets] Auto-settling tournament league: ${league.name} (attempt ${attempt})`);
+          await settleLeaguePool(client, league);
+          await client.query('COMMIT');
+          console.log(`[settleBets] Tournament league settled: ${league.name}`);
+          settled = true;
+        } catch (err) {
+          await client.query('ROLLBACK');
+          console.error(`[settleBets] Auto-settle attempt ${attempt}/3 failed for "${league.name}":`, err.message);
+          if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
+        } finally {
+          client.release();
+        }
+      }
+      if (!settled) {
+        console.error(`[settleBets] CRITICAL: All 3 auto-settle attempts failed for league "${league.name}" (id: ${league.id}). Manual intervention required.`);
       }
     }
   } catch (err) {

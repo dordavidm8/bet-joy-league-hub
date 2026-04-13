@@ -4,10 +4,35 @@ import { getGame } from "@/lib/api";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { ArrowRight, Sparkles, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowRight, Sparkles, Lock, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import AiAdvisor from "@/components/AiAdvisor";
+
+function useBettingCountdown(startTime: string) {
+  const [label, setLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const now = Date.now();
+      const start = new Date(startTime).getTime();
+      const closesAt = start - 60 * 60 * 1000; // 1 hour before
+      const diff = closesAt - now;
+      if (diff <= 0) { setLabel(null); return; }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      if (h > 0) setLabel(`הימורים ייסגרו בעוד ${h}ש׳ ${m}ד׳`);
+      else if (m > 0) setLabel(`הימורים ייסגרו בעוד ${m}:${String(s).padStart(2, "0")} דק׳`);
+      else setLabel(`הימורים ייסגרו בעוד ${s} שנ׳`);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
+
+  return label;
+}
 
 const GameDetailPage = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -25,6 +50,7 @@ const GameDetailPage = () => {
   const [stakes, setStakes] = useState<Record<string, string>>({});
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [showAi, setShowAi] = useState(false);
+  const bettingCountdown = useBettingCountdown(data?.game?.start_time ?? "");
 
   if (isLoading) return <div className="p-5 text-sm text-muted-foreground">טוען משחק...</div>;
   if (error || !data?.game) return <div className="p-5">משחק לא נמצא</div>;
@@ -115,6 +141,14 @@ const GameDetailPage = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Betting countdown */}
+      {!isLive && !isFinished && bettingCountdown && (
+        <div className="px-5 flex items-center gap-2 text-xs text-amber-500 font-medium">
+          <Clock size={13} />
+          {bettingCountdown}
+        </div>
+      )}
 
       {/* Bet Questions */}
       {(isFinished || isLive) ? (
