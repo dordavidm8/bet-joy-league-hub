@@ -46,7 +46,14 @@ function requireAdmin(req, res, next) {
   if (process.env.STUB_MODE === 'true' || adminEmails.includes(req.user?.email?.toLowerCase())) {
     return next();
   }
-  res.status(403).json({ error: 'Admin access required' });
+  res.status(403).json({ 
+    error: 'Admin access required',
+    _debug: {
+      user_email: req.user?.email,
+      admin_emails_length: adminEmails.length,
+      admin_emails: adminEmails
+    }
+  });
 }
 
 module.exports = { authenticate, optionalAuthenticate, requireAdmin };
