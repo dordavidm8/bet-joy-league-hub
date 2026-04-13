@@ -42,7 +42,7 @@ async function optionalAuthenticate(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.replace(/['"]/g, '').trim().toLowerCase()).filter(Boolean);
   if (process.env.STUB_MODE === 'true' || adminEmails.includes(req.user?.email?.toLowerCase())) {
     return next();
   }
