@@ -2,27 +2,46 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { logAdminAction } = require('../services/adminLogService');
 
 router.use(authenticate, requireAdmin);
 
-// GET /api/admin/stats
+// GET /api/admin/stats?from=YYYY-MM-DD&to=YYYY-MM-DD
 router.get('/stats', async (req, res, next) => {
   try {
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to   = req.query.to   ? new Date(req.query.to)   : null;
+    const dateFilter = (col) => {
+      if (from && to)   return `AND ${col} BETWEEN $1 AND $2`;
+      if (from)         return `AND ${col} >= $1`;
+      if (to)           return `AND ${col} <= $1`;
+      return '';
+    };
+    const dateParams = [from, to].filter(Boolean);
+
     const [users, bets, leagues, txByType] = await Promise.all([
       pool.query(`SELECT COUNT(*) AS total_users,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day') AS new_today,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') AS new_this_month
         FROM users`),
-      pool.query(`SELECT COUNT(*) AS total_bets,
-        COUNT(*) FILTER (WHERE status = 'pending') AS pending,
-        COUNT(*) FILTER (WHERE status = 'won') AS won,
-        COUNT(*) FILTER (WHERE status = 'lost') AS lost,
-        COUNT(*) FILTER (WHERE is_live_bet = true) AS live_bets,
-        COALESCE(SUM(stake), 0) AS total_staked,
-        COALESCE(SUM(actual_payout) FILTER (WHERE status = 'won'), 0) AS total_paid_out
-        FROM bets`),
+      pool.query(
+        `SELECT COUNT(*) AS total_bets,
+          COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+          COUNT(*) FILTER (WHERE status = 'won') AS won,
+          COUNT(*) FILTER (WHERE status = 'lost') AS lost,
+          COUNT(*) FILTER (WHERE is_live_bet = true) AS live_bets,
+          COALESCE(SUM(stake), 0) AS total_staked,
+          COALESCE(SUM(actual_payout) FILTER (WHERE status = 'won'), 0) AS total_paid_out
+         FROM bets WHERE true ${dateFilter('placed_at')}`,
+        dateParams
+      ),
       pool.query(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'active') AS active FROM leagues`),
-      pool.query(`SELECT type, SUM(ABS(amount)) AS volume, COUNT(*) AS count FROM point_transactions GROUP BY type ORDER BY volume DESC`),
+      pool.query(
+        `SELECT type, SUM(ABS(amount)) AS volume, COUNT(*) AS count
+         FROM point_transactions WHERE true ${dateFilter('created_at')}
+         GROUP BY type ORDER BY volume DESC`,
+        dateParams
+      ),
     ]);
     res.json({ users: users.rows[0], bets: bets.rows[0], leagues: leagues.rows[0], transactions_by_type: txByType.rows });
   } catch (err) { next(err); }
@@ -79,6 +98,92 @@ router.get('/games', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/admin/leagues — all leagues
+router.get('/leagues', async (req, res, next) => {
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const offset = parseInt(req.query.offset) || 0;
+  try {
+    const result = await pool.query(
+      `SELECT l.*,
+              u.username AS creator_username,
+              (SELECT COUNT(*) FROM league_members lm WHERE lm.league_id = l.id AND lm.is_active = true) AS member_count
+       FROM leagues l
+       JOIN users u ON u.id = l.creator_id
+       ORDER BY l.created_at DESC LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    res.json({ leagues: result.rows });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/users/:id/adjust-points
+router.post('/users/:id/adjust-points', async (req, res, next) => {
+  const { amount, reason } = req.body;
+  if (!amount || !reason) return res.status(400).json({ error: 'amount and reason required' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const userRes = await client.query(
+      `UPDATE users SET points_balance = points_balance + $1 WHERE id = $2 RETURNING username, points_balance`,
+      [amount, req.params.id]
+    );
+    if (!userRes.rows[0]) return res.status(404).json({ error: 'User not found' });
+    await client.query(
+      `INSERT INTO point_transactions (user_id, amount, type, description)
+       VALUES ($1, $2, 'admin_adjustment', $3)`,
+      [req.params.id, amount, reason]
+    );
+    await client.query('COMMIT');
+    res.json({ message: 'Points adjusted', user: userRes.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
+});
+
+// POST /api/admin/notify — send notification to all users or a specific user (by username)
+router.post('/notify', async (req, res, next) => {
+  const { type, title, body, target } = req.body; // target: 'all' | username string
+  if (!type || !title) return res.status(400).json({ error: 'type and title required' });
+  if (!['special_offer', 'admin_message'].includes(type)) {
+    return res.status(400).json({ error: 'type must be special_offer or admin_message' });
+  }
+  const { createNotification } = require('../services/notificationService');
+  try {
+    let userIds = [];
+    if (!target || target === 'all') {
+      const result = await pool.query(`SELECT id FROM users`);
+      userIds = result.rows.map(r => r.id);
+    } else {
+      const result = await pool.query(`SELECT id FROM users WHERE username ILIKE $1`, [target]);
+      if (!result.rows[0]) return res.status(404).json({ error: 'משתמש לא נמצא' });
+      userIds = [result.rows[0].id];
+    }
+    for (const userId of userIds) {
+      await createNotification(userId, { type, title, body });
+    }
+    res.json({ message: 'Notifications sent', sent_to: userIds.length });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/quiz — list all quiz questions
+router.get('/quiz', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM quiz_questions ORDER BY created_at DESC LIMIT 200`
+    );
+    res.json({ questions: result.rows });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/quiz/:id — deactivate a quiz question
+router.delete('/quiz/:id', async (req, res, next) => {
+  try {
+    await pool.query(`UPDATE quiz_questions SET is_active = false WHERE id = $1`, [req.params.id]);
+    res.json({ message: 'Question deactivated' });
+  } catch (err) { next(err); }
+});
+
 // POST /api/admin/quiz — add quiz question
 router.post('/quiz', async (req, res, next) => {
   const { question_text, options, correct_option, category, game_id, points_reward } = req.body;
@@ -92,6 +197,175 @@ router.post('/quiz', async (req, res, next) => {
       [question_text, JSON.stringify(options), correct_option, category || 'general', game_id || null, points_reward || 50]
     );
     res.status(201).json({ question: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// ── Featured Match ────────────────────────────────────────────────────────────
+
+// POST /api/admin/games/:id/feature
+router.post('/games/:id/feature', async (req, res, next) => {
+  const { bonus_pct, hours_before } = req.body;
+  if (!bonus_pct || bonus_pct < 1 || bonus_pct > 500) {
+    return res.status(400).json({ error: 'bonus_pct must be 1–500' });
+  }
+  try {
+    const result = await pool.query(
+      `UPDATE games SET is_featured = true, featured_bonus_pct = $1,
+        featured_notif_hours = $2, featured_notif_sent = false
+       WHERE id = $3 RETURNING id, home_team, away_team`,
+      [bonus_pct, hours_before || 2, req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Game not found' });
+    await logAdminAction(req.user.email, 'feature_game', 'game', req.params.id, { bonus_pct, hours_before });
+    res.json({ message: 'Game featured', game: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/games/:id/feature
+router.delete('/games/:id/feature', async (req, res, next) => {
+  try {
+    await pool.query(
+      `UPDATE games SET is_featured = false, featured_bonus_pct = 0, featured_notif_sent = false WHERE id = $1`,
+      [req.params.id]
+    );
+    await logAdminAction(req.user.email, 'unfeature_game', 'game', req.params.id, null);
+    res.json({ message: 'Game unfeatured' });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/games/:id/analytics
+router.get('/games/:id/analytics', async (req, res, next) => {
+  try {
+    const gameRes = await pool.query(`SELECT * FROM games WHERE id = $1`, [req.params.id]);
+    if (!gameRes.rows[0]) return res.status(404).json({ error: 'Game not found' });
+
+    const analytics = await pool.query(
+      `SELECT bq.id AS question_id, bq.question_text, bq.type,
+              b.selected_outcome,
+              COUNT(b.id) AS bet_count,
+              SUM(b.stake) AS total_staked,
+              ROUND(COUNT(b.id)::numeric / NULLIF(SUM(COUNT(b.id)) OVER (PARTITION BY bq.id), 0) * 100, 1) AS pct
+       FROM bet_questions bq
+       JOIN bets b ON b.bet_question_id = bq.id
+       WHERE bq.game_id = $1 AND b.status != 'cancelled'
+       GROUP BY bq.id, bq.question_text, bq.type, b.selected_outcome
+       ORDER BY bq.question_text, total_staked DESC`,
+      [req.params.id]
+    );
+
+    // Group by question
+    const grouped = {};
+    for (const row of analytics.rows) {
+      if (!grouped[row.question_id]) {
+        grouped[row.question_id] = { question_text: row.question_text, type: row.type, outcomes: [] };
+      }
+      grouped[row.question_id].outcomes.push({
+        outcome: row.selected_outcome,
+        bet_count: parseInt(row.bet_count),
+        total_staked: parseInt(row.total_staked),
+        pct: parseFloat(row.pct),
+      });
+    }
+
+    res.json({ game: gameRes.rows[0], questions: Object.values(grouped) });
+  } catch (err) { next(err); }
+});
+
+// ── Bet Management ────────────────────────────────────────────────────────────
+
+// GET /api/admin/users/:id/bets
+router.get('/users/:id/bets', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT b.*, g.home_team, g.away_team, bq.question_text
+       FROM bets b
+       JOIN games g ON g.id = b.game_id
+       JOIN bet_questions bq ON bq.id = b.bet_question_id
+       WHERE b.user_id = $1
+       ORDER BY b.placed_at DESC LIMIT 100`,
+      [req.params.id]
+    );
+    res.json({ bets: result.rows });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/bets/:id/cancel
+router.post('/bets/:id/cancel', async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const betRes = await client.query(`SELECT * FROM bets WHERE id = $1`, [req.params.id]);
+    const bet = betRes.rows[0];
+    if (!bet) return res.status(404).json({ error: 'Bet not found' });
+    if (bet.status !== 'pending') return res.status(400).json({ error: 'Only pending bets can be cancelled' });
+
+    await client.query(`UPDATE bets SET status = 'cancelled', settled_at = NOW() WHERE id = $1`, [bet.id]);
+    await client.query(
+      `UPDATE users SET points_balance = points_balance + $1, total_bets = total_bets - 1 WHERE id = $2`,
+      [bet.stake, bet.user_id]
+    );
+    await client.query(
+      `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+       VALUES ($1, $2, 'bet_cancelled', $3, 'הימור בוטל על ידי מנהל — הסכום הוחזר')`,
+      [bet.user_id, bet.stake, bet.id]
+    );
+
+    // If part of a parlay, cancel entire parlay
+    if (bet.parlay_id) {
+      await client.query(`UPDATE parlays SET status = 'cancelled', settled_at = NOW() WHERE id = $1`, [bet.parlay_id]);
+      await client.query(
+        `UPDATE bets SET status = 'cancelled', settled_at = NOW() WHERE parlay_id = $1 AND id != $2`,
+        [bet.parlay_id, bet.id]
+      );
+    }
+
+    await client.query('COMMIT');
+    await logAdminAction(req.user.email, 'cancel_bet', 'bet', bet.id, { user_id: bet.user_id, stake: bet.stake });
+    res.json({ message: 'Bet cancelled and stake refunded' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
+});
+
+// ── Competitions ──────────────────────────────────────────────────────────────
+
+// GET /api/admin/competitions
+router.get('/competitions', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.*,
+              (SELECT COUNT(*) FROM games g WHERE g.competition_id = c.id) AS game_count,
+              (SELECT COUNT(*) FROM games g WHERE g.competition_id = c.id AND g.status = 'scheduled') AS upcoming
+       FROM competitions c ORDER BY c.is_active DESC, c.name ASC`
+    );
+    res.json({ competitions: result.rows });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/competitions/:id/toggle
+router.patch('/competitions/:id/toggle', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `UPDATE competitions SET is_active = NOT is_active WHERE id = $1 RETURNING id, name, is_active`,
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Competition not found' });
+    await logAdminAction(req.user.email, 'toggle_competition', 'competition', req.params.id, { is_active: result.rows[0].is_active });
+    res.json({ competition: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// ── Admin Action Log ──────────────────────────────────────────────────────────
+
+// GET /api/admin/log
+router.get('/log', async (req, res, next) => {
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  try {
+    const result = await pool.query(
+      `SELECT * FROM admin_action_log ORDER BY created_at DESC LIMIT $1`, [limit]
+    );
+    res.json({ log: result.rows });
   } catch (err) { next(err); }
 });
 

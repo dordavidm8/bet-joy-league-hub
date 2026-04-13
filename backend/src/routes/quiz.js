@@ -9,6 +9,7 @@ router.get('/next', authenticate, async (req, res, next) => {
     const result = await pool.query(
       `SELECT q.* FROM quiz_questions q
        WHERE q.is_active = true
+         AND (q.publish_date IS NULL OR q.publish_date <= CURRENT_DATE)
          AND q.id NOT IN (SELECT question_id FROM quiz_attempts WHERE user_id = $1)
        ORDER BY RANDOM() LIMIT 1`,
       [req.user.id]

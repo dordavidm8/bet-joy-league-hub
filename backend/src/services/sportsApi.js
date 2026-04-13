@@ -157,10 +157,19 @@ function buildBetQuestions(game) {
   const a = game.away_team;
 
   // Priority: 1. ESPN live odds, 2. The Odds API cache, 3. Defaults
-  const realOdds = game.espn_odds || _oddsCache[`${h}|${a}`] || _oddsCache[`${a}|${h}`];
-  const homeOdds = realOdds?.home_odds ?? 2.10;
-  const drawOdds = realOdds?.draw_odds ?? 3.20;
-  const awayOdds = realOdds?.away_odds ?? 2.80;
+  const espnOdds  = game.espn_odds || null;
+  const apiOdds   = _oddsCache[`${h}|${a}`] || _oddsCache[`${a}|${h}`] || null;
+  const realOdds  = espnOdds || apiOdds;
+
+  const homeOdds  = realOdds?.home_odds  ?? 2.10;
+  const drawOdds  = realOdds?.draw_odds  ?? 3.20;
+  const awayOdds  = realOdds?.away_odds  ?? 2.80;
+
+  // BTTS & totals come only from The Odds API (ESPN doesn't provide them)
+  const bttsYes   = apiOdds?.btts_yes  ?? 1.75;
+  const bttsNo    = apiOdds?.btts_no   ?? 1.95;
+  const over25    = apiOdds?.over_2_5  ?? 1.85;
+  const under25   = apiOdds?.under_2_5 ?? 1.90;
 
   return [
     {
@@ -176,16 +185,16 @@ function buildBetQuestions(game) {
       type: 'both_teams_score',
       question_text: `Both teams to score in ${h} vs ${a}?`,
       outcomes: [
-        { label: 'Yes', odds: 1.75 },
-        { label: 'No',  odds: 1.95 },
+        { label: 'Yes', odds: bttsYes },
+        { label: 'No',  odds: bttsNo  },
       ],
     },
     {
       type: 'over_under',
       question_text: `Over/Under 2.5 goals in ${h} vs ${a}?`,
       outcomes: [
-        { label: 'Over 2.5',  odds: 1.85 },
-        { label: 'Under 2.5', odds: 1.90 },
+        { label: 'Over 2.5',  odds: over25  },
+        { label: 'Under 2.5', odds: under25 },
       ],
     },
   ];

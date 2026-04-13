@@ -21,6 +21,8 @@ const adminRoutes = adminModule;
 const opsRouter = adminModule.opsRouter;
 const minigamesRoutes = require('./routes/minigames');
 const advisorRoutes = require('./routes/advisor');
+const notificationRoutes = require('./routes/notifications');
+const feedRoutes = require('./routes/feed');
 
 const app = express();
 const server = http.createServer(app);
@@ -62,6 +64,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ops', opsRouter);
 app.use('/api/minigames', minigamesRoutes);
 app.use('/api/advisor', advisorRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/feed', feedRoutes);
 
 app.use(errorHandler);
 

@@ -1,21 +1,24 @@
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMyBets, getMyReferralCode, updateAvatar, deleteAccount } from "@/lib/api";
+import { getMyBets, getMyReferralCode, updateAvatar, deleteAccount, getMyAchievements, ACHIEVEMENTS } from "@/lib/api";
 import AvatarUploader from "@/components/AvatarUploader";
 import { motion } from "framer-motion";
-import { LogOut, Copy, Check, Camera } from "lucide-react";
+import { LogOut, Copy, Check, Camera, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 const ProfilePage = () => {
   const { backendUser, firebaseUser, signOut } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [showAvatarUploader, setShowAvatarUploader] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
 
-  const { data: betsData } = useQuery({ queryKey: ["my-bets"], queryFn: getMyBets });
+  const { data: betsData } = useQuery({ queryKey: ["my-bets"], queryFn: () => getMyBets({ limit: 5 }) });
   const { data: referralData } = useQuery({ queryKey: ["my-referral"], queryFn: getMyReferralCode });
+  const { data: achievementsData } = useQuery({ queryKey: ["my-achievements"], queryFn: getMyAchievements });
 
   const [avatarSaveError, setAvatarSaveError] = useState<string | null>(null);
 
@@ -101,6 +104,15 @@ const ProfilePage = () => {
         </div>
       </div>
 
+      {/* Stats link */}
+      <button
+        onClick={() => navigate("/stats")}
+        className="flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
+      >
+        <span>הסטטיסטיקות שלי</span>
+        <ChevronRight size={16} className="text-muted-foreground" />
+      </button>
+
       {/* Referral */}
       {(referralData?.referral_code || backendUser?.referral_code) && (
         <div className="card-kickoff flex items-center justify-between">
@@ -117,10 +129,43 @@ const ProfilePage = () => {
         </div>
       )}
 
+      {/* Achievements */}
+      {achievementsData && achievementsData.achievements.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="section-label">הישגים</span>
+            {achievementsData.streak > 0 && (
+              <span className="text-xs font-bold text-primary">🔥 {achievementsData.streak} ברצף</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {achievementsData.achievements.map(a => {
+              const def = ACHIEVEMENTS[a.achievement_key];
+              if (!def) return null;
+              return (
+                <div key={a.achievement_key} title={def.desc}
+                  className="flex items-center gap-1.5 bg-secondary rounded-xl px-3 py-2">
+                  <span className="text-base">{def.icon}</span>
+                  <span className="text-xs font-bold">{def.title}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Bet History */}
       {recentBets.length > 0 && (
         <section className="flex flex-col gap-3">
-          <span className="section-label">היסטוריית הימורים</span>
+          <div className="flex items-center justify-between">
+            <span className="section-label">הימורים אחרונים</span>
+            <button
+              onClick={() => navigate("/bets")}
+              className="flex items-center gap-0.5 text-xs text-primary font-bold"
+            >
+              ראה הכל <ChevronRight size={14} />
+            </button>
+          </div>
           {recentBets.map((bet, i) => (
             <motion.div
               key={bet.id}

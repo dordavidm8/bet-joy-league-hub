@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague } from "@/lib/api";
+import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague, searchUsers } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins } from "lucide-react";
 import { motion } from "framer-motion";
@@ -29,19 +29,25 @@ const LeaguesPage = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [joinCode, setJoinCode] = useState("");
+  const [userSearchInput, setUserSearchInput] = useState("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // Create form state
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [access, setAccess] = useState<"invite" | "public">("invite");
   const [format, setFormat] = useState<"pool" | "per_game" | "tournament">("pool");
   const [duration, setDuration] = useState("full_season");
   const [entryFee, setEntryFee] = useState("0");
+  const [maxMembers, setMaxMembers] = useState("");
   const [distribution, setDistribution] = useState(DEFAULT_DISTRIBUTION);
   // Tournament-specific
   const [tournamentSlug, setTournamentSlug] = useState("fifa.world");
   const [stakePerMatch, setStakePerMatch] = useState("50");
+  const [penaltyPerMissedBet, setPenaltyPerMissedBet] = useState("0");
+  const [seasonEndDate, setSeasonEndDate] = useState("");
   const [joinPolicy, setJoinPolicy] = useState<"before_start" | "anytime">("before_start");
   const [autoSettle, setAutoSettle] = useState(true);
 
@@ -56,6 +62,12 @@ const LeaguesPage = () => {
     enabled: tab === "leaderboard",
   });
 
+  const { data: searchData, isLoading: searchLoading } = useQuery({
+    queryKey: ["user-search", userSearchQuery],
+    queryFn: () => searchUsers(userSearchQuery),
+    enabled: userSearchQuery.length >= 2,
+  });
+
   const { data: myRankData } = useQuery({
     queryKey: ["my-rank"],
     queryFn: getMyRank,
@@ -66,14 +78,18 @@ const LeaguesPage = () => {
     mutationFn: () =>
       createLeague({
         name,
+        description: description.trim() || undefined,
         format,
         duration_type: format === "tournament" ? "tournament" : duration,
         access_type: access,
         entry_fee: parseInt(entryFee) || 0,
+        max_members: parseInt(maxMembers) > 0 ? parseInt(maxMembers) : undefined,
         distribution: (format === "pool" || format === "tournament") && parseInt(entryFee) > 0 ? distribution : undefined,
         ...(format === "tournament" && {
           tournament_slug: tournamentSlug,
           stake_per_match: parseInt(stakePerMatch) || 0,
+          penalty_per_missed_bet: parseInt(penaltyPerMissedBet) || 0,
+          season_end_date: seasonEndDate || undefined,
           join_policy: joinPolicy,
           auto_settle: autoSettle,
         }),
@@ -97,10 +113,11 @@ const LeaguesPage = () => {
   });
 
   const resetForm = () => {
-    setName(""); setAccess("invite"); setFormat("pool");
-    setDuration("full_season"); setEntryFee("0");
+    setName(""); setDescription(""); setAccess("invite"); setFormat("pool");
+    setDuration("full_season"); setEntryFee("0"); setMaxMembers("");
     setDistribution(DEFAULT_DISTRIBUTION);
     setTournamentSlug("fifa.world"); setStakePerMatch("50");
+    setPenaltyPerMissedBet("0"); setSeasonEndDate("");
     setJoinPolicy("before_start"); setAutoSettle(true);
   };
 
@@ -145,6 +162,10 @@ const LeaguesPage = () => {
               <input placeholder="שם הליגה" value={name} onChange={(e) => setName(e.target.value)}
                 className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
 
+              <textarea placeholder="תיאור הליגה (אופציונלי)" value={description} onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+
               {/* Access */}
               <div className="flex gap-2">
                 {(["invite", "public"] as const).map((a) => (
@@ -179,11 +200,28 @@ const LeaguesPage = () => {
                   </select>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground shrink-0">stake מינימלי למשחק</span>
+                    <span className="text-sm text-muted-foreground shrink-0">הימור מינימלי למשחק</span>
                     <input type="number" min={0} value={stakePerMatch}
                       onChange={(e) => setStakePerMatch(e.target.value)}
                       className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                     <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground shrink-0">קנס על אי-הימור</span>
+                    <input type="number" min={0} value={penaltyPerMissedBet}
+                      onChange={(e) => setPenaltyPerMissedBet(e.target.value)}
+                      className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+                  </div>
+                  {parseInt(penaltyPerMissedBet) > 0 && (
+                    <p className="text-[11px] text-muted-foreground">חבר שיש לו מספיק נקודות ולא מהמר יקוזז ב-{penaltyPerMissedBet} נק׳ עם סיום המשחק</p>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground shrink-0">תאריך סיום</span>
+                    <input type="date" value={seasonEndDate} onChange={(e) => setSeasonEndDate(e.target.value)}
+                      className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
 
                   <div className="flex flex-col gap-1">
@@ -218,6 +256,14 @@ const LeaguesPage = () => {
                 </select>
               )}
 
+              {/* Max members */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground shrink-0">מקסימום חברים</span>
+                <input type="number" min={2} value={maxMembers} onChange={(e) => setMaxMembers(e.target.value)}
+                  placeholder="ללא הגבלה"
+                  className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+
               {/* Entry fee */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground shrink-0">דמי כניסה</span>
@@ -227,8 +273,8 @@ const LeaguesPage = () => {
                 <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
               </div>
 
-              {/* Distribution (pool + entry fee > 0) */}
-              {format === "pool" && parseInt(entryFee) > 0 && (
+              {/* Distribution (pool or tournament + entry fee > 0) */}
+              {(format === "pool" || format === "tournament") && parseInt(entryFee) > 0 && (
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-bold text-muted-foreground">חלוקת פרסים (סה״כ: {distTotal}%)</p>
                   {distribution.map((d, i) => (
@@ -247,7 +293,7 @@ const LeaguesPage = () => {
               )}
 
               <Button variant="cta" size="lg" onClick={() => createMutation.mutate()}
-                disabled={!name || createMutation.isPending || (format === "pool" && parseInt(entryFee) > 0 && distTotal !== 100)}>
+                disabled={!name || createMutation.isPending || ((format === "pool" || format === "tournament") && parseInt(entryFee) > 0 && distTotal !== 100)}>
                 {createMutation.isPending ? "יוצר..." : "צור ליגה"}
               </Button>
               {createMutation.isError && (
@@ -320,6 +366,54 @@ const LeaguesPage = () => {
       {/* Leaderboard Tab */}
       {tab === "leaderboard" && (
         <div className="flex flex-col gap-3 px-5">
+          {/* User search */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="חפש משתמש..."
+              value={userSearchInput}
+              onChange={e => setUserSearchInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") setUserSearchQuery(userSearchInput); }}
+              className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none"
+              dir="rtl"
+            />
+            <button
+              onClick={() => setUserSearchQuery(userSearchInput)}
+              className="px-4 py-2.5 bg-secondary rounded-xl text-sm font-bold hover:bg-secondary/80 transition-colors"
+            >
+              חפש
+            </button>
+          </div>
+
+          {/* Search results */}
+          {userSearchQuery.length >= 2 && (
+            <div className="flex flex-col gap-2">
+              {searchLoading ? (
+                <p className="text-xs text-muted-foreground">מחפש...</p>
+              ) : (searchData?.users ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground">לא נמצאו משתמשים</p>
+              ) : (
+                (searchData?.users ?? []).map(u => (
+                  <div key={u.id}
+                    className="card-kickoff flex items-center gap-3 cursor-pointer hover:bg-secondary/60 transition-colors"
+                    onClick={() => navigate(`/profile/${u.username}`)}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-sm shrink-0">👤</div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold">@{u.username}</p>
+                      <p className="text-xs text-muted-foreground">{u.total_wins}/{u.total_bets} ניצחונות</p>
+                    </div>
+                    <span className="text-sm font-black text-primary">{u.points_balance.toLocaleString()} נק׳</span>
+                  </div>
+                ))
+              )}
+              <button onClick={() => { setUserSearchQuery(""); setUserSearchInput(""); }}
+                className="text-xs text-muted-foreground self-start">
+                נקה חיפוש ×
+              </button>
+            </div>
+          )}
+
           {myRankData?.rank && (
             <div className="card-kickoff flex items-center justify-between bg-primary/5 border border-primary/20">
               <span className="text-sm font-bold">הדירוג שלי</span>
@@ -334,7 +428,9 @@ const LeaguesPage = () => {
           ) : (
             leaderboard.map((entry, i) => (
               <motion.div key={entry.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }} className="card-kickoff flex items-center gap-3"
+                transition={{ delay: i * 0.03 }}
+                className="card-kickoff flex items-center gap-3 cursor-pointer hover:bg-secondary/60 transition-colors"
+                onClick={() => navigate(`/profile/${entry.username}`)}
               >
                 <div className="w-8 text-center">
                   {i === 0 ? <Medal size={18} className="text-yellow-500 mx-auto" /> :

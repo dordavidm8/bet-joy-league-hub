@@ -22,7 +22,13 @@ import AllGamesPage from "@/pages/AllGamesPage";
 import FinishedGamesPage from "@/pages/FinishedGamesPage";
 import MiniGamesHubPage from "@/pages/MiniGamesHubPage";
 import MiniGamePlayPage from "@/pages/MiniGamePlayPage";
+import AdminDashboard, { ADMIN_EMAILS } from "@/pages/AdminDashboard";
+import PublicProfilePage from "@/pages/PublicProfilePage";
+import BetHistoryPage from "@/pages/BetHistoryPage";
+import StatsPage from "@/pages/StatsPage";
+import { Navigate } from "react-router-dom";
 import { useState } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +70,14 @@ function AuthGate() {
       <Route path="/quiz" element={<AppLayout><QuizPage /></AppLayout>} />
       <Route path="/expert" element={<AppLayout><ExpertChatPage /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
+      <Route path="/profile/:username" element={<AppLayout><PublicProfilePage /></AppLayout>} />
+      <Route path="/bets" element={<AppLayout><BetHistoryPage /></AppLayout>} />
+      <Route path="/stats" element={<AppLayout><StatsPage /></AppLayout>} />
+      <Route path="/admin" element={
+        ADMIN_EMAILS.includes(firebaseUser?.email ?? "")
+          ? <AdminDashboard />
+          : <Navigate to="/" replace />
+      } />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -77,7 +91,9 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AuthGate />
+            <ErrorBoundary>
+              <AuthGate />
+            </ErrorBoundary>
           </BrowserRouter>
         </AuthProvider>
       </AppProvider>

@@ -204,6 +204,55 @@ ALTER TABLE leagues ADD COLUMN IF NOT EXISTS tournament_slug VARCHAR(50) REFEREN
 ALTER TABLE leagues ADD COLUMN IF NOT EXISTS stake_per_match INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE leagues ADD COLUMN IF NOT EXISTS join_policy VARCHAR(20) NOT NULL DEFAULT 'anytime';
 ALTER TABLE leagues ADD COLUMN IF NOT EXISTS auto_settle BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS penalty_per_missed_bet INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS max_members INTEGER;
+
+-- Featured match columns
+ALTER TABLE games ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS featured_bonus_pct INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS featured_notif_hours INTEGER NOT NULL DEFAULT 2;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS featured_notif_sent BOOLEAN NOT NULL DEFAULT false;
+
+-- Quiz scheduling
+ALTER TABLE quiz_questions ADD COLUMN IF NOT EXISTS publish_date DATE;
+
+-- Admin audit log
+CREATE TABLE IF NOT EXISTS admin_action_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_email VARCHAR(255) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  entity_type VARCHAR(50),
+  entity_id TEXT,
+  details JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_admin_log_created ON admin_action_log(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS tournament_missed_bets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  penalty_applied INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(league_id, user_id, game_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tournament_missed_bets_league ON tournament_missed_bets(league_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_missed_bets_user ON tournament_missed_bets(user_id);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  body TEXT,
+  data JSONB,
+  is_read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS advisor_usage (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -212,9 +261,28 @@ CREATE TABLE IF NOT EXISTS advisor_usage (
   PRIMARY KEY (user_id, usage_date)
 );
 
-CREATE TABLE IF NOT EXISTS advisor_usage (
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  message_count INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (user_id, usage_date)
+-- User follows (friend system)
+CREATE TABLE IF NOT EXISTS user_follows (
+  follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  followed_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (follower_id, followed_id)
 );
+CREATE INDEX IF NOT EXISTS idx_user_follows_follower ON user_follows(follower_id);
+CREATE INDEX IF NOT EXISTS idx_user_follows_followed ON user_follows(followed_id);
+
+-- Ensure points_balance cannot go negative
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT check_points_balance_non_negative CHECK (points_balance >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Achievements
+CREATE TABLE IF NOT EXISTS user_achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  achievement_key VARCHAR(50) NOT NULL,
+  unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, achievement_key)
+);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
