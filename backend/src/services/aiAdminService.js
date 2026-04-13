@@ -36,7 +36,7 @@ async function generateQuizQuestion(category) {
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.8,
-      max_completion_tokens: 500,
+      max_tokens: 500,
     });
 
     const responseText = completion.choices[0].message.content;
@@ -47,8 +47,8 @@ async function generateQuizQuestion(category) {
 
     return JSON.parse(jsonMatch[0]);
   } catch (err) {
-    console.error("[generateQuizQuestion] AI Error:", err.message);
-    throw new Error("Failed to generate question");
+    console.error("[generateQuizQuestion] AI Error:", err);
+    throw new Error("AI Error: " + (err.error?.error?.message || err.message));
   }
 }
 

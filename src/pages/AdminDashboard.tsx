@@ -11,7 +11,7 @@ import {
   adminGetStats, adminGetUsers, adminGetBets, adminGetGames, adminGetLeagues,
   adminGetQuiz, adminGetCompetitions, adminGetLog,
   adminAdjustPoints, adminSendNotification, adminAddQuizQuestion, adminDeleteQuizQuestion,
-  adminGenerateQuiz, adminGenerateMiniGames,
+  adminGenerateQuiz, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
@@ -797,28 +797,82 @@ const QuizTab = () => {
 // ── MiniGames Tab ─────────────────────────────────────────────────────────────
 const MiniGamesTab = () => {
   const [msg, setMsg] = useState("");
-  const generateMutation = useMutation({
-    mutationFn: adminGenerateMiniGames,
-    onSuccess: () => setMsg("✅ מיני-גיימס חוללו ונשמרו בהצלחה למסד הנתונים!"),
-    onError: (e: any) => setMsg(`❌ שגיאה: ${e.message}`),
+  const [draft, setDraft] = useState<any | null>(null);
+  const [selectedType, setSelectedType] = useState<string>("missing_xi");
+
+  const fetchDraftMutation = useMutation({
+    mutationFn: () => adminGetMiniGameDraft(selectedType),
+    onSuccess: (data) => {
+      setDraft(data.draft);
+      setMsg("");
+    },
+    onError: (e: any) => setMsg(`❌ שגיאה בטעינת החידה: ${e.message}`),
   });
+
+  const saveMutation = useMutation({
+    mutationFn: () => adminSaveMiniGameDraft(draft),
+    onSuccess: () => {
+      setDraft(null);
+      setMsg("✅ המשחק אושר ונשמר בהצלחה למסד הנתונים!");
+    },
+    onError: (e: any) => setMsg(`❌ שגיאה בשמירה: ${e.message}`),
+  });
+
+  const MINIGAMES = [
+    { id: "missing_xi", name: "Missing XI" },
+    { id: "who_are_ya", name: "Who Are Ya?" },
+    { id: "career_path", name: "Career Path" },
+    { id: "box2box", name: "Box2Box" },
+    { id: "guess_club", name: "Guess Club" },
+  ];
 
   return (
     <div className="flex flex-col gap-4">
       <div className="border rounded-2xl p-4 flex flex-col gap-4">
-        <div className="flex gap-2 items-center justify-between">
-          <div>
-            <h3 className="font-bold text-sm">ניהול משחקי יום</h3>
-            <p className="text-xs text-muted-foreground mt-1">מכאן ניתן להריץ ידנית את מנוע החילול היומי למשחקי MissingXI, GuessClub, WhoAreYa וכולי. הפעולה סורקת נתונים מ-ESPN ומייצרת חידות מעודכנות להיום.</p>
-          </div>
+        <div>
+          <h3 className="font-bold text-sm">ניהול משחקי יום (Mini Games)</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            ניתן לחולל שאלה עבור כל מצב משחק בנפרד, לעבור על התוצאה ולאשר אותה פרטנית.
+          </p>
         </div>
 
-        {msg && <p className={`text-sm ${msg.includes("✅") ? "text-green-600" : "text-destructive"}`}>{msg}</p>}
+        {msg && <p className={`text-sm font-bold ${msg.includes("✅") ? "text-green-600" : "text-destructive"}`}>{msg}</p>}
 
-        <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending} className="bg-primary">
-          <Star size={16} className="ml-2" />
-          {generateMutation.isPending ? "סורק ומחולל קומבינציות בעזרת AI..." : "חולל ואשר משחקים יומיים כעת"}
-        </Button>
+        <div className="flex gap-2 items-center">
+          <select value={selectedType} onChange={e => { setSelectedType(e.target.value); setDraft(null); }}
+            className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none flex-1">
+            {MINIGAMES.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+
+          <Button onClick={() => fetchDraftMutation.mutate()} disabled={fetchDraftMutation.isPending} variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">
+            <Star size={16} className="ml-2 fill-indigo-600" />
+            {fetchDraftMutation.isPending ? "סורק..." : "חולל שאלה"}
+          </Button>
+        </div>
+
+        {draft && (
+          <div className="flex flex-col gap-3 mt-4 border-t pt-4">
+            <h4 className="text-sm font-bold">טיוטה נוכחית:</h4>
+            <div className="bg-secondary border rounded-xl p-3 text-xs flex flex-col gap-2">
+              <pre className="overflow-x-auto text-[11px] w-full" style={{ maxHeight: "250px" }}>
+                {JSON.stringify(draft.puzzle_data, null, 2)}
+              </pre>
+              <div className="mt-auto pt-2 border-t font-bold flex gap-2">
+                <span className="text-muted-foreground">תשובה נכונה:</span>
+                <span>{JSON.stringify(draft.solution.secret)}</span>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                {saveMutation.isPending ? "שומר..." : "👍 אשר שאלה ושמור למסד הנתונים"}
+              </Button>
+              <Button onClick={() => setDraft(null)} variant="outline">
+                בטל
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -479,8 +479,20 @@ async function generateAllMiniGames() {
       results.failed.push(gen.name);
     }
   }
-
   console.log(`[generateMiniGames] Complete. Success: [${results.success.join(', ')}]  Failed: [${results.failed.join(', ')}]`);
 }
 
-module.exports = { generateAllMiniGames };
+async function generateMiniGameDraft(type) {
+  const generators = {
+    'missing_xi': generateMissingXI,
+    'who_are_ya': generateWhoAreYa,
+    'career_path': generateCareerPath,
+    'box2box': generateBox2Box,
+    'guess_club': generateGuessClub,
+  };
+  
+  if (!generators[type]) throw new Error(`Unknown game type: ${type}`);
+  return await generators[type]();
+}
+
+module.exports = { generateAllMiniGames, generateMiniGameDraft, saveMiniGame };

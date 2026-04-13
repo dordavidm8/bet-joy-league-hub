@@ -217,14 +217,26 @@ router.post('/quiz/generate', async (req, res, next) => {
 
 // ── MiniGames ─────────────────────────────────────────────────────────────────
 
-// POST /api/admin/minigames/generate
-router.post('/minigames/generate', async (req, res, next) => {
+// GET /api/admin/minigames/drafts
+router.get('/minigames/drafts', async (req, res, next) => {
   try {
-    const { generateAllMiniGames } = require('../jobs/generateMiniGames');
-    // Start it asynchronously so we don't block the request if it's slow, or await it if we want immediate feedback.
-    // It takes some time due to multiple scrapes. We will await it for synchronous feedback.
-    await generateAllMiniGames();
-    res.json({ message: 'Mini-games generated successfully for today.' });
+    const { generateAllMiniGamesDrafts } = require('../jobs/generateMiniGames');
+    const drafts = await generateAllMiniGamesDrafts();
+    res.json({ drafts });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/minigames/save-drafts
+router.post('/minigames/save-drafts', async (req, res, next) => {
+  const { games } = req.body;
+  if (!games || !Array.isArray(games)) return res.status(400).json({ error: 'games array required' });
+  try {
+    const { saveMiniGame } = require('../jobs/generateMiniGames');
+    for (const g of games) {
+      await saveMiniGame(g);
+    }
+    await logAdminAction(req.user.email, 'approve_mini_games', 'minigame_draft', null, { count: games.length });
+    res.json({ message: 'Mini-games saved successfully for today.' });
   } catch (err) { next(err); }
 });
 

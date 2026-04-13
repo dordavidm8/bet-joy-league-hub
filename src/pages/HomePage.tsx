@@ -55,7 +55,7 @@ const HomePage = () => {
       </motion.div>
 
       {/* Nav buttons */}
-      <div className="flex gap-3 px-5">
+      <div className="grid grid-cols-2 gap-3 px-5">
         <button
           onClick={() => navigate("/games")}
           className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
@@ -69,6 +69,13 @@ const HomePage = () => {
         >
           תוצאות
           <Trophy size={16} className="text-muted-foreground" />
+        </button>
+        <button
+          onClick={() => navigate("/quiz")}
+          className="col-span-2 flex items-center justify-center gap-2 bg-indigo-50/50 border border-indigo-100 rounded-xl px-4 py-3 font-bold text-sm text-indigo-700 hover:bg-indigo-100/50 transition-colors"
+        >
+          <span>🧠</span>
+          שחק בטריוויה היומית
         </button>
       </div>
 
