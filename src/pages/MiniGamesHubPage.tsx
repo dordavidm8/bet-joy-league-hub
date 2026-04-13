@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldQuestion, UserSearch, Map, Grid, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { ShieldQuestion, UserSearch, Map, Grid, ShieldAlert, CheckCircle2, HelpCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 // Define the response shape from backend
 interface Puzzle {
   id: string;
-  game_type: 'missing_xi' | 'who_are_ya' | 'career_path' | 'box2box' | 'guess_club';
+  game_type: 'missing_xi' | 'who_are_ya' | 'career_path' | 'box2box' | 'guess_club' | 'trivia';
   play_date: string;
   puzzle_data: any;
 }
 
 const UI_MAP = {
+  trivia: {
+    title: 'טריוויה יומית (AI)',
+    desc: 'היעזר בידע בנבכי עולם הכדורגל בשאלה היומית',
+    icon: HelpCircle,
+    route: '/minigames/trivia'
+  },
   missing_xi: {
     title: 'ההרכב החסר',
     desc: 'נחשו את ההרכב הפותח ממשחק קלאסי',
