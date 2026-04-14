@@ -191,7 +191,7 @@ export const adminGetMiniGameDraft = (type: string, options?: any) => {
 };
 
 export const adminSaveMiniGameDraft = (game: any) =>
-  request<{ message: string }>('/admin/minigames/save-draft', { method: 'POST', body: JSON.stringify({ game }) });
+  request<{ message: string }>('/admin/minigames/save-drafts', { method: 'POST', body: JSON.stringify({ games: [game] }) });
 
 export const adminFeatureGame = (id: string, bonus_pct: number, hours_before: number) =>
   request<{ message: string }>(`/admin/games/${id}/feature`, {
