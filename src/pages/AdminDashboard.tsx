@@ -778,8 +778,8 @@ const MiniGamesTab = () => {
                     {draft.puzzle_data.transfers?.map((t: any, i: number) => (
                        <div key={i} className="flex items-center gap-2">
                          <div className="flex flex-col items-center bg-background border rounded-lg p-2 min-w-[80px]">
-                           <span className="text-[10px] text-muted-foreground">{t.year || ''}</span>
-                           <span className="text-xs font-bold text-center leading-tight">{t.to_club}</span>
+                           <span className="text-[10px] text-muted-foreground">{t.season || ''}</span>
+                           <span className="text-xs font-bold text-center leading-tight">{t.club}</span>
                          </div>
                          {i < draft.puzzle_data.transfers.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
                        </div>
@@ -794,6 +794,25 @@ const MiniGamesTab = () => {
                     />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
                       * השחקנים מוקלדים תמיד באנגלית. המערכת תזהה שם חלקי, שגיאות והחלפת תווים מיוחדים.
+                    </span>
+                  </div>
+                </div>
+              ) : draft.game_type === "box2box" ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-4 items-center justify-center p-4 bg-secondary rounded-xl border border-indigo-100">
+                    <div className="text-sm font-black text-center flex-1">{draft.puzzle_data.team1}</div>
+                    <div className="text-lg font-bold text-indigo-500">X</div>
+                    <div className="text-sm font-black text-center flex-1">{draft.puzzle_data.team2}</div>
+                  </div>
+                  <div className="pt-2 border-t flex flex-col gap-1 w-full text-right">
+                    <span className="text-xs text-muted-foreground font-bold">השחקן המסתתר (הפתרון):</span>
+                    <input 
+                      value={draft.solution.secret}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                    />
+                    <span className="text-[10px] text-muted-foreground leading-tight mt-1">
+                      * המערכת חכמה ויודעת לקבל כשגיאות כתיב קלות, אותיות קטנות/גדולות, חלק מהשם בלבד (מעל 4 אותיות), וכינויים כמו רונאלדו. אין צורך להזין את כל הווריאציות.
                     </span>
                   </div>
                 </div>

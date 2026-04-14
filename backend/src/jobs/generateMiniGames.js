@@ -51,7 +51,7 @@ async function fetchRecentEspnMatchIds(league) {
   // Keep only STATUS_FINAL matches (completed)
   return events
     .filter(e => e.status?.type?.completed === true)
-    .map(e => ({ id: e.id, name: e.name }));
+    .map(e => ({ id: e.id, name: e.name, date: e.date }));
 }
 
 async function fetchEspnMatch(league, eventId) {
@@ -105,7 +105,8 @@ async function generateMissingXI() {
           else if (league === 'ita.1') leagueName = 'Serie A';
           else if (league === 'ger.1') leagueName = 'Bundesliga';
 
-          matchContext = `טריווית הרכב: שוחק נגד ${opponentRoster.team.displayName} (${leagueName})`;
+          const dateStr = match.date ? new Date(match.date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+          matchContext = `טריווית הרכב: שוחק נגד ${opponentRoster.team.displayName} (${leagueName}) ${dateStr ? 'בתאריך ' + dateStr : ''}`;
 
           const allPlayers = (roster.roster || roster.entries || [])
             .map(e => ({
