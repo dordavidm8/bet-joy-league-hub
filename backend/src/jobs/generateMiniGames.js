@@ -300,7 +300,7 @@ async function generateBox2Box() {
       SELECT puzzle_data->>'team1' AS t1, puzzle_data->>'team2' AS t2
       FROM daily_mini_games
       WHERE game_type = 'box2box'
-        AND play_date >= CURRENT_DATE - INTERVAL '30 days'
+        AND play_date >= CURRENT_DATE - INTERVAL '365 days'
     `);
     recentPairs = rows.map(r => `${r.t1}|${r.t2}`);
   } catch (e) {

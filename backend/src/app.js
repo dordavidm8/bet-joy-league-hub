@@ -45,7 +45,7 @@ app.use(helmet({
 }));
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', (req, res) => {
   const admin = require('./config/firebase');
