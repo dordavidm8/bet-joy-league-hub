@@ -6,7 +6,7 @@ function getGroq() {
   return _groq;
 }
 
-async function generateQuizQuestion(category) {
+async function generateQuizQuestion(options) {
   const categoryNames = {
     'general': 'כללי',
     'history': 'היסטוריה',
@@ -15,13 +15,24 @@ async function generateQuizQuestion(category) {
     'world_cup': 'מונדיאל'
   };
 
+  const category = (typeof options === 'string') ? options : (options.category || 'general');
   const categoryName = categoryNames[category] || category;
+  
+  let topicInstruction = `עליך ליצור שאלת טריוויה חדשה, מקורית ומעניינת בנושא: "${categoryName}".`;
+  if (options.customTopic) {
+    let context = 'בנושא';
+    if (options.customType === 'team') context = 'על הקבוצה';
+    else if (options.customType === 'player') context = 'על השחקן';
+    else if (options.customType === 'competition') context = 'על התחרות';
+
+    topicInstruction = `עליך ליצור שאלת טריוויה חדשה, מרתקת ומדויקת ${context}: "${options.customTopic}". השאלה חייבת להיות ספציפית וממוקדת בנושא זה בלבד!`;
+  }
 
 const prompt = `
 אתה מחולל שאלות טריוויה לאפליקציית כדורגל. עליך להיות היסטוריון כדורגל קפדן ומדויק.
 אזהרה חמורה: אל תמציא (Hallucinate) עובדות, שחקנים, אירועים או נתונים סטטיסטיים! 
 השתמש אך ורק בעובדות היסטוריות אמיתיות וודאיות ב-100% (למשל: זוכי מונדיאל, מלכי שערים, שיאי העברות רשמיים, שנות הקמה וזכייה מוכרות). אם אתה לא בטוח בעובדה, אל תשתמש בה.
-עליך ליצור שאלת טריוויה חדשה, מקורית ומעניינת בנושא: "${categoryName}".
+${topicInstruction}
 השאלה חייבת להיות בעברית תקינה.
 החזר אך ורק תשובת JSON ללא שום טקסט נוסף.
 פורמט ה-JSON חייב להיות:
@@ -54,4 +65,33 @@ const prompt = `
   }
 }
 
-module.exports = { generateQuizQuestion };
+async function verifyBox2Box(team1, team2, guess) {
+  const prompt = `
+אתה שופט נתונים מדויק של כדורגל.
+עליך לבדוק האם השחקן המכונה "${guess}" שיחק אי פעם משחקים רשמיים בקבוצות הבוגרים של **שני המועדונים הבאים**:
+1. ${team1}
+2. ${team2}
+
+השב "true" אך ורק אם השחקן אכן שיחק משחקים רשמיים (ולא רק נוער או משחקי ידידות) בשתי הקבוצות לאורך הקריירה שלו.
+אם הוא שיחק רק באחת מהן, או באף אחת מהן, השב "false".
+לדוגמה: אם יזינו 'Ronaldo' וקבוצות 'Real Madrid' ו-'Barcelona', התשובה היא "true" (רונאלדו הברזילאי).
+השב מילה אחת בלבד באנגלית - true או false. ללא שום סימן פיסוק נוסף.
+`;
+
+  try {
+    const completion = await getGroq().chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens: 10,
+    });
+
+    const responseText = completion.choices[0].message.content.trim().toLowerCase();
+    return responseText.includes('true');
+  } catch (err) {
+    console.error("[verifyBox2Box] AI Error:", err);
+    return false; // Err on the side of rejection
+  }
+}
+
+module.exports = { generateQuizQuestion, verifyBox2Box };

@@ -65,6 +65,13 @@ async function fetchEspnMatch(league, eventId) {
 
 async function generateMissingXI() {
   const leagues = ['eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1'];
+  const BIG_CLUBS = [
+    'Arsenal', 'Chelsea', 'Liverpool', 'Manchester City', 'Manchester United', 'Tottenham Hotspur',
+    'Barcelona', 'Real Madrid', 'Atlético Madrid',
+    'Bayern Munich', 'Borussia Dortmund', 'Bayer Leverkusen',
+    'Juventus', 'AC Milan', 'Inter Milan', 'Napoli',
+    'Paris Saint-Germain', 'Marseille'
+  ];
 
   let starters = [];
   let teamName = '';
@@ -93,7 +100,20 @@ async function generateMissingXI() {
       try {
         const data = await fetchEspnMatch(league, match.id);
         if (data.rosters && data.rosters.length >= 2) {
-          const teamIdx = Math.random() < 0.5 ? 0 : 1;
+          const t0 = data.rosters[0].team.displayName;
+          const t1 = data.rosters[1].team.displayName;
+          const t0Big = BIG_CLUBS.some(c => t0.includes(c) || c.includes(t0));
+          const t1Big = BIG_CLUBS.some(c => t1.includes(c) || c.includes(t1));
+
+          if (!t0Big && !t1Big) {
+            console.log(`[generateMissingXI] Skipping ${t0} vs ${t1} (Not big clubs)`);
+            continue;
+          }
+
+          let teamIdx = 0;
+          if (t0Big && t1Big) teamIdx = Math.random() < 0.5 ? 0 : 1;
+          else if (t1Big) teamIdx = 1;
+
           const roster = data.rosters[teamIdx];
           const opponentRoster = data.rosters[teamIdx === 0 ? 1 : 0];
           teamName = roster.team.displayName;
@@ -228,15 +248,42 @@ async function generateWhoAreYa() {
 
 async function generateCareerPath() {
   const PLAYERS = [
-    { slug: 'Cristiano_Ronaldo',   name: 'Cristiano Ronaldo' },
-    { slug: 'Lionel_Messi',        name: 'Lionel Messi' },
-    { slug: 'Zlatan_Ibrahimović',  name: 'Zlatan Ibrahimović' },
-    { slug: 'Robert_Lewandowski',  name: 'Robert Lewandowski' },
-    { slug: 'Luka_Modrić',         name: 'Luka Modrić' },
-    { slug: 'Karim_Benzema',       name: 'Karim Benzema' },
-    { slug: 'Erling_Haaland',      name: 'Erling Haaland' },
-    { slug: 'Harry_Kane',          name: 'Harry Kane' },
-    { slug: 'Kylian_Mbappé',       name: 'Kylian Mbappé' },
+    { slug: 'Cristiano_Ronaldo', name: 'Cristiano Ronaldo' },
+    { slug: 'Lionel_Messi', name: 'Lionel Messi' },
+    { slug: 'Zlatan_Ibrahimović', name: 'Zlatan Ibrahimović' },
+    { slug: 'Robert_Lewandowski', name: 'Robert Lewandowski' },
+    { slug: 'Luka_Modrić', name: 'Luka Modrić' },
+    { slug: 'Karim_Benzema', name: 'Karim Benzema' },
+    { slug: 'Erling_Haaland', name: 'Erling Haaland' },
+    { slug: 'Harry_Kane', name: 'Harry Kane' },
+    { slug: 'Kylian_Mbappé', name: 'Kylian Mbappé' },
+    { slug: 'Neymar', name: 'Neymar' },
+    { slug: 'Luis_Suárez', name: 'Luis Suárez' },
+    { slug: 'Sergio_Ramos', name: 'Sergio Ramos' },
+    { slug: 'Andrés_Iniesta', name: 'Andrés Iniesta' },
+    { slug: 'Xavi', name: 'Xavi' },
+    { slug: 'Gareth_Bale', name: 'Gareth Bale' },
+    { slug: 'Wayne_Rooney', name: 'Wayne Rooney' },
+    { slug: 'Thierry_Henry', name: 'Thierry Henry' },
+    { slug: 'Ronaldinho', name: 'Ronaldinho' },
+    { slug: 'Kaká', name: 'Kaká' },
+    { slug: 'Kevin_De_Bruyne', name: 'Kevin De Bruyne' },
+    { slug: 'Ángel_Di_María', name: 'Ángel Di María' },
+    { slug: 'Antoine_Griezmann', name: 'Antoine Griezmann' },
+    { slug: 'Toni_Kroos', name: 'Toni Kroos' },
+    { slug: 'Mohamed_Salah', name: 'Mohamed Salah' },
+    { slug: 'Zinedine_Zidane', name: 'Zinedine Zidane' },
+    { slug: 'Ronaldo_(Brazilian_footballer)', name: 'Ronaldo Nazário' },
+    { slug: 'David_Beckham', name: 'David Beckham' },
+    { slug: 'Steven_Gerrard', name: 'Steven Gerrard' },
+    { slug: 'Frank_Lampard', name: 'Frank Lampard' },
+    { slug: 'Andrea_Pirlo', name: 'Andrea Pirlo' },
+    { slug: 'Gianluigi_Buffon', name: 'Gianluigi Buffon' },
+    { slug: 'Eden_Hazard', name: 'Eden Hazard' },
+    { slug: 'Raheem_Sterling', name: 'Raheem Sterling' },
+    { slug: 'Paul_Pogba', name: 'Paul Pogba' },
+    { slug: 'Pierre-Emerick_Aubameyang', name: 'Pierre-Emerick Aubameyang' },
+    { slug: 'Cesc_Fàbregas', name: 'Cesc Fàbregas' }
   ];
 
   // Avoid repeats from last 7 days
@@ -502,7 +549,7 @@ async function generateAllMiniGames() {
 async function generateMiniGameDraft(type, options = {}) {
   if (type === 'trivia') {
     const { generateQuizQuestion } = require('../services/aiAdminService');
-    const q = await generateQuizQuestion(options.category || 'general');
+    const q = await generateQuizQuestion(options);
     return {
       game_type: 'trivia',
       puzzle_data: { question_text: q.question_text, options: q.options },

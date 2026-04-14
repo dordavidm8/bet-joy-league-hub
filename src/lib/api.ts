@@ -190,8 +190,20 @@ export const adminGetMiniGameDraft = (type: string, options?: any) => {
   return request<{ draft: any }>(`/admin/minigames/drafts/${type}${query}`);
 };
 
+export const verifyBox2BoxGuess = (team1: string, team2: string, guess: string) => 
+  request<{ valid: boolean }>('/minigames/box2box/verify', { method: 'POST', body: JSON.stringify({ team1, team2, guess }) });
+
 export const adminSaveMiniGameDraft = (game: any) =>
   request<{ message: string }>('/admin/minigames/save-drafts', { method: 'POST', body: JSON.stringify({ games: [game] }) });
+
+export const adminGetMiniGameQueue = () =>
+  request<{ queue: any[] }>('/admin/minigames/queue');
+
+export const adminUpdateMiniGameQueueDate = (id: string, play_date: string) =>
+  request<{ game: any }>(`/admin/minigames/queue/${id}`, { method: 'PATCH', body: JSON.stringify({ play_date }) });
+
+export const adminDeleteMiniGameQueue = (id: string) =>
+  request<{ message: string }>(`/admin/minigames/queue/${id}`, { method: 'DELETE' });
 
 export const adminFeatureGame = (id: string, bonus_pct: number, hours_before: number) =>
   request<{ message: string }>(`/admin/games/${id}/feature`, {

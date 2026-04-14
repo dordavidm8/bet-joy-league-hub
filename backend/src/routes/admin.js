@@ -240,6 +240,41 @@ router.post('/minigames/save-drafts', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/admin/minigames/queue
+router.get('/minigames/queue', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, game_type, play_date, puzzle_data, solution 
+       FROM daily_mini_games 
+       ORDER BY play_date ASC, game_type ASC`
+    );
+    res.json({ queue: result.rows });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/minigames/queue/:id
+router.patch('/minigames/queue/:id', async (req, res, next) => {
+  const { play_date } = req.body;
+  if (!play_date) return res.status(400).json({ error: 'play_date required' });
+  try {
+    const result = await pool.query(
+      `UPDATE daily_mini_games SET play_date = $1 WHERE id = $2 RETURNING *`,
+      [play_date, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ game: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/minigames/queue/:id
+router.delete('/minigames/queue/:id', async (req, res, next) => {
+  try {
+    const result = await pool.query(`DELETE FROM daily_mini_games WHERE id = $1 RETURNING id`, [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ message: 'Deleted' });
+  } catch (err) { next(err); }
+});
+
 // ── Featured Match ────────────────────────────────────────────────────────────
 
 // POST /api/admin/games/:id/feature

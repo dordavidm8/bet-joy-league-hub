@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,8 +13,9 @@ import {
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
+  adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
-  AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion,
+  AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion, getGames,
 } from "@/lib/api";
 
 export const ADMIN_EMAILS = [
@@ -625,9 +626,17 @@ const MiniGamesTab = () => {
   const [draft, setDraft] = useState<any | null>(null);
   const [selectedType, setSelectedType] = useState<string>("trivia");
   const [triviaCategory, setTriviaCategory] = useState<string>("general");
+  const [customTopic, setCustomTopic] = useState<string>("");
+  const [customType, setCustomType] = useState<string>("free");
+  const [todayGames, setTodayGames] = useState<any[]>([]);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    getGames({ from: today, to: today }).then(res => setTodayGames(res.games || []));
+  }, []);
 
   const fetchDraftMutation = useMutation({
-    mutationFn: () => adminGetMiniGameDraft(selectedType, selectedType === "trivia" ? { category: triviaCategory } : undefined),
+    mutationFn: () => adminGetMiniGameDraft(selectedType, selectedType === "trivia" ? { category: triviaCategory, customTopic, customType } : undefined),
     onSuccess: (data) => {
       setDraft(data.draft);
       setMsg("");
@@ -635,11 +644,35 @@ const MiniGamesTab = () => {
     onError: (e: any) => setMsg(`❌ שגיאה בטעינת החידה: ${e.message}`),
   });
 
+  const queryClient = useQueryClient();
+
+  const { data: queueData, isLoading: queueLoading } = useQuery({
+    queryKey: ['admin-minigames-queue'],
+    queryFn: adminGetMiniGameQueue,
+  });
+
+  const updateDateMutation = useMutation({
+    mutationFn: (variables: { id: string, play_date: string }) => adminUpdateMiniGameQueueDate(variables.id, variables.play_date),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-minigames-queue"] });
+      setMsg("✅ שונה תאריך למשחק בתור.");
+    }
+  });
+
+  const deleteQueueMutation = useMutation({
+    mutationFn: adminDeleteMiniGameQueue,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-minigames-queue"] });
+      setMsg("🗑️ החידה הוסרה מהתור.");
+    }
+  });
+
   const saveMutation = useMutation({
     mutationFn: () => adminSaveMiniGameDraft(draft),
     onSuccess: () => {
       setDraft(null);
       setMsg("✅ המשחק אושר ונשמר בהצלחה למסד הנתונים!");
+      queryClient.invalidateQueries({ queryKey: ["admin-minigames-queue"] });
     },
     onError: (e: any) => setMsg(`❌ שגיאה בשמירה: ${e.message}`),
   });
@@ -739,10 +772,19 @@ const MiniGamesTab = () => {
                 <div className="flex flex-col gap-3">
                   <div className="flex gap-4 items-center">
                     {draft.puzzle_data.image_url && <img src={draft.puzzle_data.image_url} className="w-20 h-20 rounded-full object-cover border-2" />}
-                    <div className="flex flex-col gap-1">
-                      <div className="text-sm font-bold">לאומיות: {draft.puzzle_data.nationality}</div>
-                      <div className="text-sm font-bold">קבוצה: {draft.puzzle_data.club}</div>
-                      <div className="text-sm font-bold">עמדה: {draft.puzzle_data.position}</div>
+                    <div className="flex flex-col gap-2 flex-1 w-full text-right">
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs font-bold w-14">לאומיות:</span>
+                        <input value={draft.puzzle_data.nationality} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, nationality: e.target.value }})} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs font-bold w-14">קבוצה:</span>
+                        <input value={draft.puzzle_data.club} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, club: e.target.value }})} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs font-bold w-14">עמדה:</span>
+                        <input value={draft.puzzle_data.position} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, position: e.target.value }})} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
+                      </div>
                     </div>
                   </div>
                   <div className="pt-2 border-t flex flex-col gap-1">
@@ -869,6 +911,63 @@ const MiniGamesTab = () => {
               </Button>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Queue Section */}
+      <div className="border rounded-2xl p-4 flex flex-col gap-4 bg-muted/10">
+        <div>
+          <h3 className="font-bold text-sm">תור משחקים שאושרו (Upcoming Queue)</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            משחקים שיוצגו בעתיד באפליקציה לפי התאריך המוגדר שלהם. אפשר לסדר או למחוק.
+          </p>
+        </div>
+
+        {queueLoading ? (
+           <div className="text-muted-foreground text-xs font-bold animate-pulse">טוען תור...</div>
+        ) : queueData?.queue && queueData.queue.length > 0 ? (
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-right text-xs">
+               <thead className="bg-secondary text-[10px] uppercase font-bold text-muted-foreground">
+                 <tr>
+                   <th className="px-3 py-2">סוג משחק</th>
+                   <th className="px-3 py-2 text-center">הפתרון (סוד)</th>
+                   <th className="px-3 py-2 w-32 border-r">תאריך שידור</th>
+                   <th className="px-3 py-2 w-10"></th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y bg-background font-medium">
+                 {queueData.queue.map((q: any) => {
+                   const t = MINIGAMES.find(m => m.id === q.game_type)?.name || q.game_type;
+                   const playDate = new Date(q.play_date).toISOString().split('T')[0];
+                   const secret = typeof q.solution.secret === 'string' ? q.solution.secret : JSON.stringify(q.solution.secret);
+                   const isPast = new Date(playDate) < new Date(new Date().toISOString().split('T')[0]);
+                   return (
+                     <tr key={q.id} className={isPast ? 'opacity-50 line-through text-muted-foreground' : ''}>
+                       <td className="px-3 py-2">{t}</td>
+                       <td className="px-3 py-2 text-center text-indigo-700 max-w-[150px] truncate">{secret}</td>
+                       <td className="px-3 py-2 border-r">
+                          <input 
+                            type="date" 
+                            disabled={isPast || updateDateMutation.isPending}
+                            value={playDate}
+                            onChange={(e) => updateDateMutation.mutate({ id: q.id, play_date: e.target.value })}
+                            className="bg-transparent outline-none w-full cursor-pointer text-[11px]" 
+                          />
+                       </td>
+                       <td className="px-3 py-1">
+                          <button onClick={() => { if(confirm('למחוק עתידית?')) deleteQueueMutation.mutate(q.id); }} disabled={isPast} className="p-1.5 hover:bg-destructive/10 text-destructive rounded block mx-auto transition-colors disabled:opacity-0">
+                            <Trash2 size={12} />
+                          </button>
+                       </td>
+                     </tr>
+                   )
+                 })}
+               </tbody>
+            </table>
+          </div>
+        ) : (
+           <div className="text-muted-foreground text-xs">אין משחקים בתור.</div>
         )}
       </div>
     </div>

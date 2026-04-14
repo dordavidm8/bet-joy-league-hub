@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, HelpCircle, Shield, Plus } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Shield, Plus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { verifyBox2BoxGuess } from '@/lib/api';
 
 interface Box2BoxGameProps {
   data: {
@@ -36,8 +37,24 @@ const Box2BoxGame: React.FC<Box2BoxGameProps> = ({ data, solution, onSolve }) =>
     return false;
   };
 
-  const handleSubmit = () => {
-    onSolve(isAnswerCorrect(guess, solution.secret));
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (isAnswerCorrect(guess, solution.secret)) {
+      onSolve(true);
+      return;
+    }
+    
+    // Fallback to AI verification for dynamic valid answers
+    setLoading(true);
+    try {
+      const res = await verifyBox2BoxGuess(data.team1, data.team2, guess);
+      onSolve(res.valid);
+    } catch {
+      onSolve(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -89,9 +106,10 @@ const Box2BoxGame: React.FC<Box2BoxGameProps> = ({ data, solution, onSolve }) =>
            />
            <button 
              onClick={handleSubmit}
-             className="w-full bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground py-4 rounded-full font-bold text-lg shadow-lg active:scale-95 transition-transform"
+             disabled={loading}
+             className="w-full bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground py-4 rounded-full font-bold text-lg shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2 disabled:opacity-75 disabled:active:scale-100"
            >
-             אישור תשובה
+             {loading ? <Loader2 size={24} className="animate-spin" /> : "אישור תשובה"}
            </button>
         </section>
       </main>

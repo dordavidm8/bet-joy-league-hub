@@ -36,6 +36,19 @@ router.get('/today', async (req, res, next) => {
   }
 });
 
+// POST /api/minigames/box2box/verify
+router.post('/box2box/verify', async (req, res, next) => {
+  const { team1, team2, guess } = req.body;
+  if (!team1 || !team2 || !guess) return res.status(400).json({ error: 'Missing parameters' });
+  try {
+    const { verifyBox2Box } = require('../services/aiAdminService');
+    const isValid = await verifyBox2Box(team1, team2, guess);
+    res.json({ valid: isValid });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/minigames/submit
 router.post('/submit', authenticate, async (req, res, next) => {
   const { puzzle_id, is_correct } = req.body;
