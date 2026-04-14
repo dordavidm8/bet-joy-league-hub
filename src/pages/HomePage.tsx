@@ -70,13 +70,6 @@ const HomePage = () => {
           תוצאות
           <Trophy size={16} className="text-muted-foreground" />
         </button>
-        <button
-          onClick={() => navigate("/minigames")}
-          className="col-span-2 flex items-center justify-center gap-2 bg-indigo-50/50 border border-indigo-100 rounded-xl px-4 py-3 font-bold text-sm text-indigo-700 hover:bg-indigo-100/50 transition-colors"
-        >
-          <span>🎁</span>
-          שחק באתגרים
-        </button>
       </div>
 
       {/* Live Games */}
