@@ -438,7 +438,7 @@ async function generateGuessClub() {
 // ── saveMiniGame ──────────────────────────────────────────────────────────────
 
 async function saveMiniGame(game) {
-  const { pool } = require('../db'); // ensure pool is available
+  const { pool } = require('../config/database'); // ensure pool is available
   try {
     const maxDateResult = await pool.query(`SELECT MAX(play_date) as max_date FROM daily_mini_games WHERE game_type = $1`, [game.game_type]);
     let nextDate = new Date();

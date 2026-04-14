@@ -697,19 +697,44 @@ const MiniGamesTab = () => {
             <h4 className="text-sm font-bold">טיוטה נוכחית ממתינה לאישור:</h4>
             <div className="bg-secondary border rounded-xl p-4 text-sm flex flex-col gap-3">
               {draft.game_type === "trivia" ? (
-                <>
-                  <div className="font-bold text-base">{draft.puzzle_data.question_text}</div>
-                  <div className="flex flex-col gap-1">
-                    {draft.puzzle_data.options.map((opt: string, i: number) => (
-                      <div key={i} className={`p-2 rounded-lg border ${opt.startsWith(draft.solution.secret) ? 'bg-green-100 border-green-300 font-bold' : 'bg-background'}`}>
-                        {opt}
-                      </div>
-                    ))}
+                <div className="flex flex-col gap-3">
+                  <span className="text-xs text-muted-foreground font-bold -mb-2">ערוך שאלה:</span>
+                  <input 
+                    value={draft.puzzle_data.question_text || ''}
+                    onChange={(e) => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, question_text: e.target.value }})}
+                    className="font-bold text-base bg-background border rounded-lg p-2.5 w-full outline-indigo-500 transition-all"
+                  />
+                  
+                  <span className="text-xs text-muted-foreground font-bold mt-1 -mb-2">ערוך תשובות וסמן את התשובה הנכונה בבחירה מימין:</span>
+                  <div className="flex flex-col gap-2">
+                    {draft.puzzle_data.options.map((opt: string, i: number) => {
+                       const optionLetters = ['A', 'B', 'C', 'D'];
+                       const letter = optionLetters[i] || 'A';
+                       const isCorrect = draft.solution.secret === letter;
+                       return (
+                        <div key={i} className="flex gap-3 items-center">
+                          <input 
+                            type="radio"
+                            name="correct_option"
+                            checked={isCorrect}
+                            onChange={() => setDraft({ ...draft, solution: { secret: letter } })}
+                            title={`סמן את ${letter} כתשובה הנכונה`}
+                            className="w-5 h-5 cursor-pointer accent-green-600"
+                          />
+                          <input 
+                            value={opt}
+                            onChange={(e) => {
+                              const newOptions = [...draft.puzzle_data.options];
+                              newOptions[i] = e.target.value;
+                              setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, options: newOptions }});
+                            }}
+                            className={`flex-1 p-2 rounded-lg border text-sm transition-all focus:outline-indigo-500 ${isCorrect ? 'bg-green-50 border-green-400 font-bold text-green-900' : 'bg-background hover:bg-secondary/50'}`}
+                          />
+                        </div>
+                       );
+                    })}
                   </div>
-                  <div className="pt-2 border-t text-muted-foreground">
-                    תשובה נכונה: <strong className="text-foreground">{draft.solution.secret}</strong>
-                  </div>
-                </>
+                </div>
               ) : (
                 <>
                   <pre className="overflow-x-auto text-[11px] w-full" style={{ maxHeight: "250px" }}>
