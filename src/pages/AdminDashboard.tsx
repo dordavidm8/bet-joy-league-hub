@@ -735,14 +735,107 @@ const MiniGamesTab = () => {
                     })}
                   </div>
                 </div>
+              ) : draft.game_type === "who_are_ya" ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-4 items-center">
+                    {draft.puzzle_data.image_url && <img src={draft.puzzle_data.image_url} className="w-20 h-20 rounded-full object-cover border-2" />}
+                    <div className="flex flex-col gap-1">
+                      <div className="text-sm font-bold">לאומיות: {draft.puzzle_data.nationality}</div>
+                      <div className="text-sm font-bold">קבוצה: {draft.puzzle_data.club}</div>
+                      <div className="text-sm font-bold">עמדה: {draft.puzzle_data.position}</div>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground font-bold">השחקן המסתתר (הפתרון):</span>
+                    <input 
+                      value={draft.solution.secret}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                    />
+                    <span className="text-[10px] text-muted-foreground leading-tight mt-1">
+                      * המערכת חכמה ויודעת לקבל כשגיאות כתיב קלות, אותיות קטנות/גדולות, חלק מהשם בלבד (מעל 3 אותיות), וכינויים נבחרים אוטומטית כפי שהם מקודדים במשחק. אין צורך להזין את כל הווריאציות.
+                    </span>
+                  </div>
+                </div>
+              ) : draft.game_type === "guess_club" ? (
+                <div className="flex flex-col gap-3 items-center text-center">
+                  <img src={draft.puzzle_data.logo_data || draft.puzzle_data.image_url} className="w-24 h-24 object-contain" />
+                  <div className="pt-2 border-t flex flex-col gap-1 w-full text-right">
+                    <span className="text-xs text-muted-foreground font-bold">שם המועדון (הפתרון):</span>
+                    <input 
+                      value={draft.solution.secret}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                    />
+                    <span className="text-[10px] text-muted-foreground leading-tight mt-1">
+                      * המערכת חכמה ויודעת לקבל מילות מפתח מתוך שם הקבוצה, השמטת United/City/FC ועוד.
+                    </span>
+                  </div>
+                </div>
+              ) : draft.game_type === "career_path" ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {draft.puzzle_data.transfers?.map((t: any, i: number) => (
+                       <div key={i} className="flex items-center gap-2">
+                         <div className="flex flex-col items-center bg-background border rounded-lg p-2 min-w-[80px]">
+                           <span className="text-[10px] text-muted-foreground">{t.year || ''}</span>
+                           <span className="text-xs font-bold text-center leading-tight">{t.to_club}</span>
+                         </div>
+                         {i < draft.puzzle_data.transfers.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
+                       </div>
+                    ))}
+                  </div>
+                  <div className="pt-2 border-t flex flex-col gap-1 w-full text-right">
+                    <span className="text-xs text-muted-foreground font-bold">השחקן המסתתר (הפתרון):</span>
+                    <input 
+                      value={draft.solution.secret}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                    />
+                    <span className="text-[10px] text-muted-foreground leading-tight mt-1">
+                      * השחקנים מוקלדים תמיד באנגלית. המערכת תזהה שם חלקי, שגיאות והחלפת תווים מיוחדים.
+                    </span>
+                  </div>
+                </div>
+              ) : draft.game_type === "missing_xi" ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2 items-center font-bold text-lg">
+                    {draft.puzzle_data.teamLogo && <img src={draft.puzzle_data.teamLogo} className="w-8 h-8 object-contain" />}
+                    <span>{draft.puzzle_data.teamName}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground -mt-2">{draft.puzzle_data.matchContext} • מערך: {draft.puzzle_data.formation}</span>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {draft.puzzle_data.players?.map((p: any, i: number) => (
+                       <div key={i} className={`flex items-center gap-2 p-1.5 border rounded-md text-xs ${p.name === '???' ? 'bg-indigo-50 border-indigo-300' : 'bg-background'}`}>
+                          <span className="font-mono bg-secondary px-1.5 py-0.5 rounded text-[10px]">{p.shirt}</span>
+                          <span className={`${p.name === '???' ? 'font-black text-indigo-700' : ''}`}>{p.name}</span>
+                       </div>
+                    ))}
+                  </div>
+                  <div className="pt-2 border-t flex flex-col gap-1 w-full text-right">
+                    <span className="text-xs text-muted-foreground font-bold">השחקן החסר (הפתרון):</span>
+                    <input 
+                      value={draft.solution.secret}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                    />
+                    <span className="text-[10px] text-muted-foreground leading-tight mt-1">
+                      * המערכת חכמה ומזהה שחקנים גם אם התשובה לא מושלמת או קצרה מלקוחת משם המשפחה (למעלה מ-4 תווים).
+                    </span>
+                  </div>
+                </div>
               ) : (
                 <>
                   <pre className="overflow-x-auto text-[11px] w-full" style={{ maxHeight: "250px" }}>
                     {JSON.stringify(draft.puzzle_data, null, 2)}
                   </pre>
-                  <div className="mt-auto pt-2 border-t font-bold flex gap-2">
-                    <span className="text-muted-foreground">תשובה נכונה / פתרון:</span>
-                    <span>{JSON.stringify(draft.solution.secret)}</span>
+                  <div className="mt-auto pt-2 border-t font-bold flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground font-bold text-right">תשובה נכונה / פתרון:</span>
+                    <input 
+                      value={typeof draft.solution.secret === 'string' ? draft.solution.secret : JSON.stringify(draft.solution.secret)}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
+                    />
                   </div>
                 </>
               )}

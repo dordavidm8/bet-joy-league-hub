@@ -92,7 +92,7 @@ const MiniGamesHubPage: React.FC = () => {
 
       {loading ? (
         <div className="animate-pulse space-y-4">
-          {[1,2,3,4,5].map(i => (
+          {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="h-28 bg-card rounded-[24px]"></div>
           ))}
         </div>
@@ -104,7 +104,7 @@ const MiniGamesHubPage: React.FC = () => {
             const completed = getIsCompleted(puzzle.id);
 
             return (
-              <div 
+              <div
                 key={puzzle.id}
                 onClick={() => handlePlay(puzzle.game_type, puzzle.id)}
                 className="card-kickoff flex items-center justify-between group hover:-translate-y-1 transition-transform cursor-pointer"
@@ -136,9 +136,9 @@ const MiniGamesHubPage: React.FC = () => {
           })}
 
           {puzzles.length === 0 && !loading && (
-             <div className="text-center py-10 text-muted-foreground">
-               אין חידות זמינות להיום.
-             </div>
+            <div className="text-center py-10 text-muted-foreground">
+              אין חידות זמינות להיום.
+            </div>
           )}
         </div>
       )}

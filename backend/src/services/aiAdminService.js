@@ -17,9 +17,11 @@ async function generateQuizQuestion(category) {
 
   const categoryName = categoryNames[category] || category;
 
-  const prompt = `
-אתה מחולל שאלות טריוויה לאפליקציית כדורגל.
-עליך ליצור שאלת טריוויה חדשה, מקורית ומעניינת בנושא תחרות הכדורגל "${categoryName}".
+const prompt = `
+אתה מחולל שאלות טריוויה לאפליקציית כדורגל. עליך להיות היסטוריון כדורגל קפדן ומדויק.
+אזהרה חמורה: אל תמציא (Hallucinate) עובדות, שחקנים, אירועים או נתונים סטטיסטיים! 
+השתמש אך ורק בעובדות היסטוריות אמיתיות וודאיות ב-100% (למשל: זוכי מונדיאל, מלכי שערים, שיאי העברות רשמיים, שנות הקמה וזכייה מוכרות). אם אתה לא בטוח בעובדה, אל תשתמש בה.
+עליך ליצור שאלת טריוויה חדשה, מקורית ומעניינת בנושא: "${categoryName}".
 השאלה חייבת להיות בעברית תקינה.
 החזר אך ורק תשובת JSON ללא שום טקסט נוסף.
 פורמט ה-JSON חייב להיות:
@@ -28,14 +30,14 @@ async function generateQuizQuestion(category) {
   "options": ["A. תשובה א", "B. תשובה ב", "C. תשובה ג", "D. תשובה ד"],
   "correct_option": "B" // אחת מהאותיות A, B, C, או D המתאימה לתשובה הנכונה
 }
-וודא שהתשובה הנכונה משתקפת היטב במערך ה-options (דהיינו, אם correct_option היא B, אז פריט מספר 2 במערך יהיה 'B. התשובה הנכונה').
+וודא שהתשובה הנכונה משתקפת היטב במערך ה-options (דהיינו, אם correct_option היא B, אז פריט מספר 2 במערך יהיה 'B. התשובה הנכונה') ושהיא בוודאות האמת.
 `;
 
   try {
     const completion = await getGroq().chat.completions.create({
       model: 'llama-3.1-8b-instant',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
+      temperature: 0.3,
       max_tokens: 500,
     });
 
