@@ -95,3 +95,79 @@ async function verifyBox2Box(team1, team2, guess) {
 }
 
 module.exports = { generateQuizQuestion, verifyBox2Box };
+
+async function generateWhoAreYaContext(recentPlayers = []) {
+  const prompt = `
+אתה מומחה כדורגל. עליך לבחור שחקן כדורגל מפורסם (פעיל או עבר) מוכר ברמה עולמית, ולספק נתונים בסיסיים לגביו למשחק חשיפה.
+אזהרה! אסור לך בשום אופן לבחור באחד מהשחקנים הבאים שכבר היו במשחק לאחרונה:
+[${recentPlayers.join(', ')}]
+
+החזר אך ורק תשובת JSON חוקית בפורמט הבא:
+{
+  "name": "שם השחקן באנגלית בלבד (לדוגמה Kylian Mbappé)",
+  "wikiSlug": "שם השחקן כפי שהוא מופיע בנתיב ה-URL בויקיפדיה האנגלית",
+  "club": "הקבוצה הנוכחית או האחרונה שבה שיחק בוודאות באנגלית",
+  "nat": "מולדת/לאום השחקן באנגלית",
+  "pos": "עמדה על המגרש באנגלית (לדוגמה Forward, Midfielder, Defender, Goalkeeper)"
+}
+`;
+  return await fetchJsonResponse(prompt);
+}
+
+async function generateCareerPathContext(recentPlayers = []) {
+  const prompt = `
+אתה מומחה כדורגל היסטורי. עליך לבחור שחקן כדורגל מפורסם מאוד, עבר או הווה, ששיחק לפחות ב-4 קבוצות שונות (רצוי בקבוצות ידועות) לאורך הקריירה, על מנת שהמשתמשים ינחשו מי הוא לפי המסלול שלו.
+אזהרה! אסור לך בשום אופן לבחור באחד מהשחקנים הבאים:
+[${recentPlayers.join(', ')}]
+
+החזר אך ורק תשובת JSON חוקית בפורמט הבא:
+{
+  "name": "שם השחקן באנגלית",
+  "wikiSlug": "שם השחקן כפי שמופיע בנתיב הויקיפדיה האנגלית שלו",
+  "clubs": ["Club 1", "Club 2", "Club 3", "Club 4"] // רשימה כרונולוגית של קבוצות באנגלית
+}
+`;
+  return await fetchJsonResponse(prompt);
+}
+
+async function generateBox2BoxContext(recentPlayers = []) {
+  const prompt = `
+אתה מומחה כדורגל. עליך לבחור שחקן מפורסם מאוד ששיחק במשחקים רשמיים בשתי קבוצות ענק ידועות באירופה, כך שמשתמשים יצטרכו למצוא שחקן שמקשר ביניהן. עליך לבחור שחקן שאינו טריוויאלי מדי אבל מוכר.
+אזהרה! מצא שחקן שאינו ברשימה הבאה:
+[${recentPlayers.join(', ')}]
+
+החזר אך ורק תשובת JSON חוקית בפורמט הבא:
+{
+  "secret_player": "שם השחקן המקשר באנגלית",
+  "team1": "הקבוצה הראשונה בה שיחק",
+  "team2": "הקבוצה השנייה בה שיחק"
+}
+`;
+  return await fetchJsonResponse(prompt);
+}
+
+async function fetchJsonResponse(prompt) {
+  try {
+    const completion = await getGroq().chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 400,
+    });
+    const responseText = completion.choices[0].message.content;
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Invalid output from AI");
+    return JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    console.error("[AI Generator Error]", err);
+    throw new Error("AI Generator Error: " + (err.error?.error?.message || err.message));
+  }
+}
+
+module.exports = { 
+  generateQuizQuestion, 
+  verifyBox2Box,
+  generateWhoAreYaContext,
+  generateCareerPathContext,
+  generateBox2BoxContext
+};
