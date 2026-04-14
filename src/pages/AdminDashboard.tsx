@@ -919,55 +919,69 @@ const MiniGamesTab = () => {
         <div>
           <h3 className="font-bold text-sm">תור משחקים שאושרו (Upcoming Queue)</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            משחקים שיוצגו בעתיד באפליקציה לפי התאריך המוגדר שלהם. אפשר לסדר או למחוק.
+            מציג רק את המשחקים העתידיים עבור המצב הנבחר כרגע.
           </p>
         </div>
 
         {queueLoading ? (
            <div className="text-muted-foreground text-xs font-bold animate-pulse">טוען תור...</div>
-        ) : queueData?.queue && queueData.queue.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-right text-xs">
-               <thead className="bg-secondary text-[10px] uppercase font-bold text-muted-foreground">
-                 <tr>
-                   <th className="px-3 py-2">סוג משחק</th>
-                   <th className="px-3 py-2 text-center">הפתרון (סוד)</th>
-                   <th className="px-3 py-2 w-32 border-r">תאריך שידור</th>
-                   <th className="px-3 py-2 w-10"></th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y bg-background font-medium">
-                 {queueData.queue.map((q: any) => {
-                   const t = MINIGAMES.find(m => m.id === q.game_type)?.name || q.game_type;
-                   const playDate = new Date(q.play_date).toISOString().split('T')[0];
-                   const secret = typeof q.solution.secret === 'string' ? q.solution.secret : JSON.stringify(q.solution.secret);
-                   const isPast = new Date(playDate) < new Date(new Date().toISOString().split('T')[0]);
-                   return (
-                     <tr key={q.id} className={isPast ? 'opacity-50 line-through text-muted-foreground' : ''}>
-                       <td className="px-3 py-2">{t}</td>
-                       <td className="px-3 py-2 text-center text-indigo-700 max-w-[150px] truncate">{secret}</td>
-                       <td className="px-3 py-2 border-r">
-                          <input 
-                            type="date" 
-                            disabled={isPast || updateDateMutation.isPending}
-                            value={playDate}
-                            onChange={(e) => updateDateMutation.mutate({ id: q.id, play_date: e.target.value })}
-                            className="bg-transparent outline-none w-full cursor-pointer text-[11px]" 
-                          />
-                       </td>
-                       <td className="px-3 py-1">
-                          <button onClick={() => { if(confirm('למחוק עתידית?')) deleteQueueMutation.mutate(q.id); }} disabled={isPast} className="p-1.5 hover:bg-destructive/10 text-destructive rounded block mx-auto transition-colors disabled:opacity-0">
-                            <Trash2 size={12} />
-                          </button>
-                       </td>
+        ) : queueData?.queue ? (
+          (() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const filteredQueue = queueData.queue.filter((q: any) => {
+              const playDate = new Date(q.play_date).toISOString().split('T')[0];
+              const isPast = new Date(playDate) < new Date(todayStr);
+              return q.game_type === selectedType && !isPast;
+            });
+
+            if (filteredQueue.length === 0) {
+              return <div className="text-muted-foreground text-xs">אין משחקים בתור עבור קטגוריה זו.</div>;
+            }
+
+            return (
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-right text-xs">
+                   <thead className="bg-secondary text-[10px] uppercase font-bold text-muted-foreground">
+                     <tr>
+                       <th className="px-3 py-2">סוג משחק</th>
+                       <th className="px-3 py-2 text-center">הפתרון (סוד)</th>
+                       <th className="px-3 py-2 w-32 border-r">תאריך שידור</th>
+                       <th className="px-3 py-2 w-10"></th>
                      </tr>
-                   )
-                 })}
-               </tbody>
-            </table>
-          </div>
+                   </thead>
+                   <tbody className="divide-y bg-background font-medium">
+                     {filteredQueue.map((q: any) => {
+                       const t = MINIGAMES.find(m => m.id === q.game_type)?.name || q.game_type;
+                       const playDate = new Date(q.play_date).toISOString().split('T')[0];
+                       const secret = typeof q.solution.secret === 'string' ? q.solution.secret : JSON.stringify(q.solution.secret);
+                       return (
+                         <tr key={q.id}>
+                           <td className="px-3 py-2">{t}</td>
+                           <td className="px-3 py-2 text-center text-indigo-700 max-w-[150px] truncate">{secret}</td>
+                           <td className="px-3 py-2 border-r">
+                              <input 
+                                type="date" 
+                                disabled={updateDateMutation.isPending}
+                                value={playDate}
+                                onChange={(e) => updateDateMutation.mutate({ id: q.id, play_date: e.target.value })}
+                                className="bg-transparent outline-none w-full cursor-pointer text-[11px]" 
+                              />
+                           </td>
+                           <td className="px-3 py-1">
+                              <button onClick={() => { if(confirm('למחוק עתידית?')) deleteQueueMutation.mutate(q.id); }} className="p-1.5 hover:bg-destructive/10 text-destructive rounded block mx-auto transition-colors">
+                                <Trash2 size={12} />
+                              </button>
+                           </td>
+                         </tr>
+                       )
+                     })}
+                   </tbody>
+                </table>
+              </div>
+            );
+          })()
         ) : (
-           <div className="text-muted-foreground text-xs">אין משחקים בתור.</div>
+           <div className="text-muted-foreground text-xs">שגיאה בטעינת התור.</div>
         )}
       </div>
     </div>
