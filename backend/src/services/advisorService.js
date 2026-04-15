@@ -46,17 +46,18 @@ function buildSystemPrompt(game, questions) {
   return `אתה יועץ הימורי ידידותי של Kickoff — אפליקציית הימורי ספורט חברתית (נקודות בלבד, ללא כסף אמיתי).
 תפקידך לעזור למשתמש לקבל החלטה מושכלת לפני שהוא מהמר על המשחק הספציפי הזה.
 
-**משחק:**
+משחק:
   ${game.home_team} נגד ${game.away_team}
   ליגה: ${game.competition_name ?? 'לא ידוע'}
   מועד: ${new Date(game.start_time).toLocaleString('he-IL')}
   סטטוס: ${statusLabel}
 ${scoreStr}
-**שאלות הימור פתוחות (עם אודס):**
+שאלות הימור פתוחות (עם אודס):
 ${questionsStr}
 
-**כללים:**
+כללים:
 - ענה תמיד בעברית, בטון חברותי וקצר (עד 4 משפטים)
+- אל תשתמש ב-markdown (אין כוכביות, אין האשים, אין backticks) — הטקסט מוצג בממשק פשוט
 - אתה יועץ — לא נביא. ציין "על בסיס הנתונים הזמינים..." כשאתה מנתח
 - אל תמציא סטטיסטיקות. אם אין לך מידע — אמור זאת בכנות
 - התייחס לאודס כשרלוונטי: אודס גבוה = פחות צפוי = סיכון גבוה יותר`;
@@ -104,10 +105,17 @@ async function chat(gameId, userId, messages) {
     temperature: 0.7,
   });
 
-  return {
-    reply: completion.choices[0].message.content,
-    remaining,
-  };
+  const raw = completion.choices[0].message.content;
+  // Strip markdown formatting so text renders cleanly in plain-text UI
+  const reply = raw
+    .replace(/\*\*(.*?)\*\*/g, '$1')   // **bold** → bold
+    .replace(/\*(.*?)\*/g, '$1')        // *italic* → italic
+    .replace(/__(.*?)__/g, '$1')        // __underline__
+    .replace(/`(.*?)`/g, '$1')          // `code`
+    .replace(/#{1,6}\s*/g, '')          // ## headings
+    .trim();
+
+  return { reply, remaining };
 }
 
 module.exports = { chat };
