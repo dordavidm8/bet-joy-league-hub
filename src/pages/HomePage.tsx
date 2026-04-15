@@ -40,11 +40,7 @@ const HomePage = () => {
 
   const allScheduled = gamesData?.games ?? [];
   const featuredGames = allScheduled.filter(g => g.is_featured);
-  const now = new Date();
-  const dayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
-  const upcomingGames = allScheduled
-    .filter(g => !g.is_featured && new Date(g.start_time) < dayAfterTomorrow)
-    .slice(0, 8);
+  const upcomingGames = allScheduled.filter(g => !g.is_featured).slice(0, 8);
   const liveGames = liveData?.games ?? [];
   const feed = feedData?.feed ?? [];
 
