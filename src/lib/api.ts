@@ -319,6 +319,7 @@ export interface Game {
   minute?: number | null;
   score_home?: number;
   score_away?: number;
+  is_featured?: boolean;
 }
 
 export interface BetQuestion {

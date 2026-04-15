@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getGames, getLiveGames, getFeed, ACHIEVEMENTS } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import GameCard from "@/components/GameCard";
+import GameListItem from "@/components/GameListItem";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Trophy } from "lucide-react";
@@ -21,8 +22,8 @@ const HomePage = () => {
   const [feedFilter, setFeedFilter] = useState<'all' | 'following'>('all');
 
   const { data: gamesData, isLoading } = useQuery({
-    queryKey: ["games", "featured"],
-    queryFn: () => getGames({ featured: true, status: "scheduled" }),
+    queryKey: ["games", "scheduled"],
+    queryFn: () => getGames({ status: "scheduled" }),
   });
 
   const { data: liveData } = useQuery({
@@ -37,7 +38,9 @@ const HomePage = () => {
     staleTime: 60_000,
   });
 
-  const games = gamesData?.games ?? [];
+  const allScheduled = gamesData?.games ?? [];
+  const featuredGames = allScheduled.filter(g => g.is_featured);
+  const upcomingGames = allScheduled.filter(g => !g.is_featured);
   const liveGames = liveData?.games ?? [];
   const feed = feedData?.feed ?? [];
 
@@ -53,24 +56,6 @@ const HomePage = () => {
         <h2 className="text-3xl font-black tracking-tight leading-tight">המשחק מתחיל כאן.</h2>
         <p className="text-muted-foreground mt-1">הימרו על המשחקים הגדולים וצברו נקודות</p>
       </motion.div>
-
-      {/* Nav buttons */}
-      <div className="grid grid-cols-2 gap-3 px-5">
-        <button
-          onClick={() => navigate("/games")}
-          className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
-        >
-          כל המשחקים
-          <ChevronLeft size={16} className="text-muted-foreground" />
-        </button>
-        <button
-          onClick={() => navigate("/games/finished")}
-          className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
-        >
-          תוצאות
-          <Trophy size={16} className="text-muted-foreground" />
-        </button>
-      </div>
 
       {/* Live Games */}
       {liveGames.length > 0 && (
@@ -118,20 +103,35 @@ const HomePage = () => {
         </section>
       )}
 
-      {/* Featured Games */}
+      {/* Editor's Pick — only shown when admin has featured games */}
+      {!isLoading && featuredGames.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="px-5 flex items-center gap-2">
+            <span className="text-base">⭐</span>
+            <span className="section-label">בחירת העורך</span>
+          </div>
+          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-5 pb-2 scrollbar-hide">
+            {featuredGames.map((game, i) => (
+              <GameCard key={game.id} game={game} index={i} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Upcoming Games */}
       <section className="flex flex-col gap-3">
         <div className="px-5 flex items-center gap-2">
-          <span className="text-base">⭐</span>
-          <span className="section-label">בחירת העורך</span>
+          <span className="text-base">📅</span>
+          <span className="section-label">משחקים קרובים</span>
         </div>
         {isLoading ? (
           <div className="px-5 text-sm text-muted-foreground">טוען משחקים...</div>
-        ) : games.length === 0 ? (
-          <div className="px-5 text-sm text-muted-foreground">אין משחקים מומלצים כרגע</div>
+        ) : upcomingGames.length === 0 ? (
+          <div className="px-5 text-sm text-muted-foreground">אין משחקים קרובים כרגע</div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-5 pb-2 scrollbar-hide">
-            {games.map((game, i) => (
-              <GameCard key={game.id} game={game} index={i} />
+          <div className="flex flex-col gap-2 px-5">
+            {upcomingGames.slice(0, 10).map((game) => (
+              <GameListItem key={game.id} game={game} />
             ))}
           </div>
         )}
@@ -223,6 +223,24 @@ const HomePage = () => {
           <span className="text-xs text-muted-foreground">הימורים</span>
         </motion.div>
       </section>
+
+      {/* Nav buttons */}
+      <div className="grid grid-cols-2 gap-3 px-5">
+        <button
+          onClick={() => navigate("/games")}
+          className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
+        >
+          כל המשחקים
+          <ChevronLeft size={16} className="text-muted-foreground" />
+        </button>
+        <button
+          onClick={() => navigate("/games/finished")}
+          className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
+        >
+          תוצאות
+          <Trophy size={16} className="text-muted-foreground" />
+        </button>
+      </div>
     </div>
   );
 };
