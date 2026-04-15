@@ -40,7 +40,11 @@ const HomePage = () => {
 
   const allScheduled = gamesData?.games ?? [];
   const featuredGames = allScheduled.filter(g => g.is_featured);
-  const upcomingGames = allScheduled.filter(g => !g.is_featured);
+  const now = new Date();
+  const dayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+  const upcomingGames = allScheduled
+    .filter(g => !g.is_featured && new Date(g.start_time) < dayAfterTomorrow)
+    .slice(0, 8);
   const liveGames = liveData?.games ?? [];
   const feed = feedData?.feed ?? [];
 
@@ -130,12 +134,30 @@ const HomePage = () => {
           <div className="px-5 text-sm text-muted-foreground">אין משחקים קרובים כרגע</div>
         ) : (
           <div className="flex flex-col gap-2 px-5">
-            {upcomingGames.slice(0, 10).map((game) => (
+            {upcomingGames.map((game) => (
               <GameListItem key={game.id} game={game} />
             ))}
           </div>
         )}
       </section>
+
+      {/* Nav buttons */}
+      <div className="grid grid-cols-2 gap-3 px-5">
+        <button
+          onClick={() => navigate("/games")}
+          className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
+        >
+          כל המשחקים
+          <ChevronLeft size={16} className="text-muted-foreground" />
+        </button>
+        <button
+          onClick={() => navigate("/games/finished")}
+          className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
+        >
+          תוצאות
+          <Trophy size={16} className="text-muted-foreground" />
+        </button>
+      </div>
 
       {/* Activity Feed */}
       {(feed.length > 0 || feedFilter === 'following') && (
@@ -224,23 +246,6 @@ const HomePage = () => {
         </motion.div>
       </section>
 
-      {/* Nav buttons */}
-      <div className="grid grid-cols-2 gap-3 px-5">
-        <button
-          onClick={() => navigate("/games")}
-          className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
-        >
-          כל המשחקים
-          <ChevronLeft size={16} className="text-muted-foreground" />
-        </button>
-        <button
-          onClick={() => navigate("/games/finished")}
-          className="flex-1 flex items-center justify-between bg-secondary rounded-xl px-4 py-3 font-bold text-sm hover:bg-secondary/80 transition-colors"
-        >
-          תוצאות
-          <Trophy size={16} className="text-muted-foreground" />
-        </button>
-      </div>
     </div>
   );
 };
