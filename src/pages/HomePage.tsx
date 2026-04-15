@@ -120,8 +120,9 @@ const HomePage = () => {
 
       {/* Featured Games */}
       <section className="flex flex-col gap-3">
-        <div className="px-5">
-          <span className="section-label">משחקים מומלצים</span>
+        <div className="px-5 flex items-center gap-2">
+          <span className="text-base">⭐</span>
+          <span className="section-label">בחירת העורך</span>
         </div>
         {isLoading ? (
           <div className="px-5 text-sm text-muted-foreground">טוען משחקים...</div>

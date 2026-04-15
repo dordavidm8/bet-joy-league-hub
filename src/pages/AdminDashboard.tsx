@@ -308,6 +308,7 @@ const GamesTab = () => {
   const [leagueFilter, setLeagueFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [showAllGames, setShowAllGames] = useState(false);
   const [sortField, setSortField] = useState<"time" | "bets" | "score" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -320,7 +321,11 @@ const GamesTab = () => {
     }
   };
 
-  const { data, isLoading } = useQuery({ queryKey: ["admin-games"], queryFn: adminGetGames, staleTime: 30_000 });
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-games", showAllGames],
+    queryFn: () => adminGetGames(showAllGames),
+    staleTime: 30_000,
+  });
   const { data: analyticsData } = useQuery({
     queryKey: ["admin-game-analytics", expandedId],
     queryFn: () => adminGetGameAnalytics(expandedId!),
@@ -395,6 +400,12 @@ const GamesTab = () => {
           <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
             className="bg-background border rounded-lg px-2 py-1 outline-none" />
         </div>
+        <button
+          onClick={() => setShowAllGames(v => !v)}
+          className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${showAllGames ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-secondary'}`}
+        >
+          {showAllGames ? 'טווח רגיל' : 'הצג הכל'}
+        </button>
         {(searchTeam || leagueFilter || dateFrom || dateTo) && (
           <button onClick={() => { setSearchTeam(""); setLeagueFilter(""); setDateFrom(""); setDateTo(""); }}
             className="text-xs text-primary underline">נקה סננים</button>

@@ -85,14 +85,29 @@ router.get('/bets', async (req, res, next) => {
 
 // GET /api/admin/games
 router.get('/games', async (req, res, next) => {
-  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  const limit = Math.min(parseInt(req.query.limit) || 200, 500);
   const offset = parseInt(req.query.offset) || 0;
+
+  // Default window: 7 days ago → 60 days from now.
+  // Pass from=all to skip the filter entirely.
+  const skipFilter = req.query.from === 'all';
+  const fromDate = skipFilter ? null : (req.query.from || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const toDate   = skipFilter ? null : (req.query.to   || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+
   try {
+    const conditions = [];
+    const params = [limit, offset];
+    if (fromDate) { params.push(fromDate); conditions.push(`g.start_time >= $${params.length}`); }
+    if (toDate)   { params.push(toDate + 'T23:59:59');   conditions.push(`g.start_time <= $${params.length}`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
     const result = await pool.query(
       `SELECT g.*, c.name AS competition_name,
               (SELECT COUNT(*) FROM bets WHERE game_id = g.id) AS total_bets
        FROM games g LEFT JOIN competitions c ON c.id = g.competition_id
-       ORDER BY g.start_time DESC LIMIT $1 OFFSET $2`, [limit, offset]
+       ${where}
+       ORDER BY g.start_time ASC LIMIT $1 OFFSET $2`,
+      params
     );
     res.json({ games: result.rows });
   } catch (err) { next(err); }

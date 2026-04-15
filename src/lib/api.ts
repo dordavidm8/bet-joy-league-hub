@@ -168,7 +168,8 @@ export const adminGetUsers = (search?: string) =>
   request<{ users: AdminUser[] }>(`/admin/users?limit=200${search ? `&search=${encodeURIComponent(search)}` : ''}`);
 export const adminGetBets = (status?: string) =>
   request<{ bets: AdminBet[] }>(`/admin/bets?limit=200${status ? `&status=${status}` : ''}`);
-export const adminGetGames = () => request<{ games: AdminGame[] }>('/admin/games?limit=200');
+export const adminGetGames = (all = false) =>
+  request<{ games: AdminGame[] }>(`/admin/games?limit=500${all ? '&from=all' : ''}`);
 export const adminGetLeagues = () => request<{ leagues: AdminLeague[] }>('/admin/leagues');
 export const adminGetQuiz = () => request<{ questions: AdminQuizQuestion[] }>('/admin/quiz');
 export const adminAdjustPoints = (userId: string, amount: number, reason: string) =>
