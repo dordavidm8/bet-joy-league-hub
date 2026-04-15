@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
@@ -188,8 +189,8 @@ const NotificationBell = () => {
       )}
     </div>
 
-    {/* Admin message modal */}
-    {adminModal.open && (
+    {/* Admin message modal — rendered via portal to avoid fixed-in-transform issues */}
+    {adminModal.open && createPortal(
       <div
         className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4"
         onClick={() => setAdminModal({ ...adminModal, open: false })}
@@ -212,7 +213,8 @@ const NotificationBell = () => {
             סגור
           </button>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
     </>
   );
