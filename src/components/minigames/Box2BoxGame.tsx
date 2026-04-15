@@ -1,57 +1,24 @@
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, Shield, Plus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { verifyBox2BoxGuess } from '@/lib/api';
 
 interface Box2BoxGameProps {
   data: {
     team1: string;
     team2: string;
   };
-  solution: {
-    secret: string;
-  };
-  onSolve: (correct: boolean) => void;
+  onSolve: (guess: string) => void;
 }
 
-const Box2BoxGame: React.FC<Box2BoxGameProps> = ({ data, solution, onSolve }) => {
+const Box2BoxGame: React.FC<Box2BoxGameProps> = ({ data, onSolve }) => {
   const [guess, setGuess] = useState('');
   const navigate = useNavigate();
-
-  const normalize = (s: string) =>
-    s.toLowerCase()
-     .normalize("NFD")
-     .replace(/[\u0300-\u036f]/g, "")
-     .replace(/\bjr\.?\b/g, 'junior')
-     .replace(/\bsr\.?\b/g, 'senior')
-     .trim();
-
-  const isAnswerCorrect = (guess: string, secret: string): boolean => {
-    const g = normalize(guess);
-    const s = normalize(secret);
-    if (g === s) return true;
-    const gWords = g.split(/\s+/).filter(w => w.length >= 3);
-    const sWords = s.split(/\s+/);
-    if (gWords.length > 0 && gWords.every(gw => sWords.some(sw => sw === gw || sw.startsWith(gw)))) return true;
-    if (gWords.length === 1 && gWords[0].length >= 4 && sWords.some(w => w === gWords[0])) return true;
-    return false;
-  };
-
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (isAnswerCorrect(guess, solution.secret)) {
-      onSolve(true);
-      return;
-    }
-    
-    // Fallback to AI verification for dynamic valid answers
     setLoading(true);
     try {
-      const res = await verifyBox2BoxGuess(data.team1, data.team2, guess);
-      onSolve(res.valid);
-    } catch {
-      onSolve(false);
+      onSolve(guess);
     } finally {
       setLoading(false);
     }

@@ -18,7 +18,8 @@ const MiniGamePlayPage: React.FC = () => {
     correct: boolean;
     pointsEarned: number;
     submitError: string | null;
-  }>({ open: false, correct: false, pointsEarned: 0, submitError: null });
+    correctAnswer: string;
+  }>({ open: false, correct: false, pointsEarned: 0, submitError: null, correctAnswer: '' });
 
   useEffect(() => {
     async function fetchPuzzle() {
@@ -41,9 +42,11 @@ const MiniGamePlayPage: React.FC = () => {
 
   const { firebaseUser, refreshUser } = useAuth();
 
-  const handleSolve = async (isCorrect: boolean) => {
+  const handleSolve = async (guess: string) => {
+    let isCorrect = false;
     let pointsEarned = 0;
     let submitError: string | null = null;
+    let correctAnswer = '';
 
     if (firebaseUser) {
       try {
@@ -55,12 +58,14 @@ const MiniGamePlayPage: React.FC = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ puzzle_id: id, is_correct: isCorrect })
+          body: JSON.stringify({ puzzle_id: id, guess })
         });
 
         if (res.ok) {
           const data = await res.json();
+          isCorrect = data.is_correct ?? false;
           pointsEarned = data.points_added ?? 0;
+          correctAnswer = data.correct_answer ?? '';
           if (isCorrect && pointsEarned > 0) {
             localStorage.setItem(`minigame_completed_${id}`, 'true');
             await refreshUser();
@@ -76,7 +81,7 @@ const MiniGamePlayPage: React.FC = () => {
       submitError = 'יש להתחבר כדי לצבור נקודות';
     }
 
-    setModalState({ open: true, correct: isCorrect, pointsEarned, submitError });
+    setModalState({ open: true, correct: isCorrect, pointsEarned, submitError, correctAnswer });
   };
 
   const handleCloseModal = () => {
@@ -95,17 +100,17 @@ const MiniGamePlayPage: React.FC = () => {
   const renderGame = () => {
     switch (puzzle.game_type) {
       case 'guess_club':
-        return <GuessClubGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
+        return <GuessClubGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
       case 'who_are_ya':
-        return <WhoAreYaGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
+        return <WhoAreYaGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
       case 'career_path':
-        return <CareerPathGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
+        return <CareerPathGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
       case 'box2box':
-        return <Box2BoxGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
+        return <Box2BoxGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
       case 'missing_xi':
-        return <MissingXIGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
+        return <MissingXIGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
       case 'trivia':
-        return <TriviaGame data={puzzle.puzzle_data} solution={puzzle.solution} onSolve={handleSolve} />;
+        return <TriviaGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
       default:
         return <div>סוג משחק לא נתמך</div>;
     }
@@ -117,7 +122,7 @@ const MiniGamePlayPage: React.FC = () => {
       <ResultModal
         isOpen={modalState.open}
         isCorrect={modalState.correct}
-        solution={puzzle.solution.secret}
+        solution={modalState.correctAnswer}
         pointsEarned={modalState.pointsEarned}
         submitError={modalState.submitError}
         onClose={handleCloseModal}

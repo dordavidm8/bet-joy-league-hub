@@ -76,7 +76,7 @@ const GameCard = ({ game, index }: GameCardProps) => {
         className="w-full"
         disabled={isFinished}
       >
-        {isFinished ? "הסתיים" : "הימר עכשיו"}
+        {isFinished ? "הסתיים" : "המר עכשיו"}
       </Button>
     </motion.div>
   );

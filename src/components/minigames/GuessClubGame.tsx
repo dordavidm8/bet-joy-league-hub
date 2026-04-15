@@ -6,61 +6,15 @@ interface GuessClubGameProps {
   data: {
     logo_data: string;
   };
-  solution: {
-    secret: string;
-  };
-  onSolve: (correct: boolean) => void;
+  onSolve: (guess: string) => void;
 }
 
-const GuessClubGame: React.FC<GuessClubGameProps> = ({ data, solution, onSolve }) => {
+const GuessClubGame: React.FC<GuessClubGameProps> = ({ data, onSolve }) => {
   const [guess, setGuess] = useState('');
   const navigate = useNavigate();
 
-  const normalize = (s: string) => 
-    s.toLowerCase()
-     .normalize("NFD")
-     .replace(/[\u0300-\u036f]/g, "")
-     .trim();
-
-  const CLUB_ALIASES: Record<string, string[]> = {
-    "wolverhampton wanderers": ["wolves"],
-    "manchester united": ["man utd", "man united"],
-    "manchester city": ["man city"],
-    "tottenham hotspur": ["tottenham", "spurs"],
-    "newcastle united": ["newcastle", "newcastle utd"],
-    "leicester city": ["leicester"],
-    "leeds united": ["leeds"],
-    "nottingham forest": ["nottingham"],
-    "aston villa": ["villa"],
-    "west ham united": ["west ham"],
-    "crystal palace": ["palace"],
-    "paris saint germain": ["psg", "paris sg"],
-    "inter milan": ["inter", "internazionale"],
-    "ac milan": ["milan"],
-    "juventus": ["juve"],
-    "bayern munich": ["bayern"],
-    "borussia dortmund": ["dortmund", "bvb"],
-    "bayer leverkusen": ["leverkusen"],
-    "real madrid": ["real"],
-    "atletico madrid": ["atletico"],
-    "barcelona": ["barca"],
-  };
-
   const handleSubmit = () => {
-    const userGuess = normalize(guess);
-    const correctSecret = normalize(solution.secret);
-    
-    // Check aliases
-    const aliases = CLUB_ALIASES[correctSecret] || [];
-    const matchedAlias = aliases.includes(userGuess);
-
-    // Lax check: exact match OR if the secret contains the guess (e.g. "Brighton" in "Brighton & Hove Albion")
-    // but only if the guess is long enough (>= 3 chars) to avoid false positives
-    const isCorrect = userGuess === correctSecret || 
-                     (userGuess.length >= 3 && correctSecret.includes(userGuess)) ||
-                     matchedAlias;
-    
-    onSolve(isCorrect);
+    onSolve(guess);
   };
 
   const isImageVisible = data.logo_data.startsWith('data:image') || data.logo_data.startsWith('http');

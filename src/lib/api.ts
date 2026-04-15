@@ -26,6 +26,12 @@ export const registerUser = (username: string, referral_code?: string, avatar_ur
     body: JSON.stringify({ username, referral_code, avatar_url }),
   });
 
+export const updateProfile = (data: { username?: string; display_name?: string }) =>
+  request<{ user: BackendUser }>('/users/me/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+
 export const updateAvatar = (avatar_url: string) =>
   request<{ user: BackendUser }>('/users/me/avatar', {
     method: 'PATCH',

@@ -1,24 +1,34 @@
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMyBets, getMyReferralCode, updateAvatar, deleteAccount, getMyAchievements, ACHIEVEMENTS } from "@/lib/api";
+import { getMyBets, getMyReferralCode, updateAvatar, updateProfile, deleteAccount, getMyAchievements, getDetailedStats, ACHIEVEMENTS } from "@/lib/api";
 import AvatarUploader from "@/components/AvatarUploader";
 import { motion } from "framer-motion";
-import { LogOut, Copy, Check, Camera, ChevronRight } from "lucide-react";
+import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 const ProfilePage = () => {
-  const { backendUser, firebaseUser, signOut } = useAuth();
+  const { backendUser, firebaseUser, signOut, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [showAvatarUploader, setShowAvatarUploader] = useState(false);
+
+  // Settings edit state
+  const [editField, setEditField] = useState<'username' | 'display_name' | 'password' | null>(null);
+  const [fieldValue, setFieldValue] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [fieldError, setFieldError] = useState('');
+  const [fieldSuccess, setFieldSuccess] = useState('');
+  const [fieldLoading, setFieldLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
 
   const { data: betsData } = useQuery({ queryKey: ["my-bets"], queryFn: () => getMyBets({ limit: 5 }) });
   const { data: referralData } = useQuery({ queryKey: ["my-referral"], queryFn: getMyReferralCode });
   const { data: achievementsData } = useQuery({ queryKey: ["my-achievements"], queryFn: getMyAchievements });
+  const { data: detailedStats } = useQuery({ queryKey: ["my-detailed-stats"], queryFn: getDetailedStats });
 
   const [avatarSaveError, setAvatarSaveError] = useState<string | null>(null);
 
@@ -35,9 +45,51 @@ const ProfilePage = () => {
 
   const bets = betsData?.bets ?? [];
   const recentBets = bets.slice(0, 5);
-  const totalBets = backendUser?.total_bets ?? 0;
-  const totalWins = backendUser?.total_wins ?? 0;
-  const winRate = totalBets > 0 ? `${Math.round((totalWins / totalBets) * 100)}%` : "—";
+  // Use settled bets only (won + lost) — excludes pending
+  const totalSettled = detailedStats?.summary.total_settled ?? 0;
+  const totalWins = detailedStats?.summary.total_wins ?? backendUser?.total_wins ?? 0;
+  const winRate = totalSettled > 0 ? `${detailedStats!.summary.win_rate}%` : "—";
+
+  const openEdit = (field: 'username' | 'display_name' | 'password') => {
+    setEditField(field);
+    setFieldValue(field === 'username' ? (backendUser?.username ?? '') : field === 'display_name' ? (firebaseUser?.displayName ?? '') : '');
+    setCurrentPassword('');
+    setFieldError('');
+    setFieldSuccess('');
+  };
+
+  const cancelEdit = () => { setEditField(null); setFieldError(''); setFieldSuccess(''); };
+
+  const saveField = async () => {
+    if (!fieldValue.trim()) return;
+    setFieldLoading(true);
+    setFieldError('');
+    setFieldSuccess('');
+    try {
+      if (editField === 'username') {
+        await updateProfile({ username: fieldValue.trim() });
+        await refreshUser();
+        setFieldSuccess('שם המשתמש עודכן');
+      } else if (editField === 'display_name') {
+        await updateProfile({ display_name: fieldValue.trim() });
+        await refreshUser();
+        setFieldSuccess('השם המלא עודכן');
+      } else if (editField === 'password') {
+        if (!firebaseUser?.email) throw new Error('לא ניתן לעדכן סיסמה');
+        const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
+        await reauthenticateWithCredential(firebaseUser, credential);
+        await updatePassword(firebaseUser, fieldValue);
+        setFieldSuccess('הסיסמה עודכנה בהצלחה');
+      }
+      setTimeout(() => { setEditField(null); setFieldSuccess(''); }, 1500);
+    } catch (err: any) {
+      const msg = err?.message ?? '';
+      if (msg.includes('wrong-password') || msg.includes('invalid-credential')) setFieldError('הסיסמה הנוכחית שגויה');
+      else setFieldError(err?.message || 'שגיאה בעדכון');
+    } finally {
+      setFieldLoading(false);
+    }
+  };
 
   const copyReferral = () => {
     const code = referralData?.referral_code ?? backendUser?.referral_code;
@@ -95,7 +147,7 @@ const ProfilePage = () => {
           <span className="text-xs text-muted-foreground">נקודות</span>
         </div>
         <div className="card-kickoff flex-1 flex flex-col items-center gap-1">
-          <span className="text-xl font-black">{totalWins}/{totalBets}</span>
+          <span className="text-xl font-black">{totalWins}/{totalSettled}</span>
           <span className="text-xs text-muted-foreground">ניצחונות/הימורים</span>
         </div>
         <div className="card-kickoff flex-1 flex flex-col items-center gap-1">
@@ -192,6 +244,80 @@ const ProfilePage = () => {
       {/* Settings */}
       <section className="flex flex-col gap-2">
         <span className="section-label">הגדרות</span>
+
+        {/* Display name */}
+        {editField === 'display_name' ? (
+          <div className="card-kickoff flex flex-col gap-2">
+            <p className="text-xs font-bold text-muted-foreground">שם מלא</p>
+            <input value={fieldValue} onChange={e => setFieldValue(e.target.value)}
+              className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="שם מלא" />
+            {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
+            {fieldSuccess && <p className="text-xs text-green-600">{fieldSuccess}</p>}
+            <div className="flex gap-2">
+              <button onClick={saveField} disabled={fieldLoading} className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm font-bold disabled:opacity-60">{fieldLoading ? 'שומר...' : 'שמור'}</button>
+              <button onClick={cancelEdit} className="px-3 py-2 rounded-lg bg-secondary text-sm"><X size={14} /></button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => openEdit('display_name')} className="card-kickoff flex items-center justify-between">
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">שם מלא</p>
+              <p className="text-sm font-medium">{firebaseUser?.displayName || '—'}</p>
+            </div>
+            <Pencil size={15} className="text-muted-foreground" />
+          </button>
+        )}
+
+        {/* Username */}
+        {editField === 'username' ? (
+          <div className="card-kickoff flex flex-col gap-2">
+            <p className="text-xs font-bold text-muted-foreground">שם משתמש</p>
+            <input value={fieldValue} onChange={e => setFieldValue(e.target.value)}
+              className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="שם משתמש" />
+            {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
+            {fieldSuccess && <p className="text-xs text-green-600">{fieldSuccess}</p>}
+            <div className="flex gap-2">
+              <button onClick={saveField} disabled={fieldLoading} className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm font-bold disabled:opacity-60">{fieldLoading ? 'שומר...' : 'שמור'}</button>
+              <button onClick={cancelEdit} className="px-3 py-2 rounded-lg bg-secondary text-sm"><X size={14} /></button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => openEdit('username')} className="card-kickoff flex items-center justify-between">
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">שם משתמש</p>
+              <p className="text-sm font-medium">@{backendUser?.username || '—'}</p>
+            </div>
+            <Pencil size={15} className="text-muted-foreground" />
+          </button>
+        )}
+
+        {/* Password — only for email/password accounts */}
+        {firebaseUser?.providerData.some(p => p.providerId === 'password') && (
+          editField === 'password' ? (
+            <div className="card-kickoff flex flex-col gap-2">
+              <p className="text-xs font-bold text-muted-foreground">שינוי סיסמה</p>
+              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+                className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="סיסמה נוכחית" />
+              <input type="password" value={fieldValue} onChange={e => setFieldValue(e.target.value)}
+                className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="סיסמה חדשה (מינ׳ 6 תווים)" />
+              {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
+              {fieldSuccess && <p className="text-xs text-green-600">{fieldSuccess}</p>}
+              <div className="flex gap-2">
+                <button onClick={saveField} disabled={fieldLoading || fieldValue.length < 6} className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm font-bold disabled:opacity-60">{fieldLoading ? 'שומר...' : 'שמור'}</button>
+                <button onClick={cancelEdit} className="px-3 py-2 rounded-lg bg-secondary text-sm"><X size={14} /></button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => openEdit('password')} className="card-kickoff flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">סיסמה</p>
+                <p className="text-sm font-medium">••••••••</p>
+              </div>
+              <Pencil size={15} className="text-muted-foreground" />
+            </button>
+          )
+        )}
+
         <button
           onClick={() => signOut()}
           className="card-kickoff flex items-center gap-3 text-right text-muted-foreground"

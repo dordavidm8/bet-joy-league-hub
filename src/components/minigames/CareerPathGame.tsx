@@ -12,30 +12,15 @@ interface CareerPathGameProps {
       goals: number;
     }>;
   };
-  solution: {
-    secret: string;
-  };
-  onSolve: (correct: boolean) => void;
+  onSolve: (guess: string) => void;
 }
 
-const CareerPathGame: React.FC<CareerPathGameProps> = ({ data, solution, onSolve }) => {
+const CareerPathGame: React.FC<CareerPathGameProps> = ({ data, onSolve }) => {
   const [guess, setGuess] = useState('');
   const navigate = useNavigate();
 
-  const normalize = (s: string) => 
-    s.toLowerCase()
-     .normalize("NFD")
-     .replace(/[\u0300-\u036f]/g, "")
-     .trim();
-
   const handleSubmit = () => {
-    const userGuess = normalize(guess);
-    const correctSecret = normalize(solution.secret);
-    
-    const isCorrect = userGuess === correctSecret || 
-                     (userGuess.length >= 3 && correctSecret.split(' ').some(part => part === userGuess));
-    
-    onSolve(isCorrect);
+    onSolve(guess);
   };
 
   return (

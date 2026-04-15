@@ -71,7 +71,7 @@ const GameListItem = ({ game }: GameListItemProps) => {
         onClick={(e) => { e.stopPropagation(); navigate(`/game/${game.id}`); }}
         className="shrink-0 text-xs px-3 py-1.5 h-auto"
       >
-        {isLive ? "לייב" : isFinished ? "תוצאה" : "הימר"}
+        {isLive ? "לייב" : isFinished ? "תוצאה" : "המר"}
       </Button>
     </div>
   );

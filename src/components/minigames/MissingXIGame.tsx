@@ -11,38 +11,16 @@ interface MissingXIGameProps {
     players: { name: string; shirt: string }[];
     hidden_idx: number;
   };
-  solution: {
-    secret: string;
-  };
-  onSolve: (correct: boolean) => void;
+  onSolve: (guess: string) => void;
 }
 
 
-const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, solution, onSolve }) => {
+const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, onSolve }) => {
   const [guess, setGuess] = useState('');
   const navigate = useNavigate();
 
-  const normalize = (s: string) =>
-    s.toLowerCase()
-     .normalize("NFD")
-     .replace(/[\u0300-\u036f]/g, "")
-     .replace(/\bjr\.?\b/g, 'junior')
-     .replace(/\bsr\.?\b/g, 'senior')
-     .trim();
-
-  const isAnswerCorrect = (guess: string, secret: string): boolean => {
-    const g = normalize(guess);
-    const s = normalize(secret);
-    if (g === s) return true;
-    const gWords = g.split(/\s+/).filter(w => w.length >= 3);
-    const sWords = s.split(/\s+/);
-    if (gWords.length > 0 && gWords.every(gw => sWords.some(sw => sw === gw || sw.startsWith(gw)))) return true;
-    if (gWords.length === 1 && gWords[0].length >= 4 && sWords.some(w => w === gWords[0])) return true;
-    return false;
-  };
-
   const handleSubmit = () => {
-    onSolve(isAnswerCorrect(guess, solution.secret));
+    onSolve(guess);
   };
 
 

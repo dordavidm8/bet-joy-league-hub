@@ -214,6 +214,40 @@ router.delete('/me', authenticate, async (req, res, next) => {
   } finally { client.release(); }
 });
 
+// PATCH /api/users/me/profile — update username and/or display_name
+router.patch('/me/profile', authenticate, async (req, res, next) => {
+  const { username, display_name } = req.body;
+  if (!username && !display_name) return res.status(400).json({ error: 'Nothing to update' });
+
+  try {
+    const updates = [];
+    const params = [];
+
+    if (username) {
+      const trimmed = username.trim();
+      if (!/^[a-zA-Z0-9_\u0590-\u05FF]{2,20}$/.test(trimmed)) {
+        return res.status(400).json({ error: 'שם משתמש חייב להיות 2-20 תווים (אותיות, מספרים, קו תחתון בלבד)' });
+      }
+      const existing = await pool.query('SELECT id FROM users WHERE username = $1 AND id != $2', [trimmed, req.user.id]);
+      if (existing.rows.length > 0) return res.status(409).json({ error: 'שם המשתמש כבר תפוס' });
+      params.push(trimmed);
+      updates.push(`username = $${params.length}`);
+    }
+
+    if (display_name !== undefined) {
+      params.push(display_name.trim().slice(0, 50));
+      updates.push(`display_name = $${params.length}`);
+    }
+
+    params.push(req.user.id);
+    const result = await pool.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params
+    );
+    res.json({ user: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
 // PATCH /api/users/me/avatar
 router.patch('/me/avatar', authenticate, async (req, res, next) => {
   const { avatar_url } = req.body;

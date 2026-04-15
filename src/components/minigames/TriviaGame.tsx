@@ -6,23 +6,17 @@ interface TriviaGameProps {
     question_text: string;
     options: string[];
   };
-  solution: {
-    secret: string;
-  };
-  onSolve: (isCorrect: boolean) => void;
+  onSolve: (guess: string) => void;
 }
 
-const TriviaGame: React.FC<TriviaGameProps> = ({ data, solution, onSolve }) => {
+const TriviaGame: React.FC<TriviaGameProps> = ({ data, onSolve }) => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
   const handleSelect = (opt: string) => {
     setSelectedOption(opt);
-    // Determine correctness by checking if the chosen option starts with the secret letter
-    // For example, if opt is "A. Yes" and secret is "A", it's correct.
-    const isCorrect = opt.startsWith(solution.secret);
-    // Slight delay so the user sees the click effect
+    // Slight delay so the user sees the click effect before navigating away
     setTimeout(() => {
-      onSolve(isCorrect);
+      onSolve(opt);
     }, 400);
   };
 
@@ -35,7 +29,7 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ data, solution, onSolve }) => {
       >
         🧠
       </motion.div>
-      <h2 className="text-2xl font-black mb-2 text-center text-primary">טריוויה יומית</h2>
+      <h2 className="text-2xl font-black mb-2 text-center text-primary">טריוויה</h2>
       <p className="text-sm text-muted-foreground mb-8 text-center">היעזר בידע שלך בכדורגל כדי לענות נכונה ולצבור נקודות!</p>
 
       <div className="bg-secondary/40 w-full rounded-2xl p-6 shadow-sm border border-border/50 text-center mb-6">

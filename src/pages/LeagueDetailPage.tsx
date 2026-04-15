@@ -301,12 +301,18 @@ const LeagueDetailPage = () => {
               const hasBet = !!match.bet_id;
               const isScheduled = match.status === 'scheduled';
               const isLive = match.status === 'live';
+              const canBet = isScheduled || isLive;
               return (
-                <div key={match.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border ${
-                    hasBet ? 'border-green-200 bg-green-50/50'
-                    : !isScheduled ? 'border-red-200 bg-red-50/50'
-                    : 'border-border bg-card'
+                <button
+                  key={match.id}
+                  onClick={() => canBet
+                    ? navigate(`/games/${match.id}`)
+                    : alert('לא ניתן להמר על משחק זה — חלון ההימורים נסגר')
+                  }
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border text-right transition-colors ${
+                    hasBet ? 'border-green-200 bg-green-50/50 active:bg-green-100/50'
+                    : !canBet ? 'border-border bg-card opacity-60'
+                    : 'border-border bg-card hover:bg-secondary/50 active:bg-secondary/80'
                   }`}
                 >
                   {/* Status icon */}
@@ -315,7 +321,7 @@ const LeagueDetailPage = () => {
                       ? <CheckCircle2 size={18} className="text-green-500" />
                       : isScheduled
                         ? <Circle size={18} className="text-muted-foreground/40" />
-                        : <Clock size={18} className="text-red-400" />}
+                        : <Clock size={18} className="text-muted-foreground/40" />}
                   </div>
 
                   {/* Teams */}
@@ -338,13 +344,18 @@ const LeagueDetailPage = () => {
                       {hasBet && (
                         <span className="text-[10px] font-bold text-green-600">
                           {match.selected_outcome} · {match.stake} נק׳
-                          {match.bet_status === 'won' && ` ✓ +${match.actual_payout}`}
+                          {match.bet_status === 'won' && ` +${match.actual_payout} נק׳`}
                           {match.bet_status === 'lost' && ' ✗'}
                         </span>
                       )}
                     </div>
                   </div>
-                </div>
+
+                  {/* CTA */}
+                  {canBet && !hasBet && (
+                    <span className="text-[10px] text-primary font-bold shrink-0">המר &larr;</span>
+                  )}
+                </button>
               );
             })}
           </div>

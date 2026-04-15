@@ -398,7 +398,9 @@ const LeaguesPage = () => {
                     className="card-kickoff flex items-center gap-3 cursor-pointer hover:bg-secondary/60 transition-colors"
                     onClick={() => navigate(`/profile/${u.username}`)}
                   >
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-sm shrink-0">👤</div>
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-sm shrink-0 overflow-hidden">
+                      {u.avatar_url ? <img src={u.avatar_url} className="w-full h-full object-cover" alt="" /> : <span>👤</span>}
+                    </div>
                     <div className="flex-1">
                       <p className="text-sm font-bold">@{u.username}</p>
                       <p className="text-xs text-muted-foreground">{u.total_wins}/{u.total_bets} ניצחונות</p>
@@ -438,7 +440,9 @@ const LeaguesPage = () => {
                    i === 2 ? <Medal size={18} className="text-amber-600 mx-auto" /> :
                    <span className="text-sm font-bold text-muted-foreground">#{entry.rank}</span>}
                 </div>
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-sm">👤</div>
+                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-sm overflow-hidden shrink-0">
+                  {entry.avatar_url ? <img src={entry.avatar_url} className="w-full h-full object-cover" alt="" /> : <span>👤</span>}
+                </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold">{entry.username}</p>
                   <p className="text-xs text-muted-foreground">{entry.total_wins}/{entry.total_bets} ניצחונות</p>

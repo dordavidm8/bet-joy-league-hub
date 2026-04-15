@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 // Parlay bonus multiplier by number of legs
 function parlayBonus(legs: number) {
@@ -19,6 +20,7 @@ const BetSlipPage = () => {
   const { betSlip, removeFromBetSlip, clearBetSlip } = useApp();
   const { backendUser, refreshUser } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isParlay, setIsParlay] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -63,10 +65,10 @@ const BetSlipPage = () => {
       }
       // Build share text before clearing slip
       const text = isParlay
-        ? `🎯 פרלאי של ${betSlip.length} הימורים עם מכפיל ×${combinedOdds.toFixed(2)} — ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🏆`
+        ? `פרלאי של ${betSlip.length} הימורים עם מכפיל x${combinedOdds.toFixed(2)} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff`
         : betSlip.length === 1
-          ? `🎯 הימרתי על ${betSlip[0].selectedOption} (×${betSlip[0].odds}) ב-${betSlip[0].gameLabel} — ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🏆`
-          : `🎯 שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-Kickoff 🏆`;
+          ? `המרתי על ${betSlip[0].selectedOption} (x${betSlip[0].odds}) ב-${betSlip[0].gameLabel} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff`
+          : `שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-Kickoff`;
       setShareText(text);
       clearBetSlip();
       await refreshUser();
@@ -106,6 +108,12 @@ const BetSlipPage = () => {
             שתף בוואטסאפ
           </a>
         )}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center justify-center gap-2 w-full max-w-xs py-3 rounded-xl bg-secondary text-foreground text-sm font-bold hover:bg-secondary/80 transition-colors"
+        >
+          חזרה למסך הבית
+        </button>
       </div>
     );
   }

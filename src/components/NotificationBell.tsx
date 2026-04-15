@@ -31,6 +31,7 @@ function timeAgo(iso: string) {
 
 const NotificationBell = () => {
   const [open, setOpen] = useState(false);
+  const [adminModal, setAdminModal] = useState<{ open: boolean; title: string; body: string }>({ open: false, title: '', body: '' });
   const panelRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -89,10 +90,20 @@ const NotificationBell = () => {
     } else if (n.type === "league_result" && n.data?.league_id) {
       navigate(`/leagues/${n.data.league_id}`);
       setOpen(false);
+    } else if (n.type === "daily_challenge") {
+      navigate("/minigames");
+      setOpen(false);
+    } else if (n.type === "bet_won" || n.type === "bet_lost") {
+      navigate("/bets");
+      setOpen(false);
+    } else if (n.type === "admin_message") {
+      setAdminModal({ open: true, title: n.title, body: n.body ?? '' });
+      setOpen(false);
     }
   };
 
   return (
+    <>
     <div className="relative" ref={panelRef}>
       {/* Bell button */}
       <button
@@ -155,6 +166,15 @@ const NotificationBell = () => {
                       {n.type === "league_result" && n.data?.league_id && (
                         <span className="text-[10px] text-primary font-bold">צפה בליגה ←</span>
                       )}
+                      {n.type === "daily_challenge" && (
+                        <span className="text-[10px] text-primary font-bold">לאתגרים ←</span>
+                      )}
+                      {(n.type === "bet_won" || n.type === "bet_lost") && (
+                        <span className="text-[10px] text-primary font-bold">להיסטוריית הימורים ←</span>
+                      )}
+                      {n.type === "admin_message" && (
+                        <span className="text-[10px] text-primary font-bold">קרא עוד ←</span>
+                      )}
                     </div>
                   </div>
                   {!n.is_read && (
@@ -167,6 +187,34 @@ const NotificationBell = () => {
         </div>
       )}
     </div>
+
+    {/* Admin message modal */}
+    {adminModal.open && (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4"
+        onClick={() => setAdminModal({ ...adminModal, open: false })}
+      >
+        <div
+          className="bg-background rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col gap-4"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📢</span>
+            <h3 className="font-bold text-base leading-tight flex-1">{adminModal.title}</h3>
+          </div>
+          {adminModal.body && (
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{adminModal.body}</p>
+          )}
+          <button
+            onClick={() => setAdminModal({ ...adminModal, open: false })}
+            className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl"
+          >
+            סגור
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

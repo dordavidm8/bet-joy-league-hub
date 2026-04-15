@@ -13,7 +13,7 @@ interface Puzzle {
 
 const UI_MAP = {
   trivia: {
-    title: 'טריוויה יומית (AI)',
+    title: 'טריוויה',
     desc: 'היעזר בידע בנבכי עולם הכדורגל בשאלה היומית',
     icon: HelpCircle,
     route: '/minigames/trivia'
