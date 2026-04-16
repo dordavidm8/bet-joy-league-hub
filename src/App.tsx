@@ -28,7 +28,40 @@ import BetHistoryPage from "@/pages/BetHistoryPage";
 import StatsPage from "@/pages/StatsPage";
 import { Navigate } from "react-router-dom";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { adminGetMe } from "@/lib/api";
 import ErrorBoundary from "@/components/ErrorBoundary";
+
+const BlockedScreen = () => {
+  const { signOut } = useAuth();
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white gap-6 p-8" dir="rtl">
+      <div className="text-6xl">🚫</div>
+      <div className="text-center flex flex-col gap-2">
+        <h1 className="text-xl font-black">אין גישה לאפליקציה</h1>
+        <p className="text-gray-400 text-sm max-w-xs">החשבון שלך אינו מורשה להיכנס. פנה למנהל המערכת.</p>
+      </div>
+      <button
+        onClick={signOut}
+        className="mt-2 text-sm text-gray-500 underline hover:text-gray-300 transition-colors"
+      >
+        התנתק וחזור למסך הכניסה
+      </button>
+    </div>
+  );
+};
+
+const AdminRoute = () => {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-me"],
+    queryFn: adminGetMe,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">בודק הרשאות...</div>;
+  if (isError || !data?.is_admin) return <Navigate to="/" replace />;
+  return <AdminDashboard />;
+};
 
 const queryClient = new QueryClient();
 
@@ -54,6 +87,10 @@ function AuthGate() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">טוען...</div>;
   if (!firebaseUser) return <LoginPage />;
+
+  // Block non-admins from the entire app
+  if (!ADMIN_EMAILS.includes(firebaseUser.email ?? "")) return <BlockedScreen />;
+
   if (!onboardingDone) return <OnboardingPage onDone={() => setOnboardingDone(true)} />;
 
   return (
@@ -73,11 +110,7 @@ function AuthGate() {
       <Route path="/profile/:username" element={<AppLayout><PublicProfilePage /></AppLayout>} />
       <Route path="/bets" element={<AppLayout><BetHistoryPage /></AppLayout>} />
       <Route path="/stats" element={<AppLayout><StatsPage /></AppLayout>} />
-      <Route path="/admin" element={
-        ADMIN_EMAILS.includes(firebaseUser?.email ?? "")
-          ? <AdminDashboard />
-          : <Navigate to="/" replace />
-      } />
+      <Route path="/admin" element={<AdminRoute />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -287,6 +287,13 @@ CREATE TABLE IF NOT EXISTS user_achievements (
 );
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
 
+-- Admin users (dynamic — added via dashboard)
+CREATE TABLE IF NOT EXISTS admin_users (
+  email VARCHAR(200) PRIMARY KEY,
+  added_by VARCHAR(200),
+  added_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ── Per-league betting system ─────────────────────────────────────────────────
 
 -- League bet mode: how members bet within this league

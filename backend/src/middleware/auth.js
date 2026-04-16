@@ -41,19 +41,28 @@ async function optionalAuthenticate(req, res, next) {
   next();
 }
 
-function requireAdmin(req, res, next) {
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.replace(/['"]/g, '').trim().toLowerCase()).filter(Boolean);
-  if (process.env.STUB_MODE === 'true' || adminEmails.includes(req.user?.email?.toLowerCase())) {
-    return next();
+async function requireAdmin(req, res, next) {
+  if (process.env.STUB_MODE === 'true') return next();
+
+  const email = req.user?.email?.toLowerCase();
+  if (!email) return res.status(403).json({ error: 'Admin access required' });
+
+  // Check env var (bootstrap admins)
+  const envAdmins = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map(e => e.replace(/['"]/g, '').trim().toLowerCase())
+    .filter(Boolean);
+  if (envAdmins.includes(email)) return next();
+
+  // Check DB (dynamically added admins)
+  try {
+    const result = await pool.query('SELECT 1 FROM admin_users WHERE email = $1', [email]);
+    if (result.rows.length > 0) return next();
+  } catch (e) {
+    console.error('requireAdmin DB check failed:', e.message);
   }
-  res.status(403).json({ 
-    error: 'Admin access required',
-    _debug: {
-      user_email: req.user?.email,
-      admin_emails_length: adminEmails.length,
-      admin_emails: adminEmails
-    }
-  });
+
+  res.status(403).json({ error: 'Admin access required' });
 }
 
 module.exports = { authenticate, optionalAuthenticate, requireAdmin };

@@ -4,7 +4,79 @@ const { pool } = require('../config/database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { logAdminAction } = require('../services/adminLogService');
 
+// Seed admin_users table from ADMIN_EMAILS env var on startup
+;(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        email VARCHAR(200) PRIMARY KEY,
+        added_by VARCHAR(200),
+        added_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    const emails = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map(e => e.replace(/['"]/g, '').trim().toLowerCase())
+      .filter(Boolean);
+    for (const email of emails) {
+      await pool.query(
+        'INSERT INTO admin_users (email, added_by) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING',
+        [email, 'system']
+      );
+    }
+  } catch (e) {
+    console.error('admin_users seed failed:', e.message);
+  }
+})();
+
 router.use(authenticate, requireAdmin);
+
+// GET /api/admin/me
+router.get('/me', (req, res) => {
+  res.json({ is_admin: true, email: req.user.email });
+});
+
+// GET /api/admin/admins
+router.get('/admins', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      'SELECT email, added_by, added_at FROM admin_users ORDER BY added_at ASC'
+    );
+    res.json({ admins: result.rows });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/admins
+router.post('/admins', async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'email required' });
+  const normalizedEmail = email.toLowerCase().trim();
+  try {
+    await pool.query(
+      'INSERT INTO admin_users (email, added_by) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING',
+      [normalizedEmail, req.user.email]
+    );
+    await logAdminAction(req.user.email, 'add_admin', 'admin_user', normalizedEmail, { email: normalizedEmail });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/admins/:email
+router.delete('/admins/:email', async (req, res, next) => {
+  const email = decodeURIComponent(req.params.email).toLowerCase().trim();
+  const envAdmins = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map(e => e.replace(/['"]/g, '').trim().toLowerCase())
+    .filter(Boolean);
+  if (envAdmins.includes(email)) {
+    return res.status(400).json({ error: 'לא ניתן להסיר מנהל ראשי (מוגדר בסביבה)' });
+  }
+  try {
+    await pool.query('DELETE FROM admin_users WHERE email = $1', [email]);
+    await logAdminAction(req.user.email, 'remove_admin', 'admin_user', email, { email });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
 
 // GET /api/admin/stats?from=YYYY-MM-DD&to=YYYY-MM-DD
 router.get('/stats', async (req, res, next) => {

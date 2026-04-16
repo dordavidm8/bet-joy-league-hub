@@ -14,8 +14,9 @@ import {
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
+  adminGetAdmins, adminAddAdmin, adminRemoveAdmin,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
-  AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion, getGames,
+  AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion, AdminUserEntry, getGames,
 } from "@/lib/api";
 
 export const ADMIN_EMAILS = [
@@ -52,11 +53,19 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 const Loader = () => <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">טוען...</div>;
+const ErrorMsg = ({ msg }: { msg?: string }) => (
+  <div className="flex flex-col items-center justify-center py-12 gap-2 text-sm text-destructive bg-destructive/5 rounded-xl border border-destructive/20">
+    <span className="text-lg">⚠️</span>
+    <p className="font-medium">{msg ?? "שגיאה בטעינת הנתונים"}</p>
+    <p className="text-xs text-muted-foreground">בדוק חיבור לשרת ו-ADMIN_EMAILS בסביבה</p>
+  </div>
+);
 
 // ── Stats Tab ─────────────────────────────────────────────────────────────────
 const StatsTab = () => {
-  const { data, isLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: adminGetStats });
+  const { data, isLoading, isError } = useQuery({ queryKey: ["admin-stats"], queryFn: adminGetStats });
   if (isLoading) return <Loader />;
+  if (isError) return <ErrorMsg />;
   if (!data) return null;
   const { users, bets, leagues, transactions_by_type } = data;
 
@@ -113,7 +122,7 @@ const UsersTab = () => {
   const [adjustMsg, setAdjustMsg] = useState("");
   const [viewBetsUser, setViewBetsUser] = useState<AdminUser | null>(null);
 
-  const { data, isLoading } = useQuery({ queryKey: ["admin-users", search], queryFn: () => adminGetUsers(search || undefined) });
+  const { data, isLoading, isError } = useQuery({ queryKey: ["admin-users", search], queryFn: () => adminGetUsers(search || undefined) });
   const { data: userBetsData } = useQuery({
     queryKey: ["admin-user-bets", viewBetsUser?.id],
     queryFn: () => adminGetUserBets(viewBetsUser!.id),
@@ -146,7 +155,7 @@ const UsersTab = () => {
           className="bg-transparent flex-1 text-sm outline-none" />
       </div>
 
-      {isLoading ? <Loader /> : (
+      {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
         <div className="border rounded-xl overflow-auto">
           <table className="w-full text-xs min-w-[600px]">
             <thead className="bg-muted/50"><tr>
@@ -236,7 +245,7 @@ const UsersTab = () => {
 const BetsTab = () => {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("");
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-bets", statusFilter],
     queryFn: () => adminGetBets(statusFilter || undefined),
     staleTime: 15_000,
@@ -259,7 +268,7 @@ const BetsTab = () => {
         ))}
       </div>
 
-      {isLoading ? <Loader /> : (
+      {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
         <div className="border rounded-xl overflow-auto">
           <table className="w-full text-xs min-w-[700px]">
             <thead className="bg-muted/50"><tr>
@@ -321,7 +330,7 @@ const GamesTab = () => {
     }
   };
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-games", showAllGames],
     queryFn: () => adminGetGames(showAllGames),
     staleTime: 30_000,
@@ -412,7 +421,7 @@ const GamesTab = () => {
         )}
       </div>
 
-      {isLoading ? <Loader /> : (
+      {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
         <div className="border rounded-xl overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-muted/50"><tr>
@@ -545,10 +554,10 @@ const GamesTab = () => {
 // ── Leagues Tab ───────────────────────────────────────────────────────────────
 const LeaguesTab = () => {
   const navigate = useNavigate();
-  const { data, isLoading } = useQuery({ queryKey: ["admin-leagues"], queryFn: adminGetLeagues, staleTime: 30_000 });
+  const { data, isLoading, isError } = useQuery({ queryKey: ["admin-leagues"], queryFn: adminGetLeagues, staleTime: 30_000 });
   const leagues = data?.leagues ?? [];
 
-  return isLoading ? <Loader /> : (
+  return isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
     <div className="border rounded-xl overflow-auto">
       <table className="w-full text-xs min-w-[600px]">
         <thead className="bg-muted/50"><tr>
@@ -1002,7 +1011,9 @@ const MiniGamesTab = () => {
 // ── Advanced Tab ──────────────────────────────────────────────────────────────
 const AdvancedTab = () => {
   const queryClient = useQueryClient();
-  const [section, setSection] = useState<"competitions" | "log">("competitions");
+  const [section, setSection] = useState<"competitions" | "log" | "admins">("competitions");
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [adminMsg, setAdminMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const { data: compsData, isLoading: compsLoading } = useQuery({
     queryKey: ["admin-competitions"], queryFn: adminGetCompetitions, enabled: section === "competitions",
@@ -1010,25 +1021,45 @@ const AdvancedTab = () => {
   const { data: logData, isLoading: logLoading } = useQuery({
     queryKey: ["admin-log"], queryFn: adminGetLog, enabled: section === "log", staleTime: 10_000,
   });
+  const { data: adminsData, isLoading: adminsLoading } = useQuery({
+    queryKey: ["admin-admins"], queryFn: adminGetAdmins, enabled: section === "admins",
+  });
 
   const toggleMutation = useMutation({
     mutationFn: adminToggleCompetition,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-competitions"] }),
   });
 
+  const addAdminMutation = useMutation({
+    mutationFn: () => adminAddAdmin(newAdminEmail.trim()),
+    onSuccess: () => {
+      setAdminMsg({ ok: true, text: `✅ ${newAdminEmail} נוסף כמנהל` });
+      setNewAdminEmail("");
+      queryClient.invalidateQueries({ queryKey: ["admin-admins"] });
+    },
+    onError: (e: any) => setAdminMsg({ ok: false, text: `❌ ${e.message}` }),
+  });
+
+  const removeAdminMutation = useMutation({
+    mutationFn: adminRemoveAdmin,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-admins"] }),
+    onError: (e: any) => setAdminMsg({ ok: false, text: `❌ ${e.message}` }),
+  });
+
   const ACTION_LABELS: Record<string, string> = {
     feature_game: "📌 Featured משחק", unfeature_game: "⬜ הסרת Featured",
     cancel_bet: "❌ ביטול הימור", adjust_points: "💰 התאמת נקודות",
     toggle_competition: "🔄 שינוי תחרות",
+    add_admin: "👤 הוספת מנהל", remove_admin: "🗑 הסרת מנהל",
   };
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-2">
-        {(["competitions", "log"] as const).map(s => (
+        {(["competitions", "admins", "log"] as const).map(s => (
           <button key={s} onClick={() => setSection(s)}
             className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${section === s ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
-            {s === "competitions" ? "⚽ תחרויות" : "📋 לוג פעולות"}
+            {s === "competitions" ? "⚽ תחרויות" : s === "admins" ? "🔑 מנהלים" : "📋 לוג פעולות"}
           </button>
         ))}
       </div>
@@ -1053,6 +1084,62 @@ const AdvancedTab = () => {
             ))}
           </div>
         )
+      )}
+
+      {section === "admins" && (
+        <div className="flex flex-col gap-4">
+          <div className="border rounded-2xl p-4 flex flex-col gap-3">
+            <h3 className="text-sm font-bold">הוסף מנהל חדש</h3>
+            <p className="text-xs text-muted-foreground">המנהל יוכל להיכנס ל-dashboard ולגשת לכל הנתונים.</p>
+            <div className="flex gap-2">
+              <input
+                value={newAdminEmail}
+                onChange={e => { setNewAdminEmail(e.target.value); setAdminMsg(null); }}
+                placeholder="כתובת אימייל..."
+                type="email"
+                className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none"
+              />
+              <Button onClick={() => addAdminMutation.mutate()} disabled={!newAdminEmail.trim() || addAdminMutation.isPending}>
+                <Plus size={14} className="ml-1" />
+                {addAdminMutation.isPending ? "מוסיף..." : "הוסף"}
+              </Button>
+            </div>
+            {adminMsg && <p className={`text-sm ${adminMsg.ok ? "text-green-600" : "text-destructive"}`}>{adminMsg.text}</p>}
+          </div>
+
+          <div className="border rounded-2xl p-4 flex flex-col gap-3">
+            <h3 className="text-sm font-bold">מנהלים קיימים</h3>
+            {adminsLoading ? <Loader /> : (
+              <div className="flex flex-col gap-2">
+                {(adminsData?.admins ?? []).map((a: AdminUserEntry) => (
+                  <div key={a.email} className="flex items-center gap-3 border rounded-xl px-3 py-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{a.email}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        נוסף על ידי {a.added_by === "system" ? "הגדרות סביבה" : a.added_by} · {fmtDate(a.added_at)}
+                      </p>
+                    </div>
+                    {a.added_by !== "system" && (
+                      <button
+                        onClick={() => { if (confirm(`להסיר את ${a.email} מהמנהלים?`)) removeAdminMutation.mutate(a.email); }}
+                        className="text-destructive/50 hover:text-destructive shrink-0"
+                        disabled={removeAdminMutation.isPending}
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    )}
+                    {a.added_by === "system" && (
+                      <span className="text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full shrink-0">ראשי</span>
+                    )}
+                  </div>
+                ))}
+                {(adminsData?.admins ?? []).length === 0 && (
+                  <p className="text-center text-sm text-muted-foreground py-4">אין מנהלים</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {section === "log" && (

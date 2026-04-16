@@ -163,6 +163,13 @@ export const getDetailedStats = () =>
   request<DetailedStats>('/users/me/detailed-stats');
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
+export const adminGetMe = () => request<{ is_admin: boolean; email: string }>('/admin/me');
+export interface AdminUserEntry { email: string; added_by: string; added_at: string }
+export const adminGetAdmins = () => request<{ admins: AdminUserEntry[] }>('/admin/admins');
+export const adminAddAdmin = (email: string) =>
+  request<{ ok: boolean }>('/admin/admins', { method: 'POST', body: JSON.stringify({ email }) });
+export const adminRemoveAdmin = (email: string) =>
+  request<{ ok: boolean }>(`/admin/admins/${encodeURIComponent(email)}`, { method: 'DELETE' });
 export const adminGetStats = () => request<AdminStats>('/admin/stats');
 export const adminGetUsers = (search?: string) =>
   request<{ users: AdminUser[] }>(`/admin/users?limit=200${search ? `&search=${encodeURIComponent(search)}` : ''}`);
