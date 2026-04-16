@@ -367,6 +367,8 @@ export interface PlaceBetInput {
   bet_question_id: string;
   selected_outcome: string;
   stake: number;
+  league_id?: string | null;
+  league_ids?: string[];
 }
 
 export interface PlaceParlayInput {
@@ -425,6 +427,7 @@ export interface League {
   max_members?: number | null;
   join_policy?: 'before_start' | 'anytime';
   auto_settle?: boolean;
+  bet_mode?: 'minimum_stake' | 'initial_balance';
   created_at: string;
 }
 
@@ -454,6 +457,7 @@ export interface CreateLeagueInput {
   max_members?: number;
   join_policy?: 'before_start' | 'anytime';
   auto_settle?: boolean;
+  bet_mode?: 'minimum_stake' | 'initial_balance';
 }
 
 export interface QuizQuestion {

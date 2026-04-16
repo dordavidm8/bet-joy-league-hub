@@ -11,10 +11,14 @@ function generateInviteCode() {
 router.post('/', authenticate, async (req, res, next) => {
   const {
     name, description, format, duration_type, access_type,
-    min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
+    bet_mode, min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
     tournament_slug, stake_per_match, join_policy, auto_settle, penalty_per_missed_bet,
     max_members,
   } = req.body;
+
+  if (bet_mode && !['minimum_stake', 'initial_balance'].includes(bet_mode)) {
+    return res.status(400).json({ error: 'bet_mode must be minimum_stake or initial_balance' });
+  }
 
   if (!name || !format || !duration_type) {
     return res.status(400).json({ error: 'name, format, duration_type required' });
@@ -45,12 +49,13 @@ router.post('/', authenticate, async (req, res, next) => {
     const leagueRes = await client.query(
       `INSERT INTO leagues
          (name, description, creator_id, invite_code, format, duration_type, access_type,
-          min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
+          bet_mode, min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
           tournament_slug, stake_per_match, join_policy, auto_settle, penalty_per_missed_bet, max_members)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
       [
         name, description || null, req.user.id, invite_code, format,
         duration_type, access_type || 'invite',
+        bet_mode || 'minimum_stake',
         min_bet || 10, entry_fee || 0,
         distribution ? JSON.stringify(distribution) : null,
         allowed_competitions ? JSON.stringify(allowed_competitions) : null,

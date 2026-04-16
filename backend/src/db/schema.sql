@@ -286,3 +286,33 @@ CREATE TABLE IF NOT EXISTS user_achievements (
   UNIQUE(user_id, achievement_key)
 );
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
+
+-- ── Per-league betting system ─────────────────────────────────────────────────
+
+-- League bet mode: how members bet within this league
+--   'minimum_stake'   → stake deducted from global balance, min per game enforced
+--   'initial_balance' → no stake deducted; winning awards odds-based league points
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS bet_mode VARCHAR(20) NOT NULL DEFAULT 'minimum_stake';
+
+-- Link each bet to a specific league (NULL = global bet, unrelated to any league)
+ALTER TABLE bets ADD COLUMN IF NOT EXISTS league_id UUID REFERENCES leagues(id);
+
+-- One global bet per user per question
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bets_user_question_global
+  ON bets(user_id, bet_question_id) WHERE league_id IS NULL;
+
+-- One bet per user per question per league
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bets_user_question_league
+  ON bets(user_id, bet_question_id, league_id) WHERE league_id IS NOT NULL;
+
+-- Allow fractional league points (e.g. winning at odds 2.1 → +2.10 pts)
+DO $$ BEGIN
+  IF (
+    SELECT data_type FROM information_schema.columns
+    WHERE table_name = 'league_members' AND column_name = 'points_in_league'
+  ) = 'integer' THEN
+    ALTER TABLE league_members
+      ALTER COLUMN points_in_league TYPE DECIMAL(10,2)
+      USING points_in_league::DECIMAL(10,2);
+  END IF;
+END $$;

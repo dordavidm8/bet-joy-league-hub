@@ -79,6 +79,17 @@ async function settleBets() {
         `SELECT * FROM bets WHERE game_id = $1 AND status = 'pending'`, [game.id]
       );
 
+      // Preload bet_mode for all leagues referenced in this game's bets
+      const uniqueLeagueIds = [...new Set(betsRes.rows.filter(b => b.league_id).map(b => b.league_id))];
+      const leagueModes = {};
+      if (uniqueLeagueIds.length > 0) {
+        const lRes = await client.query(
+          `SELECT id, bet_mode FROM leagues WHERE id = ANY($1::uuid[])`,
+          [uniqueLeagueIds]
+        );
+        for (const l of lRes.rows) leagueModes[l.id] = l.bet_mode;
+      }
+
       let settledWon = 0, settledLost = 0;
       const userBetResults = {}; // userId → { won, lost, totalPayout }
 
@@ -87,7 +98,13 @@ async function settleBets() {
         if (correctOutcome === undefined) continue; // question not resolved yet
 
         const won = bet.selected_outcome === correctOutcome;
-        const payout = won ? calculatePayout(bet.stake, bet.odds, bet.live_penalty_pct || 0) : 0;
+        const betMode = bet.league_id ? (leagueModes[bet.league_id] ?? 'minimum_stake') : null;
+        const isInitialBalance = betMode === 'initial_balance';
+
+        // For initial_balance bets, payout is in league points (decimal odds), not integer
+        const payout = (won && !isInitialBalance)
+          ? calculatePayout(bet.stake, bet.odds, bet.live_penalty_pct || 0)
+          : 0;
 
         await client.query(
           `UPDATE bets SET status = $1, actual_payout = $2, settled_at = NOW() WHERE id = $3`,
@@ -95,27 +112,43 @@ async function settleBets() {
         );
 
         if (won) {
-          await client.query(
-            `UPDATE users SET points_balance = points_balance + $1, total_wins = total_wins + 1 WHERE id = $2`,
-            [payout, bet.user_id]
-          );
-          await client.query(
-            `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
-             VALUES ($1,$2,'bet_won',$3,$4)`,
-            [bet.user_id, payout, bet.id, `Bet won: ${game.home_team} vs ${game.away_team}`]
-          );
-
-          // Also update points_in_league for any league this user is in
-          await client.query(
-            `UPDATE league_members lm
-             SET points_in_league = points_in_league + $1
-             FROM leagues l
-             WHERE lm.league_id = l.id
-               AND lm.user_id = $2
-               AND lm.is_active = true
-               AND l.status = 'active'`,
-            [payout, bet.user_id]
-          );
+          if (isInitialBalance) {
+            // initial_balance league: credit odds-based points to league standings only
+            await client.query(
+              `UPDATE league_members
+               SET points_in_league = points_in_league + $1
+               WHERE league_id = $2 AND user_id = $3 AND is_active = true`,
+              [parseFloat(bet.odds), bet.league_id, bet.user_id]
+            );
+          } else if (bet.league_id) {
+            // minimum_stake league: credit global balance + this league's standings
+            await client.query(
+              `UPDATE users SET points_balance = points_balance + $1, total_wins = total_wins + 1 WHERE id = $2`,
+              [payout, bet.user_id]
+            );
+            await client.query(
+              `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+               VALUES ($1,$2,'bet_won',$3,$4)`,
+              [bet.user_id, payout, bet.id, `Bet won: ${game.home_team} vs ${game.away_team}`]
+            );
+            await client.query(
+              `UPDATE league_members
+               SET points_in_league = points_in_league + $1
+               WHERE league_id = $2 AND user_id = $3 AND is_active = true`,
+              [payout, bet.league_id, bet.user_id]
+            );
+          } else {
+            // Global bet (no league): credit global balance only
+            await client.query(
+              `UPDATE users SET points_balance = points_balance + $1, total_wins = total_wins + 1 WHERE id = $2`,
+              [payout, bet.user_id]
+            );
+            await client.query(
+              `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+               VALUES ($1,$2,'bet_won',$3,$4)`,
+              [bet.user_id, payout, bet.id, `Bet won: ${game.home_team} vs ${game.away_team}`]
+            );
+          }
 
           settledWon++;
         } else {
@@ -287,7 +320,7 @@ async function applyTournamentMissedBetPenalties(gameIds) {
              AND u.points_balance >= $2
              AND NOT EXISTS (
                SELECT 1 FROM bets b
-               WHERE b.game_id = $3 AND b.user_id = lm.user_id
+               WHERE b.game_id = $3 AND b.user_id = lm.user_id AND b.league_id = $1
              )
              AND NOT EXISTS (
                SELECT 1 FROM tournament_missed_bets tmb

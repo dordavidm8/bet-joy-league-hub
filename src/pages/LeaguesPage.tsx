@@ -50,6 +50,7 @@ const LeaguesPage = () => {
   const [seasonEndDate, setSeasonEndDate] = useState("");
   const [joinPolicy, setJoinPolicy] = useState<"before_start" | "anytime">("before_start");
   const [autoSettle, setAutoSettle] = useState(true);
+  const [betMode, setBetMode] = useState<"minimum_stake" | "initial_balance">("minimum_stake");
 
   const { data: leaguesData, isLoading: leaguesLoading } = useQuery({
     queryKey: ["my-leagues"],
@@ -82,6 +83,7 @@ const LeaguesPage = () => {
         format,
         duration_type: format === "tournament" ? "tournament" : duration,
         access_type: access,
+        bet_mode: betMode,
         entry_fee: parseInt(entryFee) || 0,
         max_members: parseInt(maxMembers) > 0 ? parseInt(maxMembers) : undefined,
         distribution: (format === "pool" || format === "tournament") && parseInt(entryFee) > 0 ? distribution : undefined,
@@ -119,6 +121,7 @@ const LeaguesPage = () => {
     setTournamentSlug("fifa.world"); setStakePerMatch("50");
     setPenaltyPerMissedBet("0"); setSeasonEndDate("");
     setJoinPolicy("before_start"); setAutoSettle(true);
+    setBetMode("minimum_stake");
   };
 
   const distTotal = distribution.reduce((s, d) => s + d.pct, 0);
@@ -186,6 +189,40 @@ const LeaguesPage = () => {
                 <option value="per_game">תשלום למשחק</option>
                 <option value="tournament">🏆 ליגת טורניר</option>
               </select>
+
+              {/* Bet mode */}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs text-muted-foreground font-medium">מצב הימורים בליגה</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setBetMode("minimum_stake")}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
+                      betMode === "minimum_stake"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary border-border"
+                    }`}
+                  >
+                    <span className="block font-bold">סכום מינימלי</span>
+                    <span className="opacity-70">הימור ממאגר הנקודות</span>
+                  </button>
+                  <button
+                    onClick={() => setBetMode("initial_balance")}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
+                      betMode === "initial_balance"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary border-border"
+                    }`}
+                  >
+                    <span className="block font-bold">ניקוד צבירה</span>
+                    <span className="opacity-70">ניצחון = קבלת יחס</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {betMode === "minimum_stake"
+                    ? "חברים מהמרים מיתרת הנקודות הגלובלית שלהם. ניצחון → נקודות חוזרות + מתוספות לליגה."
+                    : "אין ניכוי נקודות. ניצחת → מקבל את יחס הזכייה בנקודות ליגה. הפסדת → כלום. המנצח הוא בעל הניקוד הגבוה ביותר."}
+                </p>
+              </div>
 
               {/* Tournament fields */}
               {format === "tournament" && (

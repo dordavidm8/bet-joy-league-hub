@@ -8,7 +8,6 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
-// Parlay bonus multiplier by number of legs
 function parlayBonus(legs: number) {
   if (legs >= 4) return 1.20;
   if (legs >= 3) return 1.15;
@@ -26,16 +25,18 @@ const BetSlipPage = () => {
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [shareText, setShareText] = useState("");
 
-  const totalStake = betSlip.reduce((sum, b) => sum + b.points, 0);
+  // Only real-stake bets count toward parlay and global cost
+  const realBets = betSlip.filter((b) => b.bet_mode !== "initial_balance");
+  const scoringBets = betSlip.filter((b) => b.bet_mode === "initial_balance");
+
+  const totalStake = realBets.reduce((sum, b) => sum + b.points, 0);
   const userPoints = backendUser?.points_balance ?? 0;
 
-  // Individual: sum of each bet's (stake × odds)
-  const individualPayout = betSlip.reduce((sum, b) => sum + Math.floor(b.points * b.odds), 0);
-
-  // Parlay: totalStake × (product of all odds) × bonus
-  const combinedOdds = betSlip.reduce((product, b) => product * b.odds, 1);
-  const parlayPayout = Math.floor(totalStake * combinedOdds * parlayBonus(betSlip.length));
-
+  const individualPayout = realBets.reduce((sum, b) => sum + Math.floor(b.points * b.odds), 0);
+  const combinedOdds = realBets.reduce((product, b) => product * b.odds, 1);
+  const parlayPayout = realBets.length >= 2
+    ? Math.floor(totalStake * combinedOdds * parlayBonus(realBets.length))
+    : 0;
   const potentialPayout = isParlay ? parlayPayout : individualPayout;
 
   const handleConfirm = async () => {
@@ -43,9 +44,9 @@ const BetSlipPage = () => {
     setLoading(true);
     setResult(null);
     try {
-      if (isParlay) {
+      if (isParlay && realBets.length >= 2) {
         await placeParlay({
-          legs: betSlip.map((b) => ({
+          legs: realBets.map((b) => ({
             game_id: b.game_id,
             bet_question_id: b.bet_question_id,
             selected_outcome: b.selectedOption,
@@ -53,6 +54,16 @@ const BetSlipPage = () => {
           })),
           stake: totalStake,
         });
+        // Scoring-only bets placed separately
+        for (const bet of scoringBets) {
+          await placeBet({
+            game_id: bet.game_id,
+            bet_question_id: bet.bet_question_id,
+            selected_outcome: bet.selectedOption,
+            stake: 0,
+            league_id: bet.league_id,
+          });
+        }
       } else {
         for (const bet of betSlip) {
           await placeBet({
@@ -60,12 +71,13 @@ const BetSlipPage = () => {
             bet_question_id: bet.bet_question_id,
             selected_outcome: bet.selectedOption,
             stake: bet.points,
+            league_id: bet.league_id,
           });
         }
       }
-      // Build share text before clearing slip
-      const text = isParlay
-        ? `פרלאי של ${betSlip.length} הימורים עם מכפיל x${combinedOdds.toFixed(2)} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff`
+
+      const text = isParlay && realBets.length >= 2
+        ? `פרלאי של ${realBets.length} הימורים עם מכפיל x${combinedOdds.toFixed(2)} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff`
         : betSlip.length === 1
           ? `המרתי על ${betSlip[0].selectedOption} (x${betSlip[0].odds}) ב-${betSlip[0].gameLabel} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff`
           : `שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-Kickoff`;
@@ -109,7 +121,7 @@ const BetSlipPage = () => {
           </a>
         )}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
           className="flex items-center justify-center gap-2 w-full max-w-xs py-3 rounded-xl bg-secondary text-foreground text-sm font-bold hover:bg-secondary/80 transition-colors"
         >
           חזרה למסך הבית
@@ -122,13 +134,13 @@ const BetSlipPage = () => {
     <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
       <h2 className="text-2xl font-black">תלוש הימורים</h2>
 
-      {/* Parlay Toggle */}
-      {betSlip.length > 1 && (
+      {/* Parlay Toggle — only for real-stake bets with 2+ */}
+      {realBets.length > 1 && (
         <div className="card-kickoff flex items-center justify-between">
           <div>
             <p className="font-bold text-sm">שילוב הימורים (פרליי)</p>
             <p className="text-xs text-muted-foreground">
-              בונוס ×{parlayBonus(betSlip.length).toFixed(2)} על {betSlip.length} הימורים
+              בונוס ×{parlayBonus(realBets.length).toFixed(2)} על {realBets.length} הימורים
             </p>
           </div>
           <button
@@ -158,7 +170,23 @@ const BetSlipPage = () => {
               <p className="font-bold text-sm">{bet.gameLabel}</p>
               <p className="text-xs text-muted-foreground">{bet.question}</p>
               <p className="text-sm font-bold text-primary">{bet.selectedOption}</p>
-              <p className="text-xs text-muted-foreground">{bet.points} נקודות · ×{bet.odds}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Context badge */}
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                  bet.bet_mode === "initial_balance"
+                    ? "bg-amber-500/10 text-amber-600"
+                    : bet.league_id
+                      ? "bg-blue-500/10 text-blue-600"
+                      : "bg-secondary text-muted-foreground"
+                }`}>
+                  {bet.league_name ?? "גלובלי"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {bet.bet_mode === "initial_balance"
+                    ? `ניקוד · ×${bet.odds}`
+                    : `${bet.points} נק׳ · ×${bet.odds}`}
+                </span>
+              </div>
             </div>
             <button
               onClick={() => removeFromBetSlip(bet.id)}
@@ -172,34 +200,45 @@ const BetSlipPage = () => {
 
       {/* Summary */}
       <div className="card-kickoff flex flex-col gap-3">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">סה״כ נקודות בסיכון</span>
-          <span className="font-bold">{totalStake.toLocaleString()}</span>
-        </div>
-        {isParlay && (
+        {totalStake > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">מכפיל משולב</span>
-            <span className="font-bold">×{(combinedOdds * parlayBonus(betSlip.length)).toFixed(2)}</span>
+            <span className="text-muted-foreground">נקודות בסיכון</span>
+            <span className="font-bold">{totalStake.toLocaleString()}</span>
           </div>
         )}
-        <div className="border-t border-border my-1" />
-        <div className="flex justify-between text-base">
-          <span className="font-bold">רווח פוטנציאלי</span>
-          <span className="font-black text-primary">{potentialPayout.toLocaleString()} נקודות</span>
-        </div>
+        {scoringBets.length > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">הימורי ניקוד (ליגה)</span>
+            <span className="font-bold">{scoringBets.length} הימורים</span>
+          </div>
+        )}
+        {isParlay && realBets.length >= 2 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">מכפיל משולב</span>
+            <span className="font-bold">×{(combinedOdds * parlayBonus(realBets.length)).toFixed(2)}</span>
+          </div>
+        )}
+        {potentialPayout > 0 && (
+          <>
+            <div className="border-t border-border my-1" />
+            <div className="flex justify-between text-base">
+              <span className="font-bold">רווח פוטנציאלי</span>
+              <span className="font-black text-primary">{potentialPayout.toLocaleString()} נקודות</span>
+            </div>
+          </>
+        )}
       </div>
 
       {result && !result.success && (
         <p className="text-xs text-destructive text-center">{result.message}</p>
       )}
 
-      {/* Confirm */}
       <Button
         variant="cta"
         size="xl"
         className="w-full"
         onClick={handleConfirm}
-        disabled={loading || totalStake > userPoints}
+        disabled={loading || (totalStake > userPoints) || (betSlip.length === 0)}
       >
         {loading ? "שולח..." : "אשר הימור"}
       </Button>
