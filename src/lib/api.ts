@@ -428,6 +428,7 @@ export interface League {
   member_count?: number;
   points_in_league?: number;
   is_active?: boolean;
+  is_tournament?: boolean;
   tournament_slug?: string | null;
   stake_per_match?: number;
   penalty_per_missed_bet?: number;
@@ -450,7 +451,7 @@ export interface LeagueMember {
 export interface CreateLeagueInput {
   name: string;
   description?: string;
-  format: 'pool' | 'per_game' | 'tournament';
+  format: 'pool' | 'per_game';
   duration_type: string;
   access_type?: 'invite' | 'public';
   min_bet?: number;
@@ -458,13 +459,13 @@ export interface CreateLeagueInput {
   distribution?: { place: number; pct: number }[];
   allowed_competitions?: string[];
   season_end_date?: string;
+  is_tournament?: boolean;
   tournament_slug?: string;
   stake_per_match?: number;
   penalty_per_missed_bet?: number;
   max_members?: number;
   join_policy?: 'before_start' | 'anytime';
   auto_settle?: boolean;
-  bet_mode?: 'minimum_stake' | 'initial_balance';
 }
 
 export interface QuizQuestion {

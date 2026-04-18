@@ -290,7 +290,7 @@ async function applyTournamentMissedBetPenalties(gameIds) {
       `SELECT DISTINCT l.* FROM leagues l
        JOIN competitions c ON c.slug = l.tournament_slug
        JOIN games g ON g.competition_id = c.id
-       WHERE l.format = 'tournament'
+       WHERE l.is_tournament = true
          AND l.status = 'active'
          AND l.penalty_per_missed_bet > 0
          AND g.id = ANY($1::uuid[])`,
@@ -386,7 +386,7 @@ async function autoSettleTournamentLeagues() {
     // tournament is finished AND has no pending bets
     const leaguesRes = await pool.query(
       `SELECT l.* FROM leagues l
-       WHERE l.format = 'tournament'
+       WHERE l.is_tournament = true
          AND l.status = 'active'
          AND l.auto_settle = true
          AND l.tournament_slug IS NOT NULL

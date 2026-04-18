@@ -11,22 +11,22 @@ function generateInviteCode() {
 router.post('/', authenticate, async (req, res, next) => {
   const {
     name, description, format, duration_type, access_type,
-    bet_mode, min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
-    tournament_slug, stake_per_match, join_policy, auto_settle, penalty_per_missed_bet,
-    max_members,
+    min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
+    is_tournament, tournament_slug, stake_per_match, join_policy, auto_settle,
+    penalty_per_missed_bet, max_members,
   } = req.body;
-
-  if (bet_mode && !['minimum_stake', 'initial_balance'].includes(bet_mode)) {
-    return res.status(400).json({ error: 'bet_mode must be minimum_stake or initial_balance' });
-  }
 
   if (!name || !format || !duration_type) {
     return res.status(400).json({ error: 'name, format, duration_type required' });
   }
-  if (!['pool', 'per_game', 'tournament'].includes(format)) {
-    return res.status(400).json({ error: 'format must be pool, per_game, or tournament' });
+  if (!['pool', 'per_game'].includes(format)) {
+    return res.status(400).json({ error: 'format must be pool or per_game' });
   }
-  if (['pool', 'tournament'].includes(format) && distribution) {
+
+  // bet_mode is derived from format: pool → initial_balance, per_game → minimum_stake
+  const derived_bet_mode = format === 'pool' ? 'initial_balance' : 'minimum_stake';
+
+  if (distribution) {
     const total = distribution.reduce((sum, d) => sum + d.pct, 0);
     if (total !== 100) return res.status(400).json({ error: 'Distribution must sum to 100' });
     if (distribution.some(d => d.pct <= 0)) return res.status(400).json({ error: 'Distribution percentages must be greater than 0' });
@@ -38,9 +38,8 @@ router.post('/', authenticate, async (req, res, next) => {
   try {
     await client.query('BEGIN');
 
-    // Tournament-specific validation
-    if (format === 'tournament') {
-      if (!tournament_slug) return res.status(400).json({ error: 'tournament_slug required for tournament leagues' });
+    // Tournament validation (optional competition)
+    if (is_tournament && tournament_slug) {
       const compCheck = await client.query('SELECT id FROM competitions WHERE slug = $1', [tournament_slug]);
       if (!compCheck.rows[0]) return res.status(400).json({ error: 'Competition not found' });
     }
@@ -50,16 +49,18 @@ router.post('/', authenticate, async (req, res, next) => {
       `INSERT INTO leagues
          (name, description, creator_id, invite_code, format, duration_type, access_type,
           bet_mode, min_bet, entry_fee, distribution, allowed_competitions, season_end_date,
-          tournament_slug, stake_per_match, join_policy, auto_settle, penalty_per_missed_bet, max_members)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
+          is_tournament, tournament_slug, stake_per_match, join_policy, auto_settle,
+          penalty_per_missed_bet, max_members)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
       [
         name, description || null, req.user.id, invite_code, format,
         duration_type, access_type || 'invite',
-        bet_mode || 'minimum_stake',
-        min_bet || 10, entry_fee || 0,
+        derived_bet_mode,
+        min_bet || (format === 'per_game' ? 10 : 0), entry_fee || 0,
         distribution ? JSON.stringify(distribution) : null,
         allowed_competitions ? JSON.stringify(allowed_competitions) : null,
         season_end_date || null,
+        is_tournament ? true : false,
         tournament_slug || null,
         stake_per_match || 0,
         join_policy || 'anytime',
@@ -124,7 +125,7 @@ router.post('/join', authenticate, async (req, res, next) => {
     }
 
     // Tournament join_policy enforcement
-    if (league.format === 'tournament' && league.join_policy === 'before_start' && league.tournament_slug) {
+    if (league.is_tournament && league.join_policy === 'before_start' && league.tournament_slug) {
       const firstGame = await client.query(
         `SELECT MIN(g.start_time) AS first_start
          FROM games g JOIN competitions c ON c.id = g.competition_id
@@ -220,7 +221,7 @@ router.get('/:id/matches', authenticate, async (req, res, next) => {
     const leagueRes = await pool.query(`SELECT * FROM leagues WHERE id = $1`, [req.params.id]);
     const league = leagueRes.rows[0];
     if (!league) return res.status(404).json({ error: 'League not found' });
-    if (!league.tournament_slug) return res.status(400).json({ error: 'Not a tournament league' });
+    if (!league.is_tournament || !league.tournament_slug) return res.status(400).json({ error: 'Not a tournament league' });
 
     const result = await pool.query(
       `SELECT g.id, g.home_team, g.away_team, g.home_team_logo, g.away_team_logo,

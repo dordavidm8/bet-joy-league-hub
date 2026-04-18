@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague, searchUsers } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins } from "lucide-react";
+import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins, Flag } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
@@ -38,19 +38,20 @@ const LeaguesPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [access, setAccess] = useState<"invite" | "public">("invite");
-  const [format, setFormat] = useState<"pool" | "per_game" | "tournament">("pool");
+  const [format, setFormat] = useState<"pool" | "per_game">("pool");
   const [duration, setDuration] = useState("full_season");
   const [entryFee, setEntryFee] = useState("0");
+  const [minStake, setMinStake] = useState("10");
   const [maxMembers, setMaxMembers] = useState("");
   const [distribution, setDistribution] = useState(DEFAULT_DISTRIBUTION);
-  // Tournament-specific
-  const [tournamentSlug, setTournamentSlug] = useState("fifa.world");
+  // Tournament modifier
+  const [isTournament, setIsTournament] = useState(false);
+  const [tournamentSlug, setTournamentSlug] = useState("");
   const [stakePerMatch, setStakePerMatch] = useState("50");
   const [penaltyPerMissedBet, setPenaltyPerMissedBet] = useState("0");
   const [seasonEndDate, setSeasonEndDate] = useState("");
   const [joinPolicy, setJoinPolicy] = useState<"before_start" | "anytime">("before_start");
   const [autoSettle, setAutoSettle] = useState(true);
-  const [betMode, setBetMode] = useState<"minimum_stake" | "initial_balance">("minimum_stake");
 
   const { data: leaguesData, isLoading: leaguesLoading } = useQuery({
     queryKey: ["my-leagues"],
@@ -81,15 +82,16 @@ const LeaguesPage = () => {
         name,
         description: description.trim() || undefined,
         format,
-        duration_type: format === "tournament" ? "tournament" : duration,
+        duration_type: isTournament ? "tournament" : duration,
         access_type: access,
-        bet_mode: betMode,
+        min_bet: format === "per_game" ? (parseInt(minStake) || 10) : 0,
         entry_fee: parseInt(entryFee) || 0,
         max_members: parseInt(maxMembers) > 0 ? parseInt(maxMembers) : undefined,
-        distribution: (format === "pool" || format === "tournament") && parseInt(entryFee) > 0 ? distribution : undefined,
-        ...(format === "tournament" && {
-          tournament_slug: tournamentSlug,
-          stake_per_match: parseInt(stakePerMatch) || 0,
+        distribution: parseInt(entryFee) > 0 ? distribution : undefined,
+        is_tournament: isTournament || undefined,
+        ...(isTournament && {
+          tournament_slug: tournamentSlug || undefined,
+          stake_per_match: format === "per_game" ? (parseInt(stakePerMatch) || 0) : 0,
           penalty_per_missed_bet: parseInt(penaltyPerMissedBet) || 0,
           season_end_date: seasonEndDate || undefined,
           join_policy: joinPolicy,
@@ -116,12 +118,11 @@ const LeaguesPage = () => {
 
   const resetForm = () => {
     setName(""); setDescription(""); setAccess("invite"); setFormat("pool");
-    setDuration("full_season"); setEntryFee("0"); setMaxMembers("");
+    setDuration("full_season"); setEntryFee("0"); setMinStake("10"); setMaxMembers("");
     setDistribution(DEFAULT_DISTRIBUTION);
-    setTournamentSlug("fifa.world"); setStakePerMatch("50");
+    setIsTournament(false); setTournamentSlug(""); setStakePerMatch("50");
     setPenaltyPerMissedBet("0"); setSeasonEndDate("");
     setJoinPolicy("before_start"); setAutoSettle(true);
-    setBetMode("minimum_stake");
   };
 
   const distTotal = distribution.reduce((s, d) => s + d.pct, 0);
@@ -183,66 +184,72 @@ const LeaguesPage = () => {
               </div>
 
               {/* Format */}
-              <select value={format} onChange={(e) => setFormat(e.target.value as any)}
-                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
-                <option value="pool">קופה משותפת</option>
-                <option value="per_game">תשלום למשחק</option>
-                <option value="tournament">🏆 ליגת טורניר</option>
-              </select>
-
-              {/* Bet mode */}
               <div className="flex flex-col gap-1.5">
-                <p className="text-xs text-muted-foreground font-medium">מצב הימורים בליגה</p>
+                <p className="text-xs text-muted-foreground font-medium">פורמט ליגה</p>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setBetMode("minimum_stake")}
+                    onClick={() => setFormat("pool")}
                     className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
-                      betMode === "minimum_stake"
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-secondary border-border"
+                      format === "pool" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"
                     }`}
                   >
-                    <span className="block font-bold">סכום מינימלי</span>
-                    <span className="opacity-70">הימור ממאגר הנקודות</span>
+                    <span className="block font-bold">קופה משותפת</span>
+                    <span className="opacity-70">ניקוד · חלוקה לפי מקום</span>
                   </button>
                   <button
-                    onClick={() => setBetMode("initial_balance")}
+                    onClick={() => setFormat("per_game")}
                     className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
-                      betMode === "initial_balance"
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-secondary border-border"
+                      format === "per_game" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"
                     }`}
                   >
-                    <span className="block font-bold">ניקוד צבירה</span>
-                    <span className="opacity-70">ניצחון = קבלת יחס</span>
+                    <span className="block font-bold">תשלום למשחק</span>
+                    <span className="opacity-70">הימור מהמאזן · זוכה שומר</span>
                   </button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  {betMode === "minimum_stake"
-                    ? "חברים מהמרים מיתרת הנקודות הגלובלית שלהם. ניצחון → נקודות חוזרות + מתוספות לליגה."
-                    : "אין ניכוי נקודות. ניצחת → מקבל את יחס הזכייה בנקודות ליגה. הפסדת → כלום. המנצח הוא בעל הניקוד הגבוה ביותר."}
+                  {format === "pool"
+                    ? "ניקוד צבירה — אין ניכוי נקודות. ניצחת → מקבל את יחס הזכייה. הקופה תחולק בסוף לפי הדירוג."
+                    : "חברים מהמרים מיתרת הנקודות הגלובלית שלהם. כל משתתף שומר את מה שזכה."}
                 </p>
               </div>
 
-              {/* Tournament fields */}
-              {format === "tournament" && (
+              {/* Tournament modifier */}
+              <label className="flex items-center gap-2.5 cursor-pointer bg-secondary rounded-xl px-4 py-3">
+                <input type="checkbox" checked={isTournament} onChange={(e) => setIsTournament(e.target.checked)}
+                  className="w-4 h-4 accent-primary shrink-0" />
+                <div>
+                  <span className="text-sm font-bold flex items-center gap-1"><Flag size={13} className="text-primary" /> ליגת טורניר</span>
+                  <span className="text-[11px] text-muted-foreground">כל חברי הליגה מהמרים על אותו טורניר</span>
+                </div>
+              </label>
+
+              {/* Tournament settings */}
+              {isTournament && (
                 <div className="flex flex-col gap-3 border border-primary/20 rounded-xl p-3 bg-primary/5">
                   <p className="text-xs font-bold text-primary">הגדרות טורניר</p>
 
-                  <select value={tournamentSlug} onChange={(e) => setTournamentSlug(e.target.value)}
-                    className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
-                    {KNOWN_COMPETITIONS.map(c => (
-                      <option key={c.slug} value={c.slug}>{c.name}</option>
-                    ))}
-                  </select>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground shrink-0">הימור מינימלי למשחק</span>
-                    <input type="number" min={0} value={stakePerMatch}
-                      onChange={(e) => setStakePerMatch(e.target.value)}
-                      className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                    <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+                  {/* Competition selector (optional) */}
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs text-muted-foreground">תחרות (אופציונלי)</p>
+                    <select value={tournamentSlug} onChange={(e) => setTournamentSlug(e.target.value)}
+                      className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
+                      <option value="">ללא — ידני</option>
+                      {KNOWN_COMPETITIONS.map(c => (
+                        <option key={c.slug} value={c.slug}>{c.name}</option>
+                      ))}
+                    </select>
                   </div>
+
+                  {/* Stake per match — only for per_game */}
+                  {format === "per_game" && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground shrink-0">הימור מינימלי למשחק</span>
+                      <input type="number" min={0} value={stakePerMatch}
+                        onChange={(e) => setStakePerMatch(e.target.value)}
+                        className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground shrink-0">קנס על אי-הימור</span>
@@ -284,13 +291,23 @@ const LeaguesPage = () => {
               )}
 
               {/* Duration (non-tournament only) */}
-              {format !== "tournament" && (
+              {!isTournament && (
                 <select value={duration} onChange={(e) => setDuration(e.target.value)}
                   className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
                   <option value="full_season">עונה מלאה</option>
                   <option value="single_round">סבב בודד</option>
                   <option value="cup">גביע</option>
                 </select>
+              )}
+
+              {/* Min stake per game (per_game format, non-tournament) */}
+              {format === "per_game" && !isTournament && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground shrink-0">הימור מינימלי למשחק</span>
+                  <input type="number" min={1} value={minStake} onChange={(e) => setMinStake(e.target.value)}
+                    className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+                </div>
               )}
 
               {/* Max members */}
@@ -303,15 +320,17 @@ const LeaguesPage = () => {
 
               {/* Entry fee */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground shrink-0">דמי כניסה</span>
+                <span className="text-sm text-muted-foreground shrink-0">
+                  {format === "pool" ? "דמי כניסה (לקופה)" : "דמי כניסה (אופציונלי)"}
+                </span>
                 <input type="number" min={0} value={entryFee} onChange={(e) => setEntryFee(e.target.value)}
                   placeholder="0"
                   className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                 <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
               </div>
 
-              {/* Distribution (pool or tournament + entry fee > 0) */}
-              {(format === "pool" || format === "tournament") && parseInt(entryFee) > 0 && (
+              {/* Distribution — always for pool, for per_game when entry fee > 0 */}
+              {(format === "pool" || parseInt(entryFee) > 0) && (
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-bold text-muted-foreground">חלוקת פרסים (סה״כ: {distTotal}%)</p>
                   {distribution.map((d, i) => (
@@ -321,8 +340,20 @@ const LeaguesPage = () => {
                         onChange={(e) => setDistribution(prev => prev.map((x, j) => j === i ? { ...x, pct: parseInt(e.target.value) || 0 } : x))}
                         className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                       <span className="text-sm text-muted-foreground shrink-0">%</span>
+                      {i > 0 && (
+                        <button onClick={() => setDistribution(prev => prev.filter((_, j) => j !== i))}
+                          className="text-muted-foreground hover:text-destructive text-xs px-1">×</button>
+                      )}
                     </div>
                   ))}
+                  {distribution.length < 5 && (
+                    <button
+                      onClick={() => setDistribution(prev => [...prev, { place: prev.length + 1, pct: 0 }])}
+                      className="text-xs text-primary self-start hover:underline"
+                    >
+                      + הוסף מקום
+                    </button>
+                  )}
                   {distTotal !== 100 && (
                     <p className="text-xs text-destructive">סה״כ חייב להיות 100% (כרגע: {distTotal}%)</p>
                   )}
@@ -330,7 +361,7 @@ const LeaguesPage = () => {
               )}
 
               <Button variant="cta" size="lg" onClick={() => createMutation.mutate()}
-                disabled={!name || createMutation.isPending || ((format === "pool" || format === "tournament") && parseInt(entryFee) > 0 && distTotal !== 100)}>
+                disabled={!name || createMutation.isPending || (parseInt(entryFee) > 0 && distTotal !== 100) || (format === "pool" && distTotal !== 100)}>
                 {createMutation.isPending ? "יוצר..." : "צור ליגה"}
               </Button>
               {createMutation.isError && (

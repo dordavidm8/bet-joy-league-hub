@@ -7,7 +7,7 @@ import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, Che
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-const FORMAT_LABEL = { pool: "קופה משותפת", per_game: "תשלום למשחק" };
+const FORMAT_LABEL: Record<string, string> = { pool: "קופה משותפת", per_game: "תשלום למשחק" };
 const DURATION_LABEL: Record<string, string> = {
   full_season: "עונה מלאה",
   single_round: "סבב בודד",
@@ -30,7 +30,7 @@ const LeagueDetailPage = () => {
     enabled: !!leagueId,
   });
 
-  const isTournament = data?.league.format === "tournament";
+  const isTournament = !!data?.league.is_tournament;
 
   const { data: matchesData } = useQuery({
     queryKey: ["league-matches", leagueId],
@@ -306,7 +306,7 @@ const LeagueDetailPage = () => {
                 <button
                   key={match.id}
                   onClick={() => canBet
-                    ? navigate(`/games/${match.id}`)
+                    ? navigate(`/game/${match.id}`)
                     : alert('לא ניתן להמר על משחק זה — חלון ההימורים נסגר')
                   }
                   className={`w-full flex items-center gap-3 p-3 rounded-xl border text-right transition-colors ${
@@ -365,7 +365,7 @@ const LeagueDetailPage = () => {
       {/* Actions */}
       {!isFinished && (
         <div className="px-5 flex flex-col gap-3">
-          {isCreator && (league.format === "pool" || league.format === "tournament") && league.pool_total > 0 && (
+          {isCreator && league.pool_total > 0 && (
             <>
               {showSettle ? (
                 <div className="card-kickoff flex flex-col gap-3 border border-destructive/30">

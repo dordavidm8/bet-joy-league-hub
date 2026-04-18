@@ -323,3 +323,13 @@ DO $$ BEGIN
       USING points_in_league::DECIMAL(10,2);
   END IF;
 END $$;
+
+-- Tournament is a modifier, not a format value
+-- Formats are now: 'pool' | 'per_game'
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS is_tournament BOOLEAN NOT NULL DEFAULT false;
+
+-- Migrate legacy format='tournament' rows
+UPDATE leagues
+  SET is_tournament = true,
+      format = CASE WHEN bet_mode = 'initial_balance' THEN 'pool' ELSE 'per_game' END
+  WHERE format = 'tournament';
