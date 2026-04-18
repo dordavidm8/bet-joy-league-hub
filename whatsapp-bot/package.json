@@ -1,0 +1,17 @@
+{
+  "name": "kickoff-wa-bot",
+  "version": "1.0.0",
+  "description": "Kickoff WhatsApp Bot",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --watch bot.js"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.26.0",
+    "qrcode-terminal": "^0.12.0",
+    "pg": "^8.13.0",
+    "node-cron": "^3.0.3",
+    "express": "^4.18.2"
+  }
+}

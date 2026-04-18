@@ -1,9 +1,9 @@
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMyBets, getMyReferralCode, updateAvatar, updateProfile, deleteAccount, getMyAchievements, getDetailedStats, ACHIEVEMENTS } from "@/lib/api";
+import { getMyBets, getMyReferralCode, updateAvatar, updateProfile, deleteAccount, getMyAchievements, getDetailedStats, ACHIEVEMENTS, getWaStatus, linkPhone, verifyPhone, unlinkPhone, setWaOptIn } from "@/lib/api";
 import AvatarUploader from "@/components/AvatarUploader";
 import { motion } from "framer-motion";
-import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X } from "lucide-react";
+import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X, Smartphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
@@ -31,6 +31,47 @@ const ProfilePage = () => {
   const { data: detailedStats } = useQuery({ queryKey: ["my-detailed-stats"], queryFn: getDetailedStats });
 
   const [avatarSaveError, setAvatarSaveError] = useState<string | null>(null);
+
+  // WhatsApp state
+  const [waPhone, setWaPhone] = useState("");
+  const [waCode, setWaCode] = useState("");
+  const [waStep, setWaStep] = useState<"idle" | "awaiting_code">("idle");
+  const [waMsg, setWaMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const { data: waData, refetch: refetchWa } = useQuery({
+    queryKey: ["wa-status"],
+    queryFn: getWaStatus,
+    staleTime: 60_000,
+  });
+
+  const waLinkMutation = useMutation({
+    mutationFn: () => linkPhone(waPhone),
+    onSuccess: (d) => {
+      setWaStep("awaiting_code");
+      setWaMsg({ ok: true, text: d.debug_code ? `[STUB] קוד: ${d.debug_code}` : 'קוד נשלח לוואטסאפ שלך' });
+    },
+    onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
+  });
+
+  const waVerifyMutation = useMutation({
+    mutationFn: () => verifyPhone(waCode),
+    onSuccess: (d) => {
+      setWaStep("idle"); setWaCode(""); setWaPhone("");
+      setWaMsg({ ok: true, text: `✅ ${d.message}` });
+      refetchWa();
+    },
+    onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
+  });
+
+  const waUnlinkMutation = useMutation({
+    mutationFn: unlinkPhone,
+    onSuccess: () => { setWaMsg({ ok: true, text: 'מספר נותק' }); refetchWa(); },
+  });
+
+  const waOptInMutation = useMutation({
+    mutationFn: (val: boolean) => setWaOptIn(val),
+    onSuccess: () => refetchWa(),
+  });
 
   const avatarMutation = useMutation({
     mutationFn: (url: string) => updateAvatar(url),
@@ -325,6 +366,92 @@ const ProfilePage = () => {
           <LogOut size={18} />
           <span className="text-sm font-medium">התנתק</span>
         </button>
+      </section>
+
+      {/* WhatsApp Section */}
+      <section className="px-5 flex flex-col gap-3">
+        <h2 className="section-label">📱 WhatsApp Bot</h2>
+        <div className="card-kickoff flex flex-col gap-3">
+          {waData?.phone_verified ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold flex items-center gap-1.5">
+                    <Smartphone size={14} className="text-green-500" />
+                    מספר מקושר
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{waData.phone_number}</p>
+                </div>
+                <button
+                  onClick={() => waUnlinkMutation.mutate()}
+                  disabled={waUnlinkMutation.isPending}
+                  className="text-xs text-destructive hover:underline"
+                >
+                  {waUnlinkMutation.isPending ? "מנתק..." : "נתק"}
+                </button>
+              </div>
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm text-muted-foreground">קבל הודעות ממשחקים</span>
+                <button
+                  onClick={() => waOptInMutation.mutate(!waData.wa_opt_in)}
+                  className={`w-11 h-6 rounded-full relative transition-colors ${waData.wa_opt_in ? 'bg-primary' : 'bg-border'}`}
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 bg-card rounded-full shadow-sm transition-transform ${waData.wa_opt_in ? 'left-0.5' : 'left-[calc(100%-1.375rem)]'}`} />
+                </button>
+              </label>
+            </>
+          ) : waStep === "awaiting_code" ? (
+            <>
+              <p className="text-sm text-muted-foreground">הזן את הקוד שנשלח אליך</p>
+              <input
+                type="text"
+                placeholder="קוד 6 ספרות"
+                value={waCode}
+                onChange={e => setWaCode(e.target.value)}
+                maxLength={6}
+                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 tracking-widest text-center"
+              />
+              <button
+                onClick={() => waVerifyMutation.mutate()}
+                disabled={waCode.length < 6 || waVerifyMutation.isPending}
+                className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold disabled:opacity-50"
+              >
+                {waVerifyMutation.isPending ? "מאמת..." : "אמת קוד"}
+              </button>
+              <button onClick={() => { setWaStep("idle"); setWaMsg(null); }} className="text-xs text-muted-foreground text-center">
+                ← חזרה
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">קשר את מספר הוואטסאפ שלך כדי להמר ישירות מהקבוצה</p>
+              <input
+                type="tel"
+                placeholder="מספר טלפון (050XXXXXXX)"
+                value={waPhone}
+                onChange={e => setWaPhone(e.target.value)}
+                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                dir="ltr"
+              />
+              <button
+                onClick={() => { setWaMsg(null); waLinkMutation.mutate(); }}
+                disabled={!waPhone || waLinkMutation.isPending}
+                className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold disabled:opacity-50"
+              >
+                {waLinkMutation.isPending ? "שולח..." : "שלח קוד אימות"}
+              </button>
+            </>
+          )}
+          {waMsg && (
+            <p className={`text-xs text-center ${waMsg.ok ? 'text-green-600' : 'text-destructive'}`}>
+              {waMsg.text}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="px-5 flex flex-col gap-3">
+        <h2 className="section-label">⚙️ הגדרות</h2>
         <button
           onClick={() => setShowDeleteConfirm(true)}
           className="card-kickoff flex items-center gap-3 text-right text-destructive"

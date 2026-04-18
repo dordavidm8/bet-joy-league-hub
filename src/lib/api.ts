@@ -601,3 +601,67 @@ export interface AdminLogEntry {
   details?: Record<string, unknown>;
   created_at: string;
 }
+
+// ── WhatsApp ──────────────────────────────────────────────────────────────────
+export interface WaStatus {
+  phone_number: string | null;
+  phone_verified: boolean;
+  wa_opt_in: boolean;
+}
+
+export interface WaLeagueSettings {
+  league_id: string;
+  bet_mode: 'prediction' | 'fixed';
+  stake_amount: number;
+  exact_score_enabled: boolean;
+  morning_message_time: string;
+  reminder_hours_before: number | null;
+  leaderboard_frequency: 'never' | 'after_game' | 'daily' | 'weekly';
+  leaderboard_time: string | null;
+  leaderboard_day: number | null;
+  wa_group_id: string | null;
+  invite_link: string | null;
+  group_active: boolean;
+}
+
+export const getWaStatus = () =>
+  request<WaStatus>('/whatsapp/status');
+
+export const linkPhone = (phone: string) =>
+  request<{ message: string; phone: string; debug_code?: string }>('/whatsapp/link-phone', {
+    method: 'POST', body: JSON.stringify({ phone }),
+  });
+
+export const verifyPhone = (code: string) =>
+  request<{ message: string; phone: string }>('/whatsapp/verify', {
+    method: 'POST', body: JSON.stringify({ code }),
+  });
+
+export const unlinkPhone = () =>
+  request<{ message: string }>('/whatsapp/unlink', { method: 'DELETE' });
+
+export const setWaOptIn = (wa_opt_in: boolean) =>
+  request<{ wa_opt_in: boolean }>('/whatsapp/opt-in', {
+    method: 'PATCH', body: JSON.stringify({ wa_opt_in }),
+  });
+
+export const getWaLeagueSettings = (leagueId: string) =>
+  request<{ settings: WaLeagueSettings | null }>(`/whatsapp/leagues/${leagueId}/settings`);
+
+export const updateWaLeagueSettings = (leagueId: string, data: Partial<WaLeagueSettings>) =>
+  request<{ message: string }>(`/whatsapp/leagues/${leagueId}/settings`, {
+    method: 'PUT', body: JSON.stringify(data),
+  });
+
+export const createWaGroup = (leagueId: string) =>
+  request<{ wa_group_id?: string; invite_link?: string; status?: string; message?: string }>(
+    `/whatsapp/leagues/${leagueId}/create-group`, { method: 'POST' }
+  );
+
+export const linkWaGroup = (leagueId: string, wa_group_id: string) =>
+  request<{ message: string }>(`/whatsapp/leagues/${leagueId}/link-group`, {
+    method: 'POST', body: JSON.stringify({ wa_group_id }),
+  });
+
+export const unlinkWaGroup = (leagueId: string) =>
+  request<{ message: string }>(`/whatsapp/leagues/${leagueId}/group`, { method: 'DELETE' });

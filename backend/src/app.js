@@ -23,6 +23,7 @@ const minigamesRoutes = require('./routes/minigames');
 const advisorRoutes = require('./routes/advisor');
 const notificationRoutes = require('./routes/notifications');
 const feedRoutes = require('./routes/feed');
+const whatsappRoutes = require('./routes/whatsapp');
 
 const app = express();
 const server = http.createServer(app);
@@ -66,6 +67,7 @@ app.use('/api/minigames', minigamesRoutes);
 app.use('/api/advisor', advisorRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/feed', feedRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 app.use(errorHandler);
 

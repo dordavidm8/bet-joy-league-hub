@@ -333,3 +333,111 @@ UPDATE leagues
   SET is_tournament = true,
       format = CASE WHEN bet_mode = 'initial_balance' THEN 'pool' ELSE 'per_game' END
   WHERE format = 'tournament';
+
+-- ── WhatsApp Bot ──────────────────────────────────────────────────────────────
+
+-- Existing table modifications
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS phone_number   VARCHAR(20) UNIQUE,
+  ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS wa_opt_in      BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE bets
+  ADD COLUMN IF NOT EXISTS is_free_bet       BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS wa_bet            BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS wa_source         VARCHAR(10),
+  ADD COLUMN IF NOT EXISTS wa_bet_message_id TEXT;
+
+ALTER TABLE leagues
+  ADD COLUMN IF NOT EXISTS wa_enabled BOOLEAN NOT NULL DEFAULT false;
+
+-- WA league settings
+CREATE TABLE IF NOT EXISTS wa_league_settings (
+  league_id              UUID PRIMARY KEY REFERENCES leagues(id) ON DELETE CASCADE,
+  bet_mode               VARCHAR(20) NOT NULL DEFAULT 'prediction',
+  stake_amount           INTEGER NOT NULL DEFAULT 0,
+  exact_score_enabled    BOOLEAN NOT NULL DEFAULT false,
+  morning_message_time   TIME NOT NULL DEFAULT '09:00',
+  reminder_hours_before  DECIMAL(4,1),
+  leaderboard_frequency  VARCHAR(20) NOT NULL DEFAULT 'after_game',
+  leaderboard_time       TIME,
+  leaderboard_day        INTEGER
+);
+
+-- WA groups linked to leagues
+CREATE TABLE IF NOT EXISTS wa_groups (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wa_group_id  VARCHAR(200) UNIQUE NOT NULL,
+  league_id    UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  is_active    BOOLEAN NOT NULL DEFAULT true,
+  invite_link  TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Morning/game messages sent (for reply detection)
+CREATE TABLE IF NOT EXISTS wa_game_messages (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id      UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  game_id        UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  wa_message_id  TEXT NOT NULL UNIQUE,
+  group_jid      VARCHAR(200),
+  dm_phone       VARCHAR(20),
+  sent_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_wa_game_msg_id ON wa_game_messages(wa_message_id);
+CREATE INDEX IF NOT EXISTS idx_wa_game_msg_game ON wa_game_messages(game_id, league_id);
+
+-- Reminders sent (deduplication)
+CREATE TABLE IF NOT EXISTS wa_reminders_sent (
+  league_id  UUID REFERENCES leagues(id) ON DELETE CASCADE,
+  game_id    UUID REFERENCES games(id) ON DELETE CASCADE,
+  sent_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (league_id, game_id)
+);
+
+-- OTP codes for phone verification
+CREATE TABLE IF NOT EXISTS wa_verification_codes (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  phone       VARCHAR(20) NOT NULL,
+  code        VARCHAR(6) NOT NULL,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  used        BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_wa_codes_expires ON wa_verification_codes(expires_at);
+
+-- DM conversation state machine
+CREATE TABLE IF NOT EXISTS wa_sessions (
+  phone       VARCHAR(20) PRIMARY KEY,
+  user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+  state       VARCHAR(50) NOT NULL DEFAULT 'idle',
+  context     JSONB NOT NULL DEFAULT '{}',
+  last_msg_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Pending messages (fallback when bot unavailable)
+CREATE TABLE IF NOT EXISTS wa_pending_messages (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  phone      VARCHAR(20),
+  group_jid  VARCHAR(200),
+  text       TEXT NOT NULL,
+  sent       BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_wa_pending_unsent ON wa_pending_messages(sent, created_at) WHERE NOT sent;
+
+-- Message log for monitoring
+CREATE TABLE IF NOT EXISTS wa_message_log (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  direction  VARCHAR(10) NOT NULL,
+  phone      VARCHAR(20),
+  group_jid  VARCHAR(200),
+  message    TEXT,
+  state_from VARCHAR(50),
+  state_to   VARCHAR(50),
+  action     VARCHAR(100),
+  error      TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_wa_log_phone ON wa_message_log(phone, created_at DESC);

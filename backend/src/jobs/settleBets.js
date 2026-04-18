@@ -172,6 +172,12 @@ async function settleBets() {
         if (r.won > 0) checkAndAwardAchievements(userId, 'bet_won').catch(() => {});
       }
 
+      // WhatsApp result notification (best-effort)
+      try {
+        const { notifyGameResult } = require('../services/whatsappBotService');
+        notifyGameResult(game.id).catch(() => {});
+      } catch (_) {}
+
       // Send one notification per user summarising their results for this game (best effort)
       for (const [userId, r] of Object.entries(userBetResults)) {
         if (r.won > 0 && r.lost === 0) {

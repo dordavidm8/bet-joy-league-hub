@@ -346,6 +346,14 @@ async function settleLeaguePool(client, league) {
 
   await client.query(`UPDATE leagues SET status = 'finished' WHERE id = $1`, [league.id]);
 
+  // WhatsApp league end notification (best-effort, after DB commit)
+  if (process.env.STUB_MODE !== 'true') {
+    try {
+      const { notifyLeagueEnd } = require('../services/whatsappBotService');
+      notifyLeagueEnd(league.id).catch(() => {});
+    } catch (_) {}
+  }
+
   // Bulk-insert all result notifications in a single query (best-effort, after transaction)
   if (notificationRows.length > 0 && process.env.STUB_MODE !== 'true') {
     const values = notificationRows.map((_, i) => {

@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, TournamentMatch } from "@/lib/api";
+import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, TournamentMatch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
-import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus } from "lucide-react";
+import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +23,8 @@ const LeagueDetailPage = () => {
   const [showSettle, setShowSettle] = useState(false);
   const [inviteUsername, setInviteUsername] = useState("");
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [waMsg, setWaMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [waGroupInput, setWaGroupInput] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["league", leagueId],
@@ -53,6 +55,28 @@ const LeagueDetailPage = () => {
       queryClient.invalidateQueries({ queryKey: ["my-leagues"] });
       navigate("/leagues");
     },
+  });
+
+  const { data: waSettingsData, refetch: refetchWaSettings } = useQuery({
+    queryKey: ["wa-league-settings", leagueId],
+    queryFn: () => getWaLeagueSettings(leagueId!),
+    enabled: !!leagueId,
+    staleTime: 60_000,
+  });
+
+  const waCreateGroupMutation = useMutation({
+    mutationFn: () => createWaGroup(leagueId!),
+    onSuccess: (d) => {
+      setWaMsg({ ok: true, text: d.invite_link ? `קבוצה נוצרה! ${d.invite_link}` : (d.message || 'בקשה נשלחה') });
+      refetchWaSettings();
+    },
+    onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
+  });
+
+  const waUnlinkGroupMutation = useMutation({
+    mutationFn: () => unlinkWaGroup(leagueId!),
+    onSuccess: () => { setWaMsg({ ok: true, text: 'קבוצה נותקה' }); refetchWaSettings(); },
+    onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });
 
   const inviteMutation = useMutation({
@@ -395,6 +419,72 @@ const LeagueDetailPage = () => {
               <LogOut size={14} /> {leaveMutation.isPending ? "עוזב..." : "עזוב ליגה"}
             </button>
           )}
+        </div>
+      )}
+
+      {/* WhatsApp Bot section — creators only */}
+      {isCreator && !isFinished && (
+        <div className="px-5">
+          <div className="card-kickoff flex flex-col gap-3">
+            <p className="text-xs font-bold flex items-center gap-1.5">
+              <Smartphone size={13} className="text-primary" />
+              WhatsApp Bot
+            </p>
+
+            {waSettingsData?.settings?.group_active ? (
+              <>
+                <p className="text-xs text-green-600">קבוצה מחוברת ✅</p>
+                {waSettingsData.settings.invite_link && (
+                  <a
+                    href={waSettingsData.settings.invite_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline"
+                  >
+                    קישור לקבוצה
+                  </a>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  כדי לקשר קבוצה קיימת — הוסף את הבוט לקבוצה ושלח: <span className="font-mono">/kickoff setup {league.invite_code}</span>
+                </p>
+                <button
+                  onClick={() => waUnlinkGroupMutation.mutate()}
+                  disabled={waUnlinkGroupMutation.isPending}
+                  className="text-xs text-destructive hover:underline self-start"
+                >
+                  {waUnlinkGroupMutation.isPending ? "מנתק..." : "נתק קבוצה"}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] text-muted-foreground">
+                  חבר קבוצת וואטסאפ לליגה — חברים יקבלו הודעות על משחקים ויוכלו להמר ישירות
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setWaMsg(null); waCreateGroupMutation.mutate(); }}
+                  disabled={waCreateGroupMutation.isPending}
+                  className="self-start"
+                >
+                  <Smartphone size={14} /> {waCreateGroupMutation.isPending ? "יוצר..." : "צור קבוצת WhatsApp"}
+                </Button>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1">
+                    או הוסף בוט לקבוצה קיימת — שלח בקבוצה:
+                  </p>
+                  <p className="font-mono text-xs bg-secondary rounded px-2 py-1 select-all">
+                    /kickoff setup {league.invite_code}
+                  </p>
+                </div>
+              </>
+            )}
+            {waMsg && (
+              <p className={`text-xs ${waMsg.ok ? 'text-green-600' : 'text-destructive'}`}>
+                {waMsg.text}
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>
