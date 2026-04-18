@@ -62,6 +62,7 @@ const BetSlipPage = () => {
             selected_outcome: bet.selectedOption,
             stake: 0,
             league_id: bet.league_id,
+            exact_score_prediction: bet.exact_score_prediction,
           });
         }
       } else {
@@ -72,6 +73,7 @@ const BetSlipPage = () => {
             selected_outcome: bet.selectedOption,
             stake: bet.points,
             league_id: bet.league_id,
+            exact_score_prediction: bet.exact_score_prediction,
           });
         }
       }
@@ -186,6 +188,11 @@ const BetSlipPage = () => {
                     ? `ניקוד · ×${bet.odds}`
                     : `${bet.points} נק׳ · ×${bet.odds}`}
                 </span>
+                {bet.exact_score_prediction && (
+                  <span className="text-[11px] font-bold text-amber-500">
+                    🎯 {bet.exact_score_prediction} · בונוס ×3
+                  </span>
+                )}
               </div>
             </div>
             <button

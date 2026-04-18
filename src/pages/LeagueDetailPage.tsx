@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, TournamentMatch } from "@/lib/api";
+import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, searchUsers, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, TournamentMatch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone } from "lucide-react";
@@ -25,6 +25,9 @@ const LeagueDetailPage = () => {
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [waMsg, setWaMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [waGroupInput, setWaGroupInput] = useState("");
+  const [matchTab, setMatchTab] = useState<"upcoming" | "finished">("upcoming");
+  const [inviteSearch, setInviteSearch] = useState("");
+  const [inviteSearchQuery, setInviteSearchQuery] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["league", leagueId],
@@ -77,6 +80,13 @@ const LeagueDetailPage = () => {
     mutationFn: () => unlinkWaGroup(leagueId!),
     onSuccess: () => { setWaMsg({ ok: true, text: 'קבוצה נותקה' }); refetchWaSettings(); },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
+  });
+
+  const { data: inviteSearchData, isLoading: inviteSearchLoading } = useQuery({
+    queryKey: ["invite-search", inviteSearchQuery],
+    queryFn: () => searchUsers(inviteSearchQuery),
+    enabled: inviteSearchQuery.length >= 2,
+    staleTime: 10_000,
   });
 
   const inviteMutation = useMutation({
@@ -183,25 +193,62 @@ const LeagueDetailPage = () => {
               שתף בוואטסאפ
             </a>
 
-            {/* Invite by username */}
+            {/* Invite by username — live search */}
             <div className="mt-3">
               <p className="text-xs text-muted-foreground mb-1.5">הזמן לפי שם משתמש</p>
-              <div className="flex gap-2">
+              <div className="relative">
                 <input
-                  placeholder="שם משתמש..."
-                  value={inviteUsername}
-                  onChange={(e) => setInviteUsername(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && inviteUsername.trim() && inviteMutation.mutate()}
-                  className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="הקלד שם משתמש לחיפוש..."
+                  value={inviteSearch}
+                  onChange={(e) => {
+                    setInviteSearch(e.target.value);
+                    setInviteSearchQuery(e.target.value.trim());
+                    setInviteUsername(e.target.value.trim());
+                  }}
+                  className="w-full bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
+                {/* Search results dropdown */}
+                {inviteSearchQuery.length >= 2 && (
+                  <div className="absolute z-10 top-full mt-1 w-full bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                    {inviteSearchLoading ? (
+                      <p className="text-xs text-muted-foreground px-3 py-2">מחפש...</p>
+                    ) : (inviteSearchData?.users ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground px-3 py-2">לא נמצאו משתמשים</p>
+                    ) : (
+                      (inviteSearchData?.users ?? []).map((u) => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setInviteUsername(u.username);
+                            setInviteSearch(u.username);
+                            setInviteSearchQuery("");
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary transition-colors text-right"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs shrink-0 overflow-hidden">
+                            {u.avatar_url
+                              ? <img src={u.avatar_url} className="w-full h-full object-cover" alt="" />
+                              : "👤"}
+                          </div>
+                          <div className="flex-1 text-right">
+                            <p className="text-sm font-bold">@{u.username}</p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              {inviteUsername && (
                 <button
                   onClick={() => inviteMutation.mutate()}
                   disabled={!inviteUsername.trim() || inviteMutation.isPending}
-                  className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors disabled:opacity-40"
+                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-40"
                 >
-                  <UserPlus size={16} className="text-primary" />
+                  <UserPlus size={13} />
+                  {inviteMutation.isPending ? "שולח..." : `הזמן את @${inviteUsername}`}
                 </button>
-              </div>
+              )}
               {inviteMsg && (
                 <p className={`text-xs mt-1.5 ${inviteMsg.ok ? "text-green-600" : "text-destructive"}`}>
                   {inviteMsg.text}
@@ -320,17 +367,44 @@ const LeagueDetailPage = () => {
             );
           })()}
 
+          {/* Tab toggle */}
+          <div className="flex border border-border rounded-xl overflow-hidden mb-3">
+            <button
+              onClick={() => setMatchTab("upcoming")}
+              className={`flex-1 py-2 text-xs font-bold transition-colors ${
+                matchTab === "upcoming" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
+              }`}
+            >
+              עתידיים
+            </button>
+            <button
+              onClick={() => setMatchTab("finished")}
+              className={`flex-1 py-2 text-xs font-bold transition-colors ${
+                matchTab === "finished" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
+              }`}
+            >
+              שהסתיימו
+            </button>
+          </div>
+
           <div className="flex flex-col gap-2">
-            {matchesData.matches.map((match: TournamentMatch) => {
+            {matchesData.matches
+              .filter((m: TournamentMatch) =>
+                matchTab === "upcoming"
+                  ? m.status === "scheduled" || m.status === "live"
+                  : m.status === "finished"
+              )
+              .map((match: TournamentMatch) => {
               const hasBet = !!match.bet_id;
               const isScheduled = match.status === 'scheduled';
               const isLive = match.status === 'live';
               const canBet = isScheduled || isLive;
+              const isInitialBalanceLeague = league.bet_mode === 'initial_balance';
               return (
                 <button
                   key={match.id}
                   onClick={() => canBet
-                    ? navigate(`/game/${match.id}`)
+                    ? navigate(`/game/${match.id}`, { state: { leagueId } })
                     : alert('לא ניתן להמר על משחק זה — חלון ההימורים נסגר')
                   }
                   className={`w-full flex items-center gap-3 p-3 rounded-xl border text-right transition-colors ${
@@ -367,9 +441,10 @@ const LeagueDetailPage = () => {
                       </span>
                       {hasBet && (
                         <span className="text-[10px] font-bold text-green-600">
-                          {match.selected_outcome} · {match.stake} נק׳
-                          {match.bet_status === 'won' && ` +${match.actual_payout} נק׳`}
-                          {match.bet_status === 'lost' && ' ✗'}
+                          {match.selected_outcome} · {(match.stake ?? 0) > 0 ? `${match.stake} נק׳` : "ניקוד"}
+                          {match.bet_status === "won" && !isInitialBalanceLeague && ` +${match.actual_payout} נק׳`}
+                          {match.bet_status === "won" && isInitialBalanceLeague && match.bet_odds && ` +${match.bet_odds}× נק׳`}
+                          {match.bet_status === "lost" && " ✗"}
                         </span>
                       )}
                     </div>
@@ -382,6 +457,15 @@ const LeagueDetailPage = () => {
                 </button>
               );
             })}
+            {matchesData.matches.filter((m: TournamentMatch) =>
+              matchTab === "upcoming"
+                ? m.status === "scheduled" || m.status === "live"
+                : m.status === "finished"
+            ).length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                {matchTab === "upcoming" ? "אין משחקים עתידיים" : "אין משחקים שהסתיימו"}
+              </p>
+            )}
           </div>
         </div>
       )}

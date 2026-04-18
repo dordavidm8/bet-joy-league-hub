@@ -317,6 +317,7 @@ export interface BackendUser {
 export interface Game {
   id: string;
   competition_name?: string;
+  competition_slug?: string;
   home_team: string;
   away_team: string;
   home_team_logo?: string;
@@ -376,6 +377,7 @@ export interface PlaceBetInput {
   stake: number;
   league_id?: string | null;
   league_ids?: string[];
+  exact_score_prediction?: string;
 }
 
 export interface PlaceParlayInput {
@@ -406,6 +408,7 @@ export interface TournamentMatch {
   bet_id?: string | null;
   selected_outcome?: string | null;
   stake?: number | null;
+  bet_odds?: number | null;
   bet_status?: string | null;
   actual_payout?: number | null;
 }

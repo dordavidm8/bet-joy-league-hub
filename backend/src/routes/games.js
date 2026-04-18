@@ -78,7 +78,7 @@ router.get('/live', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const gameRes = await pool.query(
-      `SELECT g.*, c.name AS competition_name, c.logo_url AS competition_logo
+      `SELECT g.*, c.name AS competition_name, c.slug AS competition_slug, c.logo_url AS competition_logo
        FROM games g LEFT JOIN competitions c ON c.id = g.competition_id WHERE g.id = $1`,
       [req.params.id]
     );

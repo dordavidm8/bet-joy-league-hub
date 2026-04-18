@@ -14,6 +14,7 @@ export interface BetSlipItem {
   league_id: string | null; // null = global bet
   league_name: string | null;
   bet_mode: BetMode;
+  exact_score_prediction?: string;
 }
 
 interface AppState {

@@ -37,7 +37,7 @@ function validateGameWindow(game) {
 router.post('/', authenticate, async (req, res, next) => {
   const {
     game_id, bet_question_id, selected_outcome, stake,
-    league_id, league_ids,
+    league_id, league_ids, exact_score_prediction,
   } = req.body;
 
   if (!game_id || !bet_question_id || !selected_outcome) {
@@ -76,6 +76,23 @@ router.post('/', authenticate, async (req, res, next) => {
     const chosen = question.outcomes.find(o => o.label === selected_outcome);
     if (!chosen) throw Object.assign(new Error('Invalid option'), { status: 400 });
 
+    // Validate exact score prediction if provided
+    const cleanExactScore = exact_score_prediction?.trim() || null;
+    if (cleanExactScore) {
+      const scoreMatch = cleanExactScore.match(/^(\d+)-(\d+)$/);
+      if (!scoreMatch) throw Object.assign(new Error('פורמט תוצאה מדויקת לא תקין — לדוגמה: 2-1'), { status: 400 });
+      const sh = parseInt(scoreMatch[1]);
+      const sa = parseInt(scoreMatch[2]);
+      if (question.type === 'match_winner') {
+        if (selected_outcome === game.home_team && sh <= sa)
+          throw Object.assign(new Error(`תוצאה מדויקת לא מתאימה — ${game.home_team} חייבת לנצח`), { status: 400 });
+        if (selected_outcome === game.away_team && sa <= sh)
+          throw Object.assign(new Error(`תוצאה מדויקת לא מתאימה — ${game.away_team} חייבת לנצח`), { status: 400 });
+        if (selected_outcome === 'Draw' && sh !== sa)
+          throw Object.assign(new Error('תוצאה מדויקת לא מתאימה — תיקו דורש מספרים שווים'), { status: 400 });
+      }
+    }
+
     const baseOdds = parseFloat(chosen.odds) *
       (1 + (game.is_featured ? (game.featured_bonus_pct || 0) : 0) / 100);
 
@@ -104,6 +121,17 @@ router.post('/', authenticate, async (req, res, next) => {
       if (!Number.isInteger(stake) || stake <= 0) {
         return res.status(400).json({ error: 'stake must be a positive integer' });
       }
+      // Validate min_bet per minimum_stake league
+      for (const lid of targets) {
+        if (lid === null) continue;
+        const lData = leagueData[lid];
+        if (lData.bet_mode === 'minimum_stake' && lData.min_bet > 0 && stake < lData.min_bet) {
+          throw Object.assign(
+            new Error(`הליגה "${lData.name}" דורשת הימור מינימלי של ${lData.min_bet} נק׳`),
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Check for existing bets (prevent duplicates per context)
@@ -129,13 +157,15 @@ router.post('/', authenticate, async (req, res, next) => {
              total_bets = total_bets + $2
          WHERE id = $3 AND points_balance >= $1
          RETURNING points_balance`,
-        [totalStake, stakeTargets.length, req.user.id]
+        [totalStake, targets.length, req.user.id]
       );
       if (!balRes.rows[0]) throw Object.assign(new Error('Insufficient points'), { status: 400 });
       newBalance = balRes.rows[0].points_balance;
     } else {
+      // Initial-balance-only bets: no stake deducted, but still count toward total_bets
       const balRes = await client.query(
-        'SELECT points_balance FROM users WHERE id = $1', [req.user.id]
+        `UPDATE users SET total_bets = total_bets + $1 WHERE id = $2 RETURNING points_balance`,
+        [targets.length, req.user.id]
       );
       newBalance = balRes.rows[0]?.points_balance;
     }
@@ -151,11 +181,11 @@ router.post('/', authenticate, async (req, res, next) => {
       const betRes = await client.query(
         `INSERT INTO bets
            (user_id, game_id, bet_question_id, selected_outcome, stake, odds,
-            live_penalty_pct, potential_payout, is_live_bet, match_minute_placed, league_id)
-         VALUES ($1,$2,$3,$4,$5,$6,0,$7,false,NULL,$8)
+            live_penalty_pct, potential_payout, is_live_bet, match_minute_placed, league_id, exact_score_prediction)
+         VALUES ($1,$2,$3,$4,$5,$6,0,$7,false,NULL,$8,$9)
          RETURNING *`,
         [req.user.id, game_id, bet_question_id, selected_outcome,
-         betStake, chosen.odds, potentialPayout, lid]
+         betStake, chosen.odds, potentialPayout, lid, cleanExactScore]
       );
       const bet = betRes.rows[0];
       bets.push(bet);

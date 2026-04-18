@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getGame, getMyLeagues } from "@/lib/api";
 import { useApp } from "@/context/AppContext";
@@ -37,6 +37,8 @@ function useBettingCountdown(startTime: string) {
 const GameDetailPage = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const preselectedLeagueId: string | null = (location.state as any)?.leagueId ?? null;
   const { addToBetSlip, betSlip } = useApp();
   const { backendUser } = useAuth();
 
@@ -53,12 +55,17 @@ const GameDetailPage = () => {
     staleTime: 60_000,
   });
 
+  // Exclude tournament leagues whose slug doesn't match the game's competition
   const activeLeagues = (myLeaguesData?.leagues ?? []).filter(
-    (l) => l.is_active && l.status === "active"
+    (l) =>
+      l.is_active &&
+      l.status === "active" &&
+      (!l.tournament_slug || l.tournament_slug === data?.game?.competition_slug)
   );
 
   const [stakes, setStakes] = useState<Record<string, string>>({});
   const [selections, setSelections] = useState<Record<string, string>>({});
+  const [exactScores, setExactScores] = useState<Record<string, string>>({});
   // betContexts: questionId → Set of context keys ('global' | leagueId)
   const [betContexts, setBetContexts] = useState<Record<string, Set<string>>>({});
   const [showAi, setShowAi] = useState(false);
@@ -93,10 +100,23 @@ const GameDetailPage = () => {
 
   const handleSelect = (questionId: string, label: string) => {
     setSelections((prev) => ({ ...prev, [questionId]: label }));
-    // Default to global context on first selection
+    // On first selection: pre-select originating league (if came from league page) or global
     if (!betContexts[questionId]) {
-      setBetContexts((prev) => ({ ...prev, [questionId]: new Set(["global"]) }));
+      const initial = new Set<string>(
+        preselectedLeagueId ? [preselectedLeagueId] : ["global"]
+      );
+      setBetContexts((prev) => ({ ...prev, [questionId]: initial }));
     }
+  };
+
+  const getExactScoreError = (score: string, selectedOutcome: string): string | null => {
+    if (!score) return null;
+    if (!/^\d+-\d+$/.test(score)) return "פורמט: 0-0";
+    const [h, a] = score.split("-").map(Number);
+    if (selectedOutcome === game.home_team && h <= a) return `${game.home_team} חייבת לנצח`;
+    if (selectedOutcome === game.away_team && a <= h) return `${game.away_team} חייבת לנצח`;
+    if (selectedOutcome === "Draw" && h !== a) return "תיקו = מספרים שווים";
+    return null;
   };
 
   const handleAddToSlip = (questionId: string) => {
@@ -110,6 +130,10 @@ const GameDetailPage = () => {
     const outcome = question.outcomes?.find((o: any) => o.label === selectedLabel);
     const odds = outcome?.odds ?? 1;
     const stakeVal = parseInt(stakes[questionId] || "0");
+
+    const rawScore = exactScores[questionId]?.trim() ?? "";
+    const scoreError = getExactScoreError(rawScore, selectedLabel);
+    const validScore = rawScore && !scoreError ? rawScore : undefined;
 
     for (const ctx of contexts) {
       if (ctx === "global") {
@@ -125,6 +149,7 @@ const GameDetailPage = () => {
           league_id: null,
           league_name: null,
           bet_mode: "global",
+          exact_score_prediction: validScore,
         });
       } else {
         const league = activeLeagues.find((l) => l.id === ctx);
@@ -142,6 +167,7 @@ const GameDetailPage = () => {
           league_id: league.id,
           league_name: league.name,
           bet_mode: isInitialBalance ? "initial_balance" : "minimum_stake",
+          exact_score_prediction: validScore,
         });
       }
     }
@@ -268,6 +294,40 @@ const GameDetailPage = () => {
 
                     {selections[q.id] && (
                       <div className="flex flex-col gap-3">
+                        {/* Exact score prediction — optional bonus ×3 */}
+                        {(() => {
+                          const raw = exactScores[q.id] ?? "";
+                          const scoreErr = raw ? getExactScoreError(raw, selections[q.id]) : null;
+                          const isValid = raw && !scoreErr;
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                                🎯 תוצאה מדויקת
+                                <span className="text-amber-500 font-bold">· בונוס ×3</span>
+                                <span className="text-muted-foreground font-normal">(אופציונלי)</span>
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={raw}
+                                  onChange={(e) => setExactScores((p) => ({ ...p, [q.id]: e.target.value }))}
+                                  placeholder="לדוגמה: 2-1"
+                                  maxLength={5}
+                                  className={`w-28 bg-secondary rounded-xl px-3 py-2 text-sm font-mono outline-none focus:ring-2 ${
+                                    isValid ? "focus:ring-amber-400/40 border border-amber-400/50" : "focus:ring-primary/20"
+                                  }`}
+                                />
+                                {isValid && (
+                                  <span className="text-xs font-bold text-amber-500">✓ ×3 אפשרי!</span>
+                                )}
+                                {scoreErr && (
+                                  <span className="text-xs text-destructive">{scoreErr}</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         {/* League context selector */}
                         {activeLeagues.length > 0 && (
                           <div className="flex flex-col gap-2">
@@ -307,17 +367,33 @@ const GameDetailPage = () => {
                         )}
 
                         {/* Stake input (only when global or minimum_stake leagues selected) */}
-                        {needsStakeInput(q.id) && (
-                          <input
-                            type="number"
-                            min={1}
-                            max={backendUser?.points_balance ?? 9999}
-                            value={stakes[q.id] ?? ""}
-                            onChange={(e) => setStakes((p) => ({ ...p, [q.id]: e.target.value }))}
-                            placeholder="כמה נקודות?"
-                            className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        )}
+                        {needsStakeInput(q.id) && (() => {
+                          const contexts = getContexts(q.id);
+                          const minRequired = Math.max(
+                            0,
+                            ...Array.from(contexts)
+                              .filter(ctx => ctx !== "global")
+                              .map(ctx => activeLeagues.find(l => l.id === ctx))
+                              .filter((l): l is NonNullable<typeof l> => !!l && l.bet_mode !== "initial_balance")
+                              .map(l => l.min_bet ?? 0)
+                          );
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <input
+                                type="number"
+                                min={minRequired || 1}
+                                max={backendUser?.points_balance ?? 9999}
+                                value={stakes[q.id] ?? ""}
+                                onChange={(e) => setStakes((p) => ({ ...p, [q.id]: e.target.value }))}
+                                placeholder={minRequired > 0 ? `מינימום ${minRequired} נק׳` : "כמה נקודות?"}
+                                className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20"
+                              />
+                              {minRequired > 0 && (
+                                <p className="text-[11px] text-muted-foreground">מינימום: {minRequired} נק׳</p>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Add to slip button */}
                         <div className="flex items-center gap-2">

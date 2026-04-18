@@ -33,6 +33,22 @@ async function processBetReply(client, msg, phone, user, gameMsgRecord, content,
     await msg.reply('❌ פורמט תוצאה מדויקת לא תקין. דוגמה: *2-0*');
     return;
   }
+  // Consistency: exact score must match the selected winner
+  if (scoreLine) {
+    const [sh, sa] = scoreLine.split('-').map(Number);
+    if (resultLine === '1' && sh <= sa) {
+      await msg.reply(`❌ תוצאה לא מתאימה — אם בחרת קבוצה ביתית, הקבוצה הביתית חייבת לנצח (לדוגמה: 2-1)`);
+      return;
+    }
+    if (resultLine === '2' && sa <= sh) {
+      await msg.reply(`❌ תוצאה לא מתאימה — אם בחרת קבוצה אורחת, הקבוצה האורחת חייבת לנצח (לדוגמה: 1-2)`);
+      return;
+    }
+    if (resultLine === 'X' && sh !== sa) {
+      await msg.reply(`❌ תוצאה לא מתאימה — תיקו דורש מספרים שווים (לדוגמה: 1-1)`);
+      return;
+    }
+  }
 
   const settings = await getLeagueSettings(gameMsgRecord.league_id);
   const gameRes = await pool.query(`SELECT * FROM games WHERE id = $1`, [gameMsgRecord.game_id]);
@@ -41,7 +57,7 @@ async function processBetReply(client, msg, phone, user, gameMsgRecord, content,
 
   // Find the bet question for winner (type 'result' or 'winner')
   const questionRes = await pool.query(
-    `SELECT * FROM bet_questions WHERE game_id = $1 AND type IN ('result','winner','1x2') AND is_locked = false ORDER BY created_at LIMIT 1`,
+    `SELECT * FROM bet_questions WHERE game_id = $1 AND type IN ('match_winner','result','winner','1x2') AND is_locked = false ORDER BY created_at LIMIT 1`,
     [game.id]
   );
   const question = questionRes.rows[0];
@@ -93,13 +109,16 @@ async function processBetReply(client, msg, phone, user, gameMsgRecord, content,
   }
 
   const wa_msg_id = msg.id._serialized;
+  // Store exact_score_prediction on the main bet — settlement will apply ×3 if it matches
+  const exactScorePrediction = (scoreLine && settings?.exact_score_enabled) ? scoreLine : null;
+
   await pool.query(
     `INSERT INTO bets
        (user_id, game_id, bet_question_id, selected_outcome, stake, odds,
-        potential_payout, is_free_bet, wa_bet, wa_source, wa_bet_message_id, league_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,$10,$11)`,
+        potential_payout, is_free_bet, wa_bet, wa_source, wa_bet_message_id, league_id, exact_score_prediction)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,$10,$11,$12)`,
     [user.id, game.id, question.id, outcomeLabel, stake, outcome.odds,
-     potentialPayout, isFreeBet, source, wa_msg_id, gameMsgRecord.league_id]
+     potentialPayout, isFreeBet, source, wa_msg_id, gameMsgRecord.league_id, exactScorePrediction]
   );
 
   await pool.query(
@@ -108,25 +127,8 @@ async function processBetReply(client, msg, phone, user, gameMsgRecord, content,
   );
 
   await msg.react('👍');
-
-  // Exact score bonus bet
-  if (scoreLine && settings?.exact_score_enabled) {
-    const exactOdds = outcome.odds * 3;
-    const exactPayout = isFreeBet ? Math.round(exactOdds) : Math.round(stake * exactOdds);
-    const exactQuestion = await pool.query(
-      `SELECT id FROM bet_questions WHERE game_id = $1 AND type = 'exact_score' LIMIT 1`,
-      [game.id]
-    );
-    if (exactQuestion.rows[0]) {
-      await pool.query(
-        `INSERT INTO bets
-           (user_id, game_id, bet_question_id, selected_outcome, stake, odds,
-            potential_payout, is_free_bet, wa_bet, wa_source, wa_bet_message_id, league_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,$10,$11)`,
-        [user.id, game.id, exactQuestion.rows[0].id, scoreLine, stake, exactOdds,
-         exactPayout, isFreeBet, source, wa_msg_id, gameMsgRecord.league_id]
-      );
-    }
+  if (exactScorePrediction) {
+    await msg.reply(`🎯 תוצאה מדויקת נרשמה: ${exactScorePrediction} — בונוס ×3 אם תפגע בול!`);
   }
 }
 

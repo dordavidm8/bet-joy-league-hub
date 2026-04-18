@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS bets (
   live_penalty_pct INTEGER NOT NULL DEFAULT 0,
   potential_payout INTEGER NOT NULL,
   actual_payout INTEGER,
+  exact_score_prediction VARCHAR(10) DEFAULT NULL,
   is_live_bet BOOLEAN NOT NULL DEFAULT false,
   match_minute_placed INTEGER,
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS bets (
   placed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   settled_at TIMESTAMPTZ
 );
+-- Migration: ALTER TABLE bets ADD COLUMN IF NOT EXISTS exact_score_prediction VARCHAR(10);
 
 CREATE TABLE IF NOT EXISTS leagues (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

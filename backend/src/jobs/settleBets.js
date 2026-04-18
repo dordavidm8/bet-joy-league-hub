@@ -91,7 +91,7 @@ async function settleBets() {
       }
 
       let settledWon = 0, settledLost = 0;
-      const userBetResults = {}; // userId → { won, lost, totalPayout }
+      const userBetResults = {}; // userId → { won, lost, totalPayout, leaguePoints }
 
       for (const bet of betsRes.rows) {
         const correctOutcome = correctOutcomeMap[bet.bet_question_id];
@@ -101,9 +101,16 @@ async function settleBets() {
         const betMode = bet.league_id ? (leagueModes[bet.league_id] ?? 'minimum_stake') : null;
         const isInitialBalance = betMode === 'initial_balance';
 
+        // Exact score bonus: ×3 if prediction matches actual score
+        const exactScoreHit = won &&
+          bet.exact_score_prediction &&
+          game.score_home != null && game.score_away != null &&
+          bet.exact_score_prediction === `${game.score_home}-${game.score_away}`;
+        const payoutMultiplier = exactScoreHit ? 3 : 1;
+
         // For initial_balance bets, payout is in league points (decimal odds), not integer
         const payout = (won && !isInitialBalance)
-          ? calculatePayout(bet.stake, bet.odds, bet.live_penalty_pct || 0)
+          ? calculatePayout(bet.stake, bet.odds, bet.live_penalty_pct || 0) * payoutMultiplier
           : 0;
 
         await client.query(
@@ -113,12 +120,12 @@ async function settleBets() {
 
         if (won) {
           if (isInitialBalance) {
-            // initial_balance league: credit odds-based points to league standings only
+            // initial_balance league: credit odds-based points (×3 bonus if exact score hit)
             await client.query(
               `UPDATE league_members
                SET points_in_league = points_in_league + $1
                WHERE league_id = $2 AND user_id = $3 AND is_active = true`,
-              [parseFloat(bet.odds), bet.league_id, bet.user_id]
+              [parseFloat(bet.odds) * payoutMultiplier, bet.league_id, bet.user_id]
             );
           } else if (bet.league_id) {
             // minimum_stake league: credit global balance + this league's standings
@@ -156,9 +163,16 @@ async function settleBets() {
         }
 
         // Track for per-user notification
-        if (!userBetResults[bet.user_id]) userBetResults[bet.user_id] = { won: 0, lost: 0, totalPayout: 0 };
-        if (won) { userBetResults[bet.user_id].won++; userBetResults[bet.user_id].totalPayout += payout; }
-        else { userBetResults[bet.user_id].lost++; }
+        if (!userBetResults[bet.user_id]) userBetResults[bet.user_id] = { won: 0, lost: 0, totalPayout: 0, leaguePoints: 0, exactScoreHits: 0 };
+        if (won) {
+          userBetResults[bet.user_id].won++;
+          if (exactScoreHit) userBetResults[bet.user_id].exactScoreHits++;
+          if (isInitialBalance) {
+            userBetResults[bet.user_id].leaguePoints += parseFloat(bet.odds) * payoutMultiplier;
+          } else {
+            userBetResults[bet.user_id].totalPayout += payout;
+          }
+        } else { userBetResults[bet.user_id].lost++; }
       }
 
       // Also settle parlays that include this game's bets
@@ -181,10 +195,14 @@ async function settleBets() {
       // Send one notification per user summarising their results for this game (best effort)
       for (const [userId, r] of Object.entries(userBetResults)) {
         if (r.won > 0 && r.lost === 0) {
+          const exactBonus = r.exactScoreHits > 0 ? ' 🎯 בונוס תוצאה מדויקת!' : '';
+          const payoutDesc = r.totalPayout > 0
+            ? `ניצחת ${r.totalPayout.toLocaleString()} נק׳${exactBonus}`
+            : `הרווחת ${r.leaguePoints.toFixed(1)} נק׳ בליגה${exactBonus}`;
           createNotification(userId, {
             type: 'bet_won',
             title: '✅ הימור מוצלח!',
-            body: `ניצחת ${r.totalPayout.toLocaleString()} נק׳ על ${game.home_team} נגד ${game.away_team}`,
+            body: `${payoutDesc} על ${game.home_team} נגד ${game.away_team}`,
             data: { game_id: game.id },
           }).catch(() => {});
         } else if (r.lost > 0 && r.won === 0) {
@@ -195,10 +213,13 @@ async function settleBets() {
             data: { game_id: game.id },
           }).catch(() => {});
         } else if (r.won > 0 && r.lost > 0) {
+          const mixedDesc = r.totalPayout > 0
+            ? `ניצחת ${r.totalPayout.toLocaleString()} נק׳`
+            : `הרווחת ${r.leaguePoints.toFixed(1)} נק׳ בליגה`;
           createNotification(userId, {
             type: 'bet_won',
             title: `✅ ${r.won} הימורים עברו`,
-            body: `ניצחת ${r.totalPayout.toLocaleString()} נק׳ על ${game.home_team} נגד ${game.away_team}`,
+            body: `${mixedDesc} על ${game.home_team} נגד ${game.away_team}`,
             data: { game_id: game.id },
           }).catch(() => {});
         }

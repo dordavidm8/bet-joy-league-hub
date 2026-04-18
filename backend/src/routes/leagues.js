@@ -191,7 +191,7 @@ router.get('/my/list', authenticate, async (req, res, next) => {
       `SELECT l.*, lm.points_in_league, lm.is_active,
               (SELECT COUNT(*) FROM league_members WHERE league_id = l.id AND is_active = true) AS member_count
        FROM leagues l JOIN league_members lm ON lm.league_id = l.id
-       WHERE lm.user_id = $1 ORDER BY l.created_at DESC`,
+       WHERE lm.user_id = $1 AND lm.is_active = true ORDER BY l.created_at DESC`,
       [req.user.id]
     );
     res.json({ leagues: result.rows });
@@ -226,7 +226,7 @@ router.get('/:id/matches', authenticate, async (req, res, next) => {
     const result = await pool.query(
       `SELECT g.id, g.home_team, g.away_team, g.home_team_logo, g.away_team_logo,
               g.start_time, g.status, g.score_home, g.score_away,
-              b.id AS bet_id, b.selected_outcome, b.stake, b.status AS bet_status, b.actual_payout
+              b.id AS bet_id, b.selected_outcome, b.stake, b.odds AS bet_odds, b.status AS bet_status, b.actual_payout
        FROM games g
        JOIN competitions c ON c.id = g.competition_id
        LEFT JOIN bets b ON b.game_id = g.id AND b.user_id = $2
