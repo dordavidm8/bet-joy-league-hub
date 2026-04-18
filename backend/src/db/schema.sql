@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   firebase_uid VARCHAR(128) UNIQUE NOT NULL,
   username VARCHAR(50) UNIQUE NOT NULL,
+  display_name VARCHAR(100),
   email VARCHAR(255) UNIQUE NOT NULL,
   avatar_url TEXT,
   points_balance INTEGER NOT NULL DEFAULT 500,
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);
 
 CREATE TABLE IF NOT EXISTS point_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -183,9 +185,11 @@ CREATE TABLE IF NOT EXISTS mini_game_attempts (
   puzzle_id UUID NOT NULL REFERENCES daily_mini_games(id) ON DELETE CASCADE,
   is_correct BOOLEAN NOT NULL DEFAULT FALSE,
   points_earned INTEGER NOT NULL DEFAULT 0,
+  attempt_count INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, puzzle_id)
 );
+ALTER TABLE mini_game_attempts ADD COLUMN IF NOT EXISTS attempt_count INTEGER NOT NULL DEFAULT 1;
 
 CREATE INDEX IF NOT EXISTS idx_mini_game_attempts_user ON mini_game_attempts(user_id);
 

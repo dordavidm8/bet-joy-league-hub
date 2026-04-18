@@ -5,7 +5,7 @@ const { pool } = require('../config/database');
 
 // POST /api/auth/register — called after Firebase signup
 router.post('/register', async (req, res, next) => {
-  const { username, referral_code: referralCode, avatar_url } = req.body;
+  const { username, display_name, referral_code: referralCode, avatar_url } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
 
   const header = req.headers.authorization;
@@ -31,10 +31,12 @@ router.post('/register', async (req, res, next) => {
 
     const resolvedAvatar = avatar_url || decoded.picture || null;
 
+    const resolvedDisplayName = display_name?.trim() || decoded.name || username;
+
     const userRes = await pool.query(
-      `INSERT INTO users (firebase_uid, username, email, avatar_url, points_balance, referred_by)
-       VALUES ($1, $2, $3, $4, 5000, $5) RETURNING *`,
-      [decoded.uid, username, decoded.email || '', resolvedAvatar, referrerId]
+      `INSERT INTO users (firebase_uid, username, display_name, email, avatar_url, points_balance, referred_by)
+       VALUES ($1, $2, $3, $4, $5, 5000, $6) RETURNING *`,
+      [decoded.uid, username, resolvedDisplayName, decoded.email || '', resolvedAvatar, referrerId]
     );
     const user = userRes.rows[0];
 

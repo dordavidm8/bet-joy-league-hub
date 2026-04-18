@@ -104,6 +104,26 @@ function matchesClub(guess, secret) {
   return aliases.includes(g);
 }
 
+// GET /api/minigames/status?puzzle_ids=id1,id2
+router.get('/status', authenticate, async (req, res, next) => {
+  const user_id = req.user.id;
+  const ids = (req.query.puzzle_ids || '').split(',').filter(Boolean);
+  if (ids.length === 0) return res.json({ statuses: {} });
+  try {
+    const result = await pool.query(
+      'SELECT puzzle_id, is_correct, COALESCE(attempt_count, 1) AS attempt_count FROM mini_game_attempts WHERE user_id = $1 AND puzzle_id = ANY($2::uuid[])',
+      [user_id, ids]
+    );
+    const statuses = {};
+    for (const row of result.rows) {
+      statuses[row.puzzle_id] = { is_completed: row.is_correct, attempt_count: row.attempt_count };
+    }
+    res.json({ statuses });
+  } catch (error) { next(error); }
+});
+
+const MAX_ATTEMPTS = 3;
+
 // POST /api/minigames/submit
 router.post('/submit', authenticate, async (req, res, next) => {
   const { puzzle_id, guess } = req.body;
@@ -125,13 +145,18 @@ router.post('/submit', authenticate, async (req, res, next) => {
     const { game_type, puzzle_data, solution } = puzzleResult.rows[0];
     const correct_answer = solution.secret;
 
-    // 2. Check if already solved correctly
-    const check = await pool.query(
-      'SELECT * FROM mini_game_attempts WHERE user_id = $1 AND puzzle_id = $2 AND is_correct = true',
+    // 2. Check existing attempt record
+    const existing = await pool.query(
+      'SELECT is_correct, COALESCE(attempt_count, 1) AS attempt_count FROM mini_game_attempts WHERE user_id = $1 AND puzzle_id = $2',
       [user_id, puzzle_id]
     );
-    if (check.rows.length > 0) {
-      return res.json({ success: true, is_correct: true, points_added: 0, correct_answer });
+    const existingRow = existing.rows[0];
+
+    if (existingRow?.is_correct) {
+      return res.json({ success: true, is_correct: true, points_added: 0, attempt_count: existingRow.attempt_count, show_answer: true });
+    }
+    if (existingRow && existingRow.attempt_count >= MAX_ATTEMPTS) {
+      return res.json({ success: false, is_correct: false, points_added: 0, attempt_count: existingRow.attempt_count, show_answer: true, correct_answer });
     }
 
     // 3. Validate guess server-side
@@ -148,15 +173,21 @@ router.post('/submit', authenticate, async (req, res, next) => {
     } else if (game_type === 'guess_club') {
       is_correct = matchesClub(guess, correct_answer);
     } else {
-      // who_are_ya, career_path, missing_xi
       is_correct = matchesName(guess, correct_answer);
     }
 
     const pointsToAward = is_correct ? 500 : 0;
+    const newAttemptCount = (existingRow?.attempt_count ?? 0) + 1;
+    const showAnswer = is_correct || newAttemptCount >= MAX_ATTEMPTS;
 
-    // 4. Insert attempt
+    // 4. Upsert attempt with incremented count
     await pool.query(
-      'INSERT INTO mini_game_attempts (user_id, puzzle_id, is_correct, points_earned) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, puzzle_id) DO UPDATE SET is_correct = EXCLUDED.is_correct, points_earned = EXCLUDED.points_earned, created_at = CURRENT_TIMESTAMP',
+      `INSERT INTO mini_game_attempts (user_id, puzzle_id, is_correct, points_earned, attempt_count)
+       VALUES ($1, $2, $3, $4, 1)
+       ON CONFLICT (user_id, puzzle_id) DO UPDATE SET
+         is_correct = EXCLUDED.is_correct,
+         points_earned = GREATEST(mini_game_attempts.points_earned, EXCLUDED.points_earned),
+         attempt_count = mini_game_attempts.attempt_count + 1`,
       [user_id, puzzle_id, is_correct, pointsToAward]
     );
 
@@ -172,7 +203,14 @@ router.post('/submit', authenticate, async (req, res, next) => {
       );
     }
 
-    res.json({ success: true, is_correct, points_added: pointsToAward, correct_answer });
+    res.json({
+      success: true,
+      is_correct,
+      points_added: pointsToAward,
+      attempt_count: newAttemptCount,
+      show_answer: showAnswer,
+      correct_answer: showAnswer ? correct_answer : undefined,
+    });
   } catch (error) {
     console.error('[MiniGameSubmit] Error:', error);
     next(error);

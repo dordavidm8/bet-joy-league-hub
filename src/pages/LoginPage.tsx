@@ -6,6 +6,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -20,7 +21,7 @@ export default function LoginPage() {
       if (mode === 'login') {
         await signIn(email, password);
       } else {
-        await signUp(email, password, username, referralCode || undefined);
+        await signUp(email, password, username, referralCode || undefined, displayName || undefined);
       }
     } catch (err: any) {
       setError(err.message || 'שגיאה, נסה שוב');
@@ -54,9 +55,17 @@ export default function LoginPage() {
             <>
               <input
                 type="text"
-                placeholder="שם משתמש"
+                placeholder="שם מלא"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                required
+                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2.5 text-sm border border-gray-600 focus:border-green-500 outline-none"
+              />
+              <input
+                type="text"
+                placeholder="שם משתמש (ייחודי, ללא רווחים)"
                 value={username}
-                onChange={e => setUsername(e.target.value)}
+                onChange={e => setUsername(e.target.value.replace(/\s+/g, ''))}
                 required
                 className="w-full bg-gray-800 text-white rounded-lg px-4 py-2.5 text-sm border border-gray-600 focus:border-green-500 outline-none"
               />

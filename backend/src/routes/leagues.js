@@ -206,7 +206,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
     if (!league) return res.status(404).json({ error: 'League not found' });
 
     const membersRes = await pool.query(
-      `SELECT u.id, u.username, u.avatar_url, lm.points_in_league, lm.joined_at, lm.is_active
+      `SELECT u.id, u.username, u.display_name, u.avatar_url, lm.points_in_league, lm.joined_at, lm.is_active
        FROM league_members lm JOIN users u ON u.id = lm.user_id
        WHERE lm.league_id = $1 ORDER BY lm.points_in_league DESC`,
       [req.params.id]
@@ -224,16 +224,20 @@ router.get('/:id/matches', authenticate, async (req, res, next) => {
     if (!league.is_tournament || !league.tournament_slug) return res.status(400).json({ error: 'Not a tournament league' });
 
     const result = await pool.query(
-      `SELECT g.id, g.home_team, g.away_team, g.home_team_logo, g.away_team_logo,
+      `SELECT DISTINCT ON (g.id)
+              g.id, g.home_team, g.away_team, g.home_team_logo, g.away_team_logo,
               g.start_time, g.status, g.score_home, g.score_away,
               b.id AS bet_id, b.selected_outcome, b.stake, b.odds AS bet_odds, b.status AS bet_status, b.actual_payout
        FROM games g
        JOIN competitions c ON c.id = g.competition_id
-       LEFT JOIN bets b ON b.game_id = g.id AND b.user_id = $2
+       LEFT JOIN bets b ON b.game_id = g.id AND b.user_id = $2 AND b.league_id = $3 AND b.status != 'cancelled'
        WHERE c.slug = $1
-       ORDER BY g.start_time ASC`,
-      [league.tournament_slug, req.user.id]
+       ORDER BY g.id, b.placed_at DESC NULLS LAST`,
+      [league.tournament_slug, req.user.id, req.params.id]
     );
+
+    // Sort by start_time after DISTINCT ON
+    result.rows.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
     res.json({ matches: result.rows, stake_per_match: league.stake_per_match });
   } catch (err) { next(err); }

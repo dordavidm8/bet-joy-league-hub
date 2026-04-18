@@ -10,8 +10,8 @@ router.get('/search', async (req, res, next) => {
   if (!q || q.trim().length < 2) return res.json({ users: [] });
   try {
     const result = await pool.query(
-      `SELECT id, username, avatar_url, points_balance, total_bets, total_wins
-       FROM users WHERE username ILIKE $1 ORDER BY points_balance DESC LIMIT 10`,
+      `SELECT id, username, display_name, avatar_url, points_balance, total_bets, total_wins
+       FROM users WHERE username ILIKE $1 OR display_name ILIKE $1 ORDER BY points_balance DESC LIMIT 10`,
       [`${q.trim()}%`]
     );
     res.json({ users: result.rows });

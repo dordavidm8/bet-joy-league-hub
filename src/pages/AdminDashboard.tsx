@@ -12,6 +12,7 @@ import {
   adminGetCompetitions, adminGetLog,
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
+  adminLockGame, adminUnlockGame, adminPauseLeague,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
   adminGetAdmins, adminAddAdmin, adminRemoveAdmin,
@@ -315,6 +316,8 @@ const GamesTab = () => {
 
   const [searchTeam, setSearchTeam] = useState("");
   const [leagueFilter, setLeagueFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [blockedFilter, setBlockedFilter] = useState<"" | "blocked" | "open">("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showAllGames, setShowAllGames] = useState(false);
@@ -356,6 +359,16 @@ const GamesTab = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-games"] }),
   });
 
+  const lockMutation = useMutation({
+    mutationFn: (id: string) => adminLockGame(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-games"] }),
+  });
+
+  const unlockMutation = useMutation({
+    mutationFn: (id: string) => adminUnlockGame(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-games"] }),
+  });
+
   const games = data?.games ?? [];
   const featGame = games.find(g => g.id === featuredGameId);
 
@@ -367,6 +380,9 @@ const GamesTab = () => {
       if (!g.home_team.toLowerCase().includes(q) && !g.away_team.toLowerCase().includes(q)) return false;
     }
     if (leagueFilter && g.competition_name !== leagueFilter) return false;
+    if (statusFilter && g.status !== statusFilter) return false;
+    if (blockedFilter === "blocked" && !(g as any).is_fully_locked) return false;
+    if (blockedFilter === "open" && (g as any).is_fully_locked) return false;
     if (dateFrom && new Date(g.start_time) < new Date(dateFrom)) return false;
     if (dateTo && new Date(g.start_time) > new Date(dateTo + "T23:59:59")) return false;
     return true;
@@ -415,8 +431,21 @@ const GamesTab = () => {
         >
           {showAllGames ? 'טווח רגיל' : 'הצג הכל'}
         </button>
-        {(searchTeam || leagueFilter || dateFrom || dateTo) && (
-          <button onClick={() => { setSearchTeam(""); setLeagueFilter(""); setDateFrom(""); setDateTo(""); }}
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="bg-background border rounded-lg px-2 py-1 text-xs outline-none">
+          <option value="">כל הסטטוסים</option>
+          <option value="scheduled">scheduled</option>
+          <option value="live">live</option>
+          <option value="finished">finished</option>
+        </select>
+        <select value={blockedFilter} onChange={e => setBlockedFilter(e.target.value as any)}
+          className="bg-background border rounded-lg px-2 py-1 text-xs outline-none">
+          <option value="">הכל</option>
+          <option value="blocked">חסום</option>
+          <option value="open">פתוח</option>
+        </select>
+        {(searchTeam || leagueFilter || statusFilter || blockedFilter || dateFrom || dateTo) && (
+          <button onClick={() => { setSearchTeam(""); setLeagueFilter(""); setStatusFilter(""); setBlockedFilter(""); setDateFrom(""); setDateTo(""); }}
             className="text-xs text-primary underline">נקה סננים</button>
         )}
       </div>
@@ -439,6 +468,7 @@ const GamesTab = () => {
                 הימורים {sortField === "bets" ? (sortDir === "asc" ? "↑" : "↓") : "⇅"}
               </th>
               <th className="text-right px-2 py-2 font-semibold text-muted-foreground">featured</th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground">נעילה</th>
               <th className="text-right px-2 py-2 font-semibold text-muted-foreground">אנליטיקות</th>
             </tr></thead>
             <tbody>
@@ -475,6 +505,17 @@ const GamesTab = () => {
                       )}
                     </td>
                     <td className="px-2 py-2">
+                      {(g as any).question_count > 0 && (
+                        <button
+                          onClick={() => { if ((g as any).is_fully_locked) unlockMutation.mutate(g.id); else lockMutation.mutate(g.id); }}
+                          title={(g as any).is_fully_locked ? "בטל נעילת הימורים" : "נעל הימורים"}
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full border transition-colors ${(g as any).is_fully_locked ? 'bg-red-100 border-red-300 text-red-700' : 'bg-gray-100 border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-700'}`}
+                        >
+                          {(g as any).is_fully_locked ? '🔒' : '🔓'}
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-2 py-2">
                       {Number(g.total_bets) > 0 && (
                         <button onClick={() => setExpandedId(expandedId === g.id ? null : g.id)}
                           className="text-primary flex items-center gap-1 text-[11px]">
@@ -485,7 +526,7 @@ const GamesTab = () => {
                   </tr>
                   {expandedId === g.id && (
                     <tr key={`${g.id}-analytics`} className="bg-muted/20">
-                      <td colSpan={9} className="px-4 py-3">
+                      <td colSpan={10} className="px-4 py-3">
                         {!analyticsData ? <p className="text-xs text-muted-foreground">טוען...</p> : (
                           <div className="flex flex-col gap-3">
                             {(analyticsData.questions as AdminGameAnalyticsQuestion[]).map((q, qi) => (
@@ -554,36 +595,88 @@ const GamesTab = () => {
 // ── Leagues Tab ───────────────────────────────────────────────────────────────
 const LeaguesTab = () => {
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useQuery({ queryKey: ["admin-leagues"], queryFn: adminGetLeagues, staleTime: 30_000 });
-  const leagues = data?.leagues ?? [];
+  const queryClient = useQueryClient();
+  const [leagueSearch, setLeagueSearch] = useState("");
+  const [pauseConfirm, setPauseConfirm] = useState<AdminLeague | null>(null);
+  const [pauseMsg, setPauseMsg] = useState("");
 
-  return isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
-    <div className="border rounded-xl overflow-auto">
-      <table className="w-full text-xs min-w-[600px]">
-        <thead className="bg-muted/50"><tr>
-          {["שם", "פורמט", "יוצר", "חברים", "קופה", "דמי כניסה", "סטטוס", "נוצר"].map(h => (
-            <th key={h} className="text-right px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
-          ))}
-        </tr></thead>
-        <tbody>
-          {leagues.map(l => (
-            <tr key={l.id} className="border-t border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/leagues/${l.id}`)}>
-              <td className="px-3 py-2 font-bold">
-                {l.name}
-                {l.tournament_slug && <span className="mr-1 text-primary text-[10px]">🏆{l.tournament_slug}</span>}
-              </td>
-              <td className="px-3 py-2 text-muted-foreground">{l.format}</td>
-              <td className="px-3 py-2">{l.creator_username}</td>
-              <td className="px-3 py-2 font-bold">{fmt(l.member_count)}</td>
-              <td className="px-3 py-2">{fmt(l.pool_total)}</td>
-              <td className="px-3 py-2">{l.entry_fee > 0 ? fmt(l.entry_fee) : "חינם"}</td>
-              <td className="px-3 py-2"><StatusBadge status={l.status} /></td>
-              <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(l.created_at)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {leagues.length === 0 && <p className="text-center text-sm text-muted-foreground py-6">אין ליגות</p>}
+  const { data, isLoading, isError } = useQuery({ queryKey: ["admin-leagues"], queryFn: adminGetLeagues, staleTime: 30_000 });
+  const leagues = (data?.leagues ?? []).filter((l: AdminLeague) => {
+    if (!leagueSearch) return true;
+    const q = leagueSearch.toLowerCase();
+    return l.name.toLowerCase().includes(q) || l.creator_username?.toLowerCase().includes(q);
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: (id: string) => adminPauseLeague(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
+      setPauseMsg("✅ הליגה הושהתה");
+      setTimeout(() => { setPauseConfirm(null); setPauseMsg(""); }, 1500);
+    },
+    onError: (e: any) => setPauseMsg(`❌ ${e.message}`),
+  });
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2">
+        <Search size={16} className="text-muted-foreground shrink-0" />
+        <input value={leagueSearch} onChange={e => setLeagueSearch(e.target.value)}
+          placeholder="חיפוש לפי שם ליגה / יוצר..."
+          className="bg-transparent flex-1 text-sm outline-none" />
+      </div>
+
+      {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
+        <div className="border rounded-xl overflow-auto">
+          <table className="w-full text-xs min-w-[600px]">
+            <thead className="bg-muted/50"><tr>
+              {["שם", "פורמט", "יוצר", "חברים", "קופה", "סטטוס", "נוצר", ""].map(h => (
+                <th key={h} className="text-right px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {leagues.map((l: AdminLeague) => (
+                <tr key={l.id} className="border-t border-border/50 hover:bg-muted/30">
+                  <td className="px-3 py-2 font-bold cursor-pointer hover:text-primary" onClick={() => navigate(`/leagues/${l.id}`)}>
+                    {l.name}
+                    {l.tournament_slug && <span className="mr-1 text-primary text-[10px]">🏆{l.tournament_slug}</span>}
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">{l.format}</td>
+                  <td className="px-3 py-2">{l.creator_username}</td>
+                  <td className="px-3 py-2 font-bold">{fmt(l.member_count)}</td>
+                  <td className="px-3 py-2">{fmt(l.pool_total)}</td>
+                  <td className="px-3 py-2"><StatusBadge status={l.status} /></td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(l.created_at)}</td>
+                  <td className="px-3 py-2">
+                    {l.status === "active" && (
+                      <button onClick={() => { setPauseConfirm(l); setPauseMsg(""); }}
+                        className="text-[11px] text-amber-600 border border-amber-300 bg-amber-50 px-2 py-0.5 rounded-full hover:bg-amber-100 transition-colors">
+                        השהה
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {leagues.length === 0 && <p className="text-center text-sm text-muted-foreground py-6">אין ליגות</p>}
+        </div>
+      )}
+
+      {pauseConfirm && (
+        <Modal onClose={() => setPauseConfirm(null)} title={`השהיית ליגה: ${pauseConfirm.name}`}>
+          <p className="text-sm text-muted-foreground mb-4">
+            האם לשנות את סטטוס הליגה ל-"paused"? חברים לא יוכלו להמר עד שהליגה תחודש.
+          </p>
+          {pauseMsg && <p className="text-sm mb-3">{pauseMsg}</p>}
+          <div className="flex gap-2">
+            <Button className="flex-1 bg-amber-500 hover:bg-amber-600" onClick={() => pauseMutation.mutate(pauseConfirm.id)} disabled={pauseMutation.isPending}>
+              {pauseMutation.isPending ? "משהה..." : "השהה ליגה"}
+            </Button>
+            <Button variant="outline" onClick={() => setPauseConfirm(null)}>ביטול</Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -657,10 +750,8 @@ const MiniGamesTab = () => {
 
   const fetchDraftMutation = useMutation({
     mutationFn: () => adminGetMiniGameDraft(selectedType, selectedType === "trivia" ? { category: triviaCategory, customTopic, customType } : undefined),
-    onSuccess: (data) => {
-      setDraft(data.draft);
-      setMsg("");
-    },
+    onMutate: () => { setDraft(null); setMsg(""); },
+    onSuccess: (data) => { setDraft(data.draft); },
     onError: (e: any) => setMsg(`❌ שגיאה בטעינת החידה: ${e.message}`),
   });
 

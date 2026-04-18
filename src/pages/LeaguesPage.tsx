@@ -470,7 +470,8 @@ const LeaguesPage = () => {
                       {u.avatar_url ? <img src={u.avatar_url} className="w-full h-full object-cover" alt="" /> : <span>👤</span>}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold">@{u.username}</p>
+                      <p className="text-sm font-bold">{u.display_name || u.username}</p>
+                    <p className="text-[10px] text-muted-foreground">@{u.username}</p>
                       <p className="text-xs text-muted-foreground">{u.total_wins}/{u.total_bets} ניצחונות</p>
                     </div>
                     <span className="text-sm font-black text-primary">{u.points_balance.toLocaleString()} נק׳</span>
@@ -512,7 +513,8 @@ const LeaguesPage = () => {
                   {entry.avatar_url ? <img src={entry.avatar_url} className="w-full h-full object-cover" alt="" /> : <span>👤</span>}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold">{entry.username}</p>
+                  <p className="text-sm font-bold">{entry.display_name || entry.username}</p>
+                  <p className="text-[11px] text-muted-foreground/70">@{entry.username}</p>
                   <p className="text-xs text-muted-foreground">{entry.total_wins}/{entry.total_bets} ניצחונות</p>
                 </div>
                 <span className="text-sm font-black text-primary">{entry.points_balance?.toLocaleString()} נק׳</span>

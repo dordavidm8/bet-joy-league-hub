@@ -20,10 +20,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-export const registerUser = (username: string, referral_code?: string, avatar_url?: string) =>
+export const registerUser = (username: string, referral_code?: string, avatar_url?: string, display_name?: string) =>
   request<{ user: BackendUser }>('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ username, referral_code, avatar_url }),
+    body: JSON.stringify({ username, referral_code, avatar_url, display_name }),
   });
 
 export const updateProfile = (data: { username?: string; display_name?: string }) =>
@@ -178,6 +178,8 @@ export const adminGetBets = (status?: string) =>
 export const adminGetGames = (all = false) =>
   request<{ games: AdminGame[] }>(`/admin/games?limit=500${all ? '&from=all' : ''}`);
 export const adminGetLeagues = () => request<{ leagues: AdminLeague[] }>('/admin/leagues');
+export const adminPauseLeague = (id: string) =>
+  request<{ message: string }>(`/admin/leagues/${id}/pause`, { method: 'POST' });
 export const adminGetQuiz = () => request<{ questions: AdminQuizQuestion[] }>('/admin/quiz');
 export const adminAdjustPoints = (userId: string, amount: number, reason: string) =>
   request<{ message: string; user: { username: string; points_balance: number } }>(
@@ -225,6 +227,10 @@ export const adminFeatureGame = (id: string, bonus_pct: number, hours_before: nu
   });
 export const adminUnfeatureGame = (id: string) =>
   request<{ message: string }>(`/admin/games/${id}/feature`, { method: 'DELETE' });
+export const adminLockGame = (id: string) =>
+  request<{ message: string }>(`/admin/games/${id}/lock`, { method: 'POST' });
+export const adminUnlockGame = (id: string) =>
+  request<{ message: string }>(`/admin/games/${id}/lock`, { method: 'DELETE' });
 export const adminGetGameAnalytics = (id: string) =>
   request<{ game: Game; questions: AdminGameAnalyticsQuestion[] }>(`/admin/games/${id}/analytics`);
 export const adminGetUserBets = (userId: string) =>
@@ -305,6 +311,7 @@ export interface BackendUser {
   id: string;
   firebase_uid: string;
   username: string;
+  display_name: string | null;
   email: string;
   avatar_url: string | null;
   points_balance: number;

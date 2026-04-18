@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldQuestion, UserSearch, Map, Grid, ShieldAlert, CheckCircle2, HelpCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-// Define the response shape from backend
 interface Puzzle {
   id: string;
   game_type: 'missing_xi' | 'who_are_ya' | 'career_path' | 'box2box' | 'guess_club' | 'trivia';
@@ -12,51 +11,22 @@ interface Puzzle {
 }
 
 const UI_MAP = {
-  trivia: {
-    title: 'טריוויה',
-    desc: 'היעזר בידע בנבכי עולם הכדורגל בשאלה היומית',
-    icon: HelpCircle,
-    route: '/minigames/trivia'
-  },
-  missing_xi: {
-    title: 'ההרכב החסר',
-    desc: 'נחשו את ההרכב הפותח ממשחק קלאסי',
-    icon: ShieldQuestion,
-    route: '/minigames/missing_xi'
-  },
-  who_are_ya: {
-    title: 'מי אתה?',
-    desc: 'נחשו את השחקן מתוך התמונה המטושטשת והרמזים',
-    icon: UserSearch,
-    route: '/minigames/who_are_ya'
-  },
-  career_path: {
-    title: 'אתגר נתיב הקריירה',
-    desc: 'נחשו את השחקן מתוך נתיב הקריירה שלו',
-    icon: Map,
-    route: '/minigames/career_path'
-  },
-  box2box: {
-    title: 'בוקס2בוקס (Box2Box)',
-    desc: 'השלימו את גריד הכדורגל',
-    icon: Grid,
-    route: '/minigames/box2box'
-  },
-  guess_club: {
-    title: 'נחשו את המועדון',
-    desc: 'כמה טוב אתם מכירים את סמלי הקבוצות?',
-    icon: ShieldAlert,
-    route: '/minigames/guess_club'
-  }
+  trivia: { title: 'טריוויה', desc: 'היעזר בידע בנבכי עולם הכדורגל בשאלה היומית', icon: HelpCircle },
+  missing_xi: { title: 'ההרכב החסר', desc: 'נחשו את ההרכב הפותח ממשחק קלאסי', icon: ShieldQuestion },
+  who_are_ya: { title: 'מי אתה?', desc: 'נחשו את השחקן מתוך התמונה המטושטשת והרמזים', icon: UserSearch },
+  career_path: { title: 'אתגר נתיב הקריירה', desc: 'נחשו את השחקן מתוך נתיב הקריירה שלו', icon: Map },
+  box2box: { title: 'בוקס2בוקס (Box2Box)', desc: 'השלימו את גריד הכדורגל', icon: Grid },
+  guess_club: { title: 'נחשו את המועדון', desc: 'כמה טוב אתם מכירים את סמלי הקבוצות?', icon: ShieldAlert },
 };
 
 const MiniGamesHubPage: React.FC = () => {
   const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
+  const { firebaseUser } = useAuth();
 
   useEffect(() => {
-    // Fetch today's puzzles
     const fetchGames = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -64,6 +34,22 @@ const MiniGamesHubPage: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setPuzzles(data);
+          // Fetch completion status from DB
+          if (firebaseUser && data.length > 0) {
+            const ids = data.map((p: Puzzle) => p.id).join(',');
+            const token = await firebaseUser.getIdToken();
+            const statusRes = await fetch(`${apiUrl}/api/minigames/status?puzzle_ids=${ids}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (statusRes.ok) {
+              const statusData = await statusRes.json();
+              const completed = new Set<string>();
+              for (const [puzzleId, status] of Object.entries(statusData.statuses as Record<string, any>)) {
+                if (status.is_completed) completed.add(puzzleId);
+              }
+              setCompletedIds(completed);
+            }
+          }
         }
       } catch (err) {
         console.error('Failed to fetch mini games', err);
@@ -72,16 +58,7 @@ const MiniGamesHubPage: React.FC = () => {
       }
     };
     fetchGames();
-  }, []);
-
-  // Check LocalStorage for completed states
-  const getIsCompleted = (id: string) => {
-    return localStorage.getItem(`minigame_completed_${id}`) === 'true';
-  };
-
-  const handlePlay = (gameType: string, id: string) => {
-    navigate(`/minigames/play/${id}`);
-  };
+  }, [firebaseUser]);
 
   return (
     <div className="pt-8 px-4 w-full">
@@ -92,21 +69,19 @@ const MiniGamesHubPage: React.FC = () => {
 
       {loading ? (
         <div className="animate-pulse space-y-4">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-28 bg-card rounded-[24px]"></div>
-          ))}
+          {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-28 bg-card rounded-[24px]"></div>)}
         </div>
       ) : (
         <div className="space-y-4">
           {puzzles.map((puzzle, index) => {
             const meta = UI_MAP[puzzle.game_type] || UI_MAP.who_are_ya;
             const Icon = meta.icon;
-            const completed = getIsCompleted(puzzle.id);
+            const completed = completedIds.has(puzzle.id);
 
             return (
               <div
                 key={puzzle.id}
-                onClick={() => handlePlay(puzzle.game_type, puzzle.id)}
+                onClick={() => navigate(`/minigames/play/${puzzle.id}`)}
                 className="card-kickoff flex items-center justify-between group hover:-translate-y-1 transition-transform cursor-pointer"
               >
                 <div className="flex items-center gap-4 flex-1">
@@ -119,7 +94,6 @@ const MiniGamesHubPage: React.FC = () => {
                     <span className="text-primary font-bold text-xs mt-1">חידה #{index + 1}</span>
                   </div>
                 </div>
-
                 <div className="flex items-center justify-center min-w-[48px] mr-2">
                   {completed ? (
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -134,12 +108,7 @@ const MiniGamesHubPage: React.FC = () => {
               </div>
             );
           })}
-
-          {puzzles.length === 0 && !loading && (
-            <div className="text-center py-10 text-muted-foreground">
-              אין חידות זמינות להיום.
-            </div>
-          )}
+          {puzzles.length === 0 && <div className="text-center py-10 text-muted-foreground">אין חידות זמינות להיום.</div>}
         </div>
       )}
     </div>

@@ -17,15 +17,26 @@ async function generateQuizQuestion(options) {
 
   const category = (typeof options === 'string') ? options : (options.category || 'general');
   const categoryName = categoryNames[category] || category;
-  
-  let topicInstruction = `עליך ליצור שאלת טריוויה חדשה, מקורית ומעניינת בנושא: "${categoryName}".`;
+
+  const angleSuggestions = {
+    'general': ['העשור האחרון', 'שנות ה-90', 'ליגת האלופות', 'ליגה האנגלית', 'ליגה הספרדית', 'שיאים', 'העברות'],
+    'history': ['שנות ה-70', 'שנות ה-80', 'שנות ה-60', 'ראשית הכדורגל המקצועי', 'היסטוריה של מונדיאל'],
+    'players': ['קשרים', 'חלוצים', 'שוערים', 'מגנים', 'שחקנים ברזילאים', 'שחקנים ארגנטינאים', 'שחקנים אנגלים'],
+    'clubs': ['קבוצות איטלקיות', 'קבוצות גרמניות', 'קבוצות ספרדיות', 'קבוצות אנגליות', 'ארגמנטינאיות', 'קבוצות צרפתיות'],
+    'world_cup': ['פינאלים', 'שוערים', 'מארגנות', 'שיאים', 'מפתיעות', 'כדורגלניות מפורסמות']
+  };
+  const angles = angleSuggestions[category] || angleSuggestions['general'];
+  const randomAngle = angles[Math.floor(Math.random() * angles.length)];
+  const randomSeed = Math.floor(Math.random() * 10000);
+
+  let topicInstruction = `עליך ליצור שאלת טריוויה חדשה, מקורית ומעניינת בנושא: "${categoryName}". התמקד בזווית: "${randomAngle}". (seed: ${randomSeed})`;
   if (options.customTopic) {
     let context = 'בנושא';
     if (options.customType === 'team') context = 'על הקבוצה';
     else if (options.customType === 'player') context = 'על השחקן';
     else if (options.customType === 'competition') context = 'על התחרות';
 
-    topicInstruction = `עליך ליצור שאלת טריוויה חדשה, מרתקת ומדויקת ${context}: "${options.customTopic}". השאלה חייבת להיות ספציפית וממוקדת בנושא זה בלבד!`;
+    topicInstruction = `עליך ליצור שאלת טריוויה חדשה, מרתקת ומדויקת ${context}: "${options.customTopic}". השאלה חייבת להיות ספציפית וממוקדת בנושא זה בלבד! (seed: ${randomSeed})`;
   }
 
 const prompt = `
@@ -48,7 +59,7 @@ ${topicInstruction}
     const completion = await getGroq().chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
+      temperature: 0.8,
       max_tokens: 500,
     });
 
@@ -98,7 +109,8 @@ module.exports = { generateQuizQuestion, verifyBox2Box };
 
 async function generateWhoAreYaContext(recentPlayers = []) {
   const prompt = `
-אתה מומחה כדורגל. עליך לבחור שחקן כדורגל מפורסם (פעיל או עבר) מוכר ברמה עולמית, ולספק נתונים בסיסיים לגביו למשחק חשיפה.
+אתה מומחה כדורגל. עליך לבחור שחקן כדורגל פעיל כיום (נכון ל-2024-2025) המוכר ברמה עולמית ומשחק בליגות המובילות, ולספק נתונים בסיסיים לגביו למשחק חשיפה.
+חשוב: בחר אך ורק שחקנים שמשחקים פעיל כיום בקבוצה. אין לבחור שחקנים שפרשו, גמלאים, או שהקריירה המקצועית שלהם הסתיימה.
 אזהרה! אסור לך בשום אופן לבחור באחד מהשחקנים הבאים שכבר היו במשחק לאחרונה:
 [${recentPlayers.join(', ')}]
 

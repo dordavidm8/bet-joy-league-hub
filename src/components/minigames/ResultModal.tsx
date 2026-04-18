@@ -7,12 +7,19 @@ interface ResultModalProps {
   solution: string;
   pointsEarned?: number;
   submitError?: string | null;
+  showAnswer?: boolean;
+  attemptsLeft?: number;
   onClose: () => void;
   onRetry?: () => void;
 }
 
-const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, pointsEarned = 0, submitError, onClose, onRetry }) => {
+const ResultModal: React.FC<ResultModalProps> = ({
+  isOpen, isCorrect, solution, pointsEarned = 0, submitError,
+  showAnswer = false, attemptsLeft, onClose, onRetry,
+}) => {
   if (!isOpen) return null;
+
+  const isExhausted = !isCorrect && showAnswer;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
@@ -23,7 +30,7 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, 
 
         <div className="flex flex-col gap-2">
           <h2 className="text-2xl font-black text-foreground">
-            {isCorrect ? 'כל הכבוד!' : 'אופס, לא בדיוק...'}
+            {isCorrect ? 'כל הכבוד!' : isExhausted ? 'נגמרו הניסיונות' : 'אופס, לא בדיוק...'}
           </h2>
           {isCorrect && pointsEarned > 0 && (
             <p className="text-green-500 text-xl font-black">+{pointsEarned} נקודות!</p>
@@ -35,7 +42,11 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, 
                 : submitError
                   ? 'התשובה נכונה, אך לא הצלחנו לשמור את הנקודות.'
                   : 'כבר ענית על אתגר זה היום.'
-              : `התשובה הנכונה הייתה: ${solution}. אל תדאגו, תמיד יש אתגרים חדשים!`}
+              : isExhausted
+                ? `התשובה הנכונה הייתה: ${solution}. אל תדאגו, תמיד יש אתגרים חדשים!`
+                : attemptsLeft !== undefined
+                  ? `נשארו לכם ${attemptsLeft} ניסיון${attemptsLeft === 1 ? '' : 'ות'} נוסף${attemptsLeft === 1 ? '' : 'ים'}`
+                  : 'נסו שוב!'}
           </p>
           {submitError && (
             <div className="flex items-center gap-2 bg-destructive/10 text-destructive text-xs font-medium px-3 py-2 rounded-xl mt-1">
@@ -46,12 +57,12 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, isCorrect, solution, 
         </div>
 
         <div className="w-full flex flex-col gap-3 mt-2">
-          {isCorrect ? (
+          {isCorrect || isExhausted ? (
             <button
               onClick={onClose}
               className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg"
             >
-              המשך למרכז האתגרים
+              {isCorrect ? 'המשך למרכז האתגרים' : 'חזרה לרשימה'}
               <ArrowRight size={20} />
             </button>
           ) : (

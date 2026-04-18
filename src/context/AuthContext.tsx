@@ -16,7 +16,7 @@ interface AuthState {
   backendUser: BackendUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string, referralCode?: string) => Promise<void>;
+  signUp: (email: string, password: string, username: string, referralCode?: string, displayName?: string) => Promise<void>;
   signInWithGoogle: (username?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -89,10 +89,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string, username: string, referralCode?: string) => {
+  const signUp = async (email: string, password: string, username: string, referralCode?: string, displayName?: string) => {
     await createUserWithEmailAndPassword(auth, email, password);
     try {
-      const data = await registerUser(username, referralCode);
+      const data = await registerUser(username, referralCode, undefined, displayName);
       setBackendUser(data.user);
     } catch (err: any) {
       // If auto-registration already fired via onAuthStateChanged, just fetch existing user

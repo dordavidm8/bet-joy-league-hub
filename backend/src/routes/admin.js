@@ -175,7 +175,9 @@ router.get('/games', async (req, res, next) => {
 
     const result = await pool.query(
       `SELECT g.*, c.name AS competition_name,
-              (SELECT COUNT(*) FROM bets WHERE game_id = g.id) AS total_bets
+              (SELECT COUNT(*) FROM bets WHERE game_id = g.id) AS total_bets,
+              (SELECT BOOL_AND(is_locked) FROM bet_questions WHERE game_id = g.id) AS is_fully_locked,
+              (SELECT COUNT(*) FROM bet_questions WHERE game_id = g.id) AS question_count
        FROM games g LEFT JOIN competitions c ON c.id = g.competition_id
        ${where}
        ORDER BY g.start_time ASC LIMIT $1 OFFSET $2`,
@@ -200,6 +202,19 @@ router.get('/leagues', async (req, res, next) => {
       [limit, offset]
     );
     res.json({ leagues: result.rows });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/leagues/:id/pause
+router.post('/leagues/:id/pause', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `UPDATE leagues SET status = 'paused' WHERE id = $1 AND status = 'active' RETURNING id, name`,
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'League not found or not active' });
+    await logAdminAction(req.user.email, 'pause_league', 'league', req.params.id, { name: result.rows[0].name });
+    res.json({ message: 'League paused', league: result.rows[0] });
   } catch (err) { next(err); }
 });
 
@@ -430,6 +445,24 @@ router.get('/games/:id/analytics', async (req, res, next) => {
     }
 
     res.json({ game: gameRes.rows[0], questions: Object.values(grouped) });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/games/:id/lock — lock all bet questions for a game
+router.post('/games/:id/lock', async (req, res, next) => {
+  try {
+    await pool.query(`UPDATE bet_questions SET is_locked = true WHERE game_id = $1`, [req.params.id]);
+    await logAdminAction(req.user.email, 'lock_game', 'game', req.params.id, null);
+    res.json({ message: 'All questions locked' });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/games/:id/lock — unlock all bet questions for a game
+router.delete('/games/:id/lock', async (req, res, next) => {
+  try {
+    await pool.query(`UPDATE bet_questions SET is_locked = false WHERE game_id = $1`, [req.params.id]);
+    await logAdminAction(req.user.email, 'unlock_game', 'game', req.params.id, null);
+    res.json({ message: 'All questions unlocked' });
   } catch (err) { next(err); }
 });
 

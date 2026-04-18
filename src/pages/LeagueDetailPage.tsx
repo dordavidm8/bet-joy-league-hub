@@ -231,7 +231,8 @@ const LeagueDetailPage = () => {
                               : "👤"}
                           </div>
                           <div className="flex-1 text-right">
-                            <p className="text-sm font-bold">@{u.username}</p>
+                            <p className="text-sm font-bold">{u.display_name || u.username}</p>
+                            <p className="text-[10px] text-muted-foreground">@{u.username}</p>
                           </div>
                         </button>
                       ))
@@ -307,13 +308,13 @@ const LeagueDetailPage = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold truncate flex items-center gap-1">
                       {isMe ? (
-                        <span>{member.username}</span>
+                        <span>{member.display_name || member.username}</span>
                       ) : (
                         <button
                           onClick={() => navigate(`/profile/${member.username}`)}
                           className="hover:text-primary transition-colors truncate"
                         >
-                          {member.username}
+                          {member.display_name || member.username}
                         </button>
                       )}
                       {member.id === league.creator_id && <Crown size={11} className="text-amber-500 shrink-0" />}
@@ -506,8 +507,8 @@ const LeagueDetailPage = () => {
         </div>
       )}
 
-      {/* WhatsApp Bot section — creators only */}
-      {isCreator && !isFinished && (
+      {/* WhatsApp Bot section */}
+      {!isFinished && (
         <div className="px-5">
           <div className="card-kickoff flex flex-col gap-3">
             <p className="text-xs font-bold flex items-center gap-1.5">
@@ -523,23 +524,28 @@ const LeagueDetailPage = () => {
                     href={waSettingsData.settings.invite_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline"
+                    className="flex items-center gap-1.5 text-sm font-bold text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2 hover:bg-green-100 transition-colors self-start"
                   >
-                    קישור לקבוצה
+                    <Smartphone size={14} />
+                    הצטרף לקבוצת WhatsApp
                   </a>
                 )}
-                <p className="text-[11px] text-muted-foreground">
-                  כדי לקשר קבוצה קיימת — הוסף את הבוט לקבוצה ושלח: <span className="font-mono">/kickoff setup {league.invite_code}</span>
-                </p>
-                <button
-                  onClick={() => waUnlinkGroupMutation.mutate()}
-                  disabled={waUnlinkGroupMutation.isPending}
-                  className="text-xs text-destructive hover:underline self-start"
-                >
-                  {waUnlinkGroupMutation.isPending ? "מנתק..." : "נתק קבוצה"}
-                </button>
+                {isCreator && (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">
+                      לקישור קבוצה קיימת — הוסף את הבוט לקבוצה ושלח: <span className="font-mono">/kickoff setup {league.invite_code}</span>
+                    </p>
+                    <button
+                      onClick={() => waUnlinkGroupMutation.mutate()}
+                      disabled={waUnlinkGroupMutation.isPending}
+                      className="text-xs text-destructive hover:underline self-start"
+                    >
+                      {waUnlinkGroupMutation.isPending ? "מנתק..." : "נתק קבוצה"}
+                    </button>
+                  </>
+                )}
               </>
-            ) : (
+            ) : isCreator ? (
               <>
                 <p className="text-[11px] text-muted-foreground">
                   חבר קבוצת וואטסאפ לליגה — חברים יקבלו הודעות על משחקים ויוכלו להמר ישירות
@@ -562,6 +568,10 @@ const LeagueDetailPage = () => {
                   </p>
                 </div>
               </>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                עדיין לא קושרה קבוצת וואטסאפ לליגה זו
+              </p>
             )}
             {waMsg && (
               <p className={`text-xs ${waMsg.ok ? 'text-green-600' : 'text-destructive'}`}>

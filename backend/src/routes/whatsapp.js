@@ -11,10 +11,10 @@ function generateOTP() {
 }
 
 function normalizePhone(raw) {
-  // Strip all non-digit chars, ensure Israel country code
   const digits = raw.replace(/\D/g, '');
-  if (digits.startsWith('972')) return digits;
-  if (digits.startsWith('0')) return '972' + digits.slice(1);
+  if (digits.startsWith('0972')) return digits.slice(1); // 0972... → 972...
+  if (digits.startsWith('972')) return digits;           // +972 or 972...
+  if (digits.startsWith('0')) return '972' + digits.slice(1); // 05x... → 9725x...
   return '972' + digits;
 }
 
@@ -132,7 +132,7 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
     if (!user.phone_verified) return res.status(400).json({ error: 'יש לאמת מספר טלפון תחילה' });
 
     const result = await callBot('/internal/create-group', {
-      name: league.name,
+      name: `kickoff - ${league.name} ⚽`,
       phones: [user.phone_number],
     });
 

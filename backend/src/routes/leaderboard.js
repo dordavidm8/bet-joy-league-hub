@@ -8,7 +8,7 @@ router.get('/global', async (req, res, next) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   try {
     const result = await pool.query(
-      `SELECT id, username, avatar_url, points_balance, total_bets, total_wins,
+      `SELECT id, username, display_name, avatar_url, points_balance, total_bets, total_wins,
               RANK() OVER (ORDER BY points_balance DESC) AS rank
        FROM users ORDER BY points_balance DESC LIMIT $1`,
       [limit]
