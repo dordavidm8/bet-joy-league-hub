@@ -23,6 +23,20 @@ router.post('/', authenticate, async (req, res, next) => {
     return res.status(400).json({ error: 'format must be pool or per_game' });
   }
 
+  // Only admins may create public leagues
+  if (access_type === 'public') {
+    const email = req.user?.email?.toLowerCase();
+    const envAdmins = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.replace(/['"]/g, '').trim().toLowerCase()).filter(Boolean);
+    let isAdmin = envAdmins.includes(email);
+    if (!isAdmin) {
+      try {
+        const ar = await pool.query('SELECT 1 FROM admin_users WHERE email = $1', [email]);
+        isAdmin = ar.rows.length > 0;
+      } catch (_) {}
+    }
+    if (!isAdmin) return res.status(403).json({ error: 'ניתן ליצור ליגה ציבורית דרך לוח הניהול בלבד' });
+  }
+
   // bet_mode is derived from format: pool → initial_balance, per_game → minimum_stake
   const derived_bet_mode = format === 'pool' ? 'initial_balance' : 'minimum_stake';
 
@@ -184,6 +198,22 @@ router.post('/:id/leave', authenticate, async (req, res, next) => {
   } finally { client.release(); }
 });
 
+// GET /api/leagues/public — discover public leagues
+router.get('/public', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT l.id, l.name, l.description, l.format, l.entry_fee, l.pool_total, l.status, l.created_at,
+              u.username AS creator_username,
+              (SELECT COUNT(*) FROM league_members lm WHERE lm.league_id = l.id AND lm.is_active = true) AS member_count
+       FROM leagues l
+       JOIN users u ON u.id = l.creator_id
+       WHERE l.access_type = 'public' AND l.status = 'active'
+       ORDER BY l.created_at DESC LIMIT 50`
+    );
+    res.json({ leagues: result.rows });
+  } catch (err) { next(err); }
+});
+
 // GET /api/leagues/my/list
 router.get('/my/list', authenticate, async (req, res, next) => {
   try {
@@ -196,6 +226,55 @@ router.get('/my/list', authenticate, async (req, res, next) => {
     );
     res.json({ leagues: result.rows });
   } catch (err) { next(err); }
+});
+
+// POST /api/leagues/:id/join-public — join a public league directly
+router.post('/:id/join-public', authenticate, async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const leagueRes = await client.query(`SELECT * FROM leagues WHERE id = $1`, [req.params.id]);
+    const league = leagueRes.rows[0];
+    if (!league) return res.status(404).json({ error: 'ליגה לא נמצאה' });
+    if (league.access_type !== 'public') return res.status(403).json({ error: 'ליגה זו אינה ציבורית' });
+    if (league.status !== 'active') return res.status(400).json({ error: 'הליגה אינה פעילה' });
+
+    const memberCheck = await client.query(
+      `SELECT id FROM league_members WHERE league_id = $1 AND user_id = $2`, [league.id, req.user.id]
+    );
+    if (memberCheck.rows[0]) return res.status(409).json({ error: 'כבר חבר בליגה' });
+
+    if (league.max_members) {
+      const countRes = await client.query(
+        `SELECT COUNT(*) FROM league_members WHERE league_id = $1 AND is_active = true`, [league.id]
+      );
+      if (parseInt(countRes.rows[0].count) >= league.max_members) {
+        return res.status(400).json({ error: 'הליגה מלאה' });
+      }
+    }
+
+    if (league.entry_fee > 0) {
+      const balRes = await client.query(
+        `UPDATE users SET points_balance = points_balance - $1
+         WHERE id = $2 AND points_balance >= $1 RETURNING points_balance`,
+        [league.entry_fee, req.user.id]
+      );
+      if (!balRes.rows[0]) throw Object.assign(new Error('אין מספיק נקודות לדמי כניסה'), { status: 400 });
+      await client.query(`UPDATE leagues SET pool_total = pool_total + $1 WHERE id = $2`, [league.entry_fee, league.id]);
+      await client.query(
+        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+         VALUES ($1,$2,'league_entry',$3,$4)`,
+        [req.user.id, -league.entry_fee, league.id, `Entry fee: ${league.name}`]
+      );
+    }
+
+    await client.query(`INSERT INTO league_members (league_id, user_id) VALUES ($1,$2)`, [league.id, req.user.id]);
+    await client.query('COMMIT');
+    res.json({ message: 'הצטרפת לליגה', league });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
 });
 
 // GET /api/leagues/:id

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague, searchUsers } from "@/lib/api";
+import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague, searchUsers, getPublicLeagues, joinPublicLeague } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins, Flag } from "lucide-react";
 import { motion } from "framer-motion";
@@ -37,7 +37,6 @@ const LeaguesPage = () => {
   // Create form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [access, setAccess] = useState<"invite" | "public">("invite");
   const [format, setFormat] = useState<"pool" | "per_game">("pool");
   const [duration, setDuration] = useState("full_season");
   const [entryFee, setEntryFee] = useState("0");
@@ -76,6 +75,21 @@ const LeaguesPage = () => {
     enabled: tab === "leaderboard",
   });
 
+  const { data: publicLeaguesData } = useQuery({
+    queryKey: ["public-leagues"],
+    queryFn: getPublicLeagues,
+    staleTime: 60_000,
+  });
+
+  const joinPublicMutation = useMutation({
+    mutationFn: (id: string) => joinPublicLeague(id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["my-leagues"] });
+      queryClient.invalidateQueries({ queryKey: ["public-leagues"] });
+      navigate(`/leagues/${data.league.id}`);
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: () =>
       createLeague({
@@ -83,7 +97,7 @@ const LeaguesPage = () => {
         description: description.trim() || undefined,
         format,
         duration_type: isTournament ? "tournament" : duration,
-        access_type: access,
+        access_type: 'invite',
         min_bet: format === "per_game" ? (parseInt(minStake) || 10) : 0,
         entry_fee: parseInt(entryFee) || 0,
         max_members: parseInt(maxMembers) > 0 ? parseInt(maxMembers) : undefined,
@@ -117,7 +131,7 @@ const LeaguesPage = () => {
   });
 
   const resetForm = () => {
-    setName(""); setDescription(""); setAccess("invite"); setFormat("pool");
+    setName(""); setDescription(""); setFormat("pool");
     setDuration("full_season"); setEntryFee("0"); setMinStake("10"); setMaxMembers("");
     setDistribution(DEFAULT_DISTRIBUTION);
     setIsTournament(false); setTournamentSlug(""); setStakePerMatch("50");
@@ -128,6 +142,9 @@ const LeaguesPage = () => {
   const distTotal = distribution.reduce((s, d) => s + d.pct, 0);
   const leagues = leaguesData?.leagues ?? [];
   const leaderboard = leaderboardData?.leaderboard ?? [];
+  const publicLeagues = (publicLeaguesData?.leagues ?? []).filter(
+    pl => !leagues.some(l => l.id === pl.id)
+  );
 
   return (
     <div className="flex flex-col gap-5 pb-24">
@@ -169,19 +186,6 @@ const LeaguesPage = () => {
               <textarea placeholder="תיאור הליגה (אופציונלי)" value={description} onChange={(e) => setDescription(e.target.value)}
                 rows={2}
                 className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
-
-              {/* Access */}
-              <div className="flex gap-2">
-                {(["invite", "public"] as const).map((a) => (
-                  <button key={a} onClick={() => setAccess(a)}
-                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                      access === a ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"
-                    }`}
-                  >
-                    {a === "invite" ? <><Lock size={13} /> הזמנה בלבד</> : <><Globe size={13} /> פתוחה</>}
-                  </button>
-                ))}
-              </div>
 
               {/* Format */}
               <div className="flex flex-col gap-1.5">
@@ -426,6 +430,46 @@ const LeaguesPage = () => {
                   </div>
                 </motion.button>
               ))}
+            </div>
+          )}
+
+          {/* Public Leagues Discovery */}
+          {publicLeagues.length > 0 && (
+            <div className="flex flex-col gap-3 mt-2">
+              <div className="flex items-center gap-2">
+                <Globe size={15} className="text-primary" />
+                <h3 className="text-sm font-bold">ליגות ציבוריות</h3>
+              </div>
+              {publicLeagues.map((league, i) => (
+                <motion.div key={league.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="card-kickoff flex items-center gap-3 border border-primary/10 bg-primary/2"
+                >
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Globe size={18} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm">{league.name}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                      <span className="flex items-center gap-0.5"><Users size={11} /> {league.member_count ?? "?"}</span>
+                      {league.entry_fee > 0 && <span className="flex items-center gap-0.5"><Coins size={11} /> {league.entry_fee} נק׳</span>}
+                    </p>
+                    {league.description && (
+                      <p className="text-[11px] text-muted-foreground truncate">{league.description}</p>
+                    )}
+                  </div>
+                  <Button size="sm" variant="outline"
+                    className="shrink-0 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                    disabled={joinPublicMutation.isPending}
+                    onClick={() => joinPublicMutation.mutate(league.id)}
+                  >
+                    הצטרף
+                  </Button>
+                </motion.div>
+              ))}
+              {joinPublicMutation.isError && (
+                <p className="text-xs text-destructive">{(joinPublicMutation.error as any)?.message}</p>
+              )}
             </div>
           )}
         </div>

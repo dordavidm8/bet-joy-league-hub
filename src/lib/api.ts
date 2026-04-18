@@ -84,6 +84,11 @@ export const getMyRank = () => request<{ rank: number | null; points_balance: nu
 // ── Leagues ───────────────────────────────────────────────────────────────────
 export const getMyLeagues = () => request<{ leagues: League[] }>('/leagues/my/list');
 
+export const getPublicLeagues = () => request<{ leagues: League[] }>('/leagues/public');
+
+export const joinPublicLeague = (id: string) =>
+  request<{ message: string; league: League }>(`/leagues/${id}/join-public`, { method: 'POST' });
+
 export const getLeague = (id: string) => request<{ league: League; members: LeagueMember[] }>(`/leagues/${id}`);
 
 export const createLeague = (data: CreateLeagueInput) =>
@@ -180,6 +185,12 @@ export const adminGetGames = (all = false) =>
 export const adminGetLeagues = () => request<{ leagues: AdminLeague[] }>('/admin/leagues');
 export const adminPauseLeague = (id: string) =>
   request<{ message: string }>(`/admin/leagues/${id}/pause`, { method: 'POST' });
+export const adminRemoveWaGroup = (id: string) =>
+  request<{ message: string }>(`/admin/leagues/${id}/wa-group`, { method: 'DELETE' });
+export const adminSetWaInviteLink = (id: string, invite_link: string) =>
+  request<{ message: string }>(`/admin/leagues/${id}/wa-group`, {
+    method: 'PATCH', body: JSON.stringify({ invite_link }),
+  });
 export const adminGetQuiz = () => request<{ questions: AdminQuizQuestion[] }>('/admin/quiz');
 export const adminAdjustPoints = (userId: string, amount: number, reason: string) =>
   request<{ message: string; user: { username: string; points_balance: number } }>(
@@ -395,6 +406,7 @@ export interface PlaceParlayInput {
 export interface LeaderboardEntry {
   id: string;
   username: string;
+  display_name: string | null;
   avatar_url: string | null;
   points_balance: number;
   total_bets: number;
@@ -565,6 +577,7 @@ export interface AdminLeague {
   id: string;
   name: string;
   format: string;
+  access_type: 'invite' | 'public';
   creator_username: string;
   member_count: string;
   pool_total: number;
@@ -572,6 +585,9 @@ export interface AdminLeague {
   status: string;
   tournament_slug?: string;
   created_at: string;
+  wa_group_id?: string | null;
+  wa_invite_link?: string | null;
+  wa_group_active?: boolean;
 }
 
 export interface AdminQuizQuestion {

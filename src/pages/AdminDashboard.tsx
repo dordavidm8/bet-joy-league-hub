@@ -13,9 +13,11 @@ import {
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
   adminLockGame, adminUnlockGame, adminPauseLeague,
+  adminRemoveWaGroup, adminSetWaInviteLink,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
   adminGetAdmins, adminAddAdmin, adminRemoveAdmin,
+  createLeague,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
   AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion, AdminUserEntry, getGames,
 } from "@/lib/api";
@@ -599,6 +601,16 @@ const LeaguesTab = () => {
   const [leagueSearch, setLeagueSearch] = useState("");
   const [pauseConfirm, setPauseConfirm] = useState<AdminLeague | null>(null);
   const [pauseMsg, setPauseMsg] = useState("");
+  const [waModal, setWaModal] = useState<{ league: AdminLeague; mode: 'view' | 'edit' } | null>(null);
+  const [waLinkInput, setWaLinkInput] = useState("");
+  const [waMsg, setWaMsg] = useState("");
+
+  // Public league creation
+  const [showCreatePublic, setShowCreatePublic] = useState(false);
+  const [pubName, setPubName] = useState("");
+  const [pubDesc, setPubDesc] = useState("");
+  const [pubFormat, setPubFormat] = useState<"pool" | "per_game">("pool");
+  const [pubMsg, setPubMsg] = useState("");
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["admin-leagues"], queryFn: adminGetLeagues, staleTime: 30_000 });
   const leagues = (data?.leagues ?? []).filter((l: AdminLeague) => {
@@ -617,8 +629,67 @@ const LeaguesTab = () => {
     onError: (e: any) => setPauseMsg(`❌ ${e.message}`),
   });
 
+  const removeWaMutation = useMutation({
+    mutationFn: (id: string) => adminRemoveWaGroup(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
+      setWaMsg("✅ קבוצת WA הוסרה");
+      setTimeout(() => { setWaModal(null); setWaMsg(""); }, 1500);
+    },
+    onError: (e: any) => setWaMsg(`❌ ${e.message}`),
+  });
+
+  const setWaLinkMutation = useMutation({
+    mutationFn: ({ id, link }: { id: string; link: string }) => adminSetWaInviteLink(id, link),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
+      setWaMsg("✅ לינק עודכן");
+      setTimeout(() => { setWaModal(null); setWaMsg(""); setWaLinkInput(""); }, 1500);
+    },
+    onError: (e: any) => setWaMsg(`❌ ${e.message}`),
+  });
+
+  const createPublicMutation = useMutation({
+    mutationFn: () => createLeague({ name: pubName, description: pubDesc.trim() || undefined, format: pubFormat, duration_type: 'full_season', access_type: 'public' }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
+      setPubMsg(`✅ ליגה ציבורית נוצרה: ${res.league.name}`);
+      setPubName(""); setPubDesc(""); setPubFormat("pool");
+      setTimeout(() => { setShowCreatePublic(false); setPubMsg(""); }, 2000);
+    },
+    onError: (e: any) => setPubMsg(`❌ ${e.message}`),
+  });
+
   return (
     <div className="flex flex-col gap-3">
+      {/* Create public league */}
+      <div className="border rounded-xl p-3 bg-primary/5 border-primary/20">
+        <button onClick={() => setShowCreatePublic(v => !v)}
+          className="flex items-center gap-2 text-sm font-bold text-primary w-full text-right">
+          <Plus size={15} /> צור ליגה ציבורית
+        </button>
+        {showCreatePublic && (
+          <div className="flex flex-col gap-2 mt-3">
+            <input value={pubName} onChange={e => setPubName(e.target.value)} placeholder="שם הליגה"
+              className="bg-background border rounded-xl px-3 py-2 text-sm outline-none" />
+            <input value={pubDesc} onChange={e => setPubDesc(e.target.value)} placeholder="תיאור (אופציונלי)"
+              className="bg-background border rounded-xl px-3 py-2 text-sm outline-none" />
+            <div className="flex gap-2">
+              {(["pool", "per_game"] as const).map(f => (
+                <button key={f} onClick={() => setPubFormat(f)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${pubFormat === f ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
+                  {f === "pool" ? "קופה משותפת" : "תשלום למשחק"}
+                </button>
+              ))}
+            </div>
+            {pubMsg && <p className="text-xs">{pubMsg}</p>}
+            <Button onClick={() => createPublicMutation.mutate()} disabled={!pubName || createPublicMutation.isPending} className="bg-primary">
+              {createPublicMutation.isPending ? "יוצר..." : "צור ליגה ציבורית"}
+            </Button>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2">
         <Search size={16} className="text-muted-foreground shrink-0" />
         <input value={leagueSearch} onChange={e => setLeagueSearch(e.target.value)}
@@ -628,9 +699,9 @@ const LeaguesTab = () => {
 
       {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
         <div className="border rounded-xl overflow-auto">
-          <table className="w-full text-xs min-w-[600px]">
+          <table className="w-full text-xs min-w-[700px]">
             <thead className="bg-muted/50"><tr>
-              {["שם", "פורמט", "יוצר", "חברים", "קופה", "סטטוס", "נוצר", ""].map(h => (
+              {["שם", "סוג", "פורמט", "יוצר", "חברים", "קופה", "סטטוס", "נוצר", "WA", ""].map(h => (
                 <th key={h} className="text-right px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
               ))}
             </tr></thead>
@@ -641,12 +712,24 @@ const LeaguesTab = () => {
                     {l.name}
                     {l.tournament_slug && <span className="mr-1 text-primary text-[10px]">🏆{l.tournament_slug}</span>}
                   </td>
+                  <td className="px-3 py-2">
+                    {l.access_type === 'public'
+                      ? <span className="text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">ציבורית</span>
+                      : <span className="text-[11px] text-muted-foreground">פרטית</span>
+                    }
+                  </td>
                   <td className="px-3 py-2 text-muted-foreground">{l.format}</td>
                   <td className="px-3 py-2">{l.creator_username}</td>
                   <td className="px-3 py-2 font-bold">{fmt(l.member_count)}</td>
                   <td className="px-3 py-2">{fmt(l.pool_total)}</td>
                   <td className="px-3 py-2"><StatusBadge status={l.status} /></td>
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(l.created_at)}</td>
+                  <td className="px-3 py-2">
+                    <button onClick={() => { setWaModal({ league: l, mode: 'view' }); setWaMsg(""); setWaLinkInput(l.wa_invite_link || ""); }}
+                      className={`text-[11px] px-2 py-0.5 rounded-full border ${l.wa_group_id ? 'bg-green-100 border-green-300 text-green-700' : 'bg-gray-100 border-gray-300 text-gray-500 hover:border-blue-300 hover:text-blue-600'}`}>
+                      {l.wa_group_id ? '📱 מחובר' : '📱 הגדר'}
+                    </button>
+                  </td>
                   <td className="px-3 py-2">
                     {l.status === "active" && (
                       <button onClick={() => { setPauseConfirm(l); setPauseMsg(""); }}
@@ -674,6 +757,46 @@ const LeaguesTab = () => {
               {pauseMutation.isPending ? "משהה..." : "השהה ליגה"}
             </Button>
             <Button variant="outline" onClick={() => setPauseConfirm(null)}>ביטול</Button>
+          </div>
+        </Modal>
+      )}
+
+      {waModal && (
+        <Modal onClose={() => { setWaModal(null); setWaMsg(""); }} title={`ניהול WA — ${waModal.league.name}`}>
+          <div className="flex flex-col gap-4">
+            {waModal.league.wa_group_id ? (
+              <div className="flex flex-col gap-2 bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-xs font-bold text-green-700">קבוצת WA מחוברת ✓</p>
+                <p className="text-xs text-muted-foreground font-mono break-all">{waModal.league.wa_group_id}</p>
+                {waModal.league.wa_invite_link && (
+                  <a href={waModal.league.wa_invite_link} target="_blank" rel="noreferrer"
+                    className="text-xs text-blue-600 underline break-all">{waModal.league.wa_invite_link}</a>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">אין קבוצת WA מחוברת לליגה זו.</p>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-bold">עדכן לינק הזמנה לקבוצה:</p>
+              <input value={waLinkInput} onChange={e => setWaLinkInput(e.target.value)}
+                placeholder="https://chat.whatsapp.com/..."
+                className="bg-secondary rounded-xl px-3 py-2 text-sm outline-none" />
+              <Button onClick={() => setWaLinkMutation.mutate({ id: waModal.league.id, link: waLinkInput })}
+                disabled={!waLinkInput || setWaLinkMutation.isPending}>
+                {setWaLinkMutation.isPending ? "שומר..." : "עדכן לינק"}
+              </Button>
+            </div>
+
+            {waModal.league.wa_group_id && (
+              <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                onClick={() => { if (confirm("להסיר את קבוצת ה-WA מהליגה?")) removeWaMutation.mutate(waModal.league.id); }}
+                disabled={removeWaMutation.isPending}>
+                {removeWaMutation.isPending ? "מסיר..." : "הסר קישור קבוצת WA"}
+              </Button>
+            )}
+
+            {waMsg && <p className="text-sm">{waMsg}</p>}
           </div>
         </Modal>
       )}

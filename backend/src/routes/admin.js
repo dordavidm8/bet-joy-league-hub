@@ -195,13 +195,39 @@ router.get('/leagues', async (req, res, next) => {
     const result = await pool.query(
       `SELECT l.*,
               u.username AS creator_username,
-              (SELECT COUNT(*) FROM league_members lm WHERE lm.league_id = l.id AND lm.is_active = true) AS member_count
+              (SELECT COUNT(*) FROM league_members lm WHERE lm.league_id = l.id AND lm.is_active = true) AS member_count,
+              wg.wa_group_id, wg.invite_link AS wa_invite_link, wg.is_active AS wa_group_active
        FROM leagues l
        JOIN users u ON u.id = l.creator_id
+       LEFT JOIN wa_groups wg ON wg.league_id = l.id AND wg.is_active = true
        ORDER BY l.created_at DESC LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
     res.json({ leagues: result.rows });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/leagues/:id/wa-group — remove WA group link
+router.delete('/leagues/:id/wa-group', async (req, res, next) => {
+  try {
+    await pool.query(`UPDATE wa_groups SET is_active = false WHERE league_id = $1`, [req.params.id]);
+    await pool.query(`UPDATE leagues SET wa_enabled = false WHERE id = $1`, [req.params.id]);
+    await logAdminAction(req.user.email, 'remove_wa_group', 'league', req.params.id, null);
+    res.json({ message: 'WA group removed' });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/leagues/:id/wa-group — set invite link manually
+router.patch('/leagues/:id/wa-group', async (req, res, next) => {
+  const { invite_link } = req.body;
+  if (!invite_link) return res.status(400).json({ error: 'invite_link required' });
+  try {
+    await pool.query(
+      `UPDATE wa_groups SET invite_link = $1 WHERE league_id = $2 AND is_active = true`,
+      [invite_link, req.params.id]
+    );
+    await logAdminAction(req.user.email, 'set_wa_invite_link', 'league', req.params.id, { invite_link });
+    res.json({ message: 'Invite link updated' });
   } catch (err) { next(err); }
 });
 
