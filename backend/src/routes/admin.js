@@ -129,11 +129,33 @@ router.get('/users', async (req, res, next) => {
   if (search) params.push(`%${search}%`);
   try {
     const result = await pool.query(
-      `SELECT id, firebase_uid, username, email, points_balance, total_bets, total_wins, created_at
+      `SELECT id, firebase_uid, username, display_name, email, points_balance, total_bets, total_wins, created_at
        FROM users ${where} ORDER BY created_at DESC LIMIT $1 OFFSET $2`, params
     );
     res.json({ users: result.rows });
   } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/users/:id — edit username / display_name
+router.patch('/users/:id', async (req, res, next) => {
+  const { username, display_name } = req.body;
+  const sets = [], params = [];
+  if (username?.trim()) { params.push(username.trim()); sets.push(`username = $${params.length}`); }
+  if (display_name !== undefined) { params.push(display_name?.trim() || null); sets.push(`display_name = $${params.length}`); }
+  if (!sets.length) return res.status(400).json({ error: 'At least one field required' });
+  params.push(req.params.id);
+  try {
+    const r = await pool.query(
+      `UPDATE users SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING id, username, display_name, email`,
+      params
+    );
+    if (!r.rows[0]) return res.status(404).json({ error: 'User not found' });
+    await logAdminAction(req.user.email, 'edit_user', 'user', req.params.id, { username, display_name });
+    res.json({ user: r.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'שם המשתמש כבר תפוס' });
+    next(err);
+  }
 });
 
 // GET /api/admin/bets
@@ -177,13 +199,38 @@ router.get('/games', async (req, res, next) => {
       `SELECT g.*, c.name AS competition_name,
               (SELECT COUNT(*) FROM bets WHERE game_id = g.id) AS total_bets,
               (SELECT BOOL_AND(is_locked) FROM bet_questions WHERE game_id = g.id) AS is_fully_locked,
-              (SELECT COUNT(*) FROM bet_questions WHERE game_id = g.id) AS question_count
+              (SELECT COUNT(*) FROM bet_questions WHERE game_id = g.id) AS question_count,
+              (SELECT bq.odds_source FROM bet_questions bq WHERE bq.game_id = g.id AND bq.type = 'match_winner' LIMIT 1) AS odds_source,
+              (SELECT bq.outcomes FROM bet_questions bq WHERE bq.game_id = g.id AND bq.type = 'match_winner' LIMIT 1) AS match_winner_outcomes
        FROM games g LEFT JOIN competitions c ON c.id = g.competition_id
        ${where}
        ORDER BY g.start_time ASC LIMIT $1 OFFSET $2`,
       params
     );
     res.json({ games: result.rows });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/games/:id/odds — manually override match_winner odds
+router.patch('/games/:id/odds', async (req, res, next) => {
+  const { home_odds, draw_odds, away_odds } = req.body;
+  if (!home_odds || !draw_odds || !away_odds) return res.status(400).json({ error: 'home_odds, draw_odds, away_odds required' });
+  try {
+    const gRes = await pool.query('SELECT home_team, away_team FROM games WHERE id = $1', [req.params.id]);
+    if (!gRes.rows[0]) return res.status(404).json({ error: 'Game not found' });
+    const { home_team, away_team } = gRes.rows[0];
+    const outcomes = [
+      { label: home_team, odds: parseFloat(home_odds) },
+      { label: 'Draw',    odds: parseFloat(draw_odds) },
+      { label: away_team, odds: parseFloat(away_odds) },
+    ];
+    await pool.query(
+      `UPDATE bet_questions SET outcomes = $1::jsonb, odds_source = 'admin'
+       WHERE game_id = $2 AND type = 'match_winner'`,
+      [JSON.stringify(outcomes), req.params.id]
+    );
+    await logAdminAction(req.user.email, 'set_game_odds', 'game', req.params.id, { home_odds, draw_odds, away_odds });
+    res.json({ message: 'Odds updated' });
   } catch (err) { next(err); }
 });
 

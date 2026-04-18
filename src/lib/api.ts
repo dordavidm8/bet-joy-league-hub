@@ -242,6 +242,14 @@ export const adminLockGame = (id: string) =>
   request<{ message: string }>(`/admin/games/${id}/lock`, { method: 'POST' });
 export const adminUnlockGame = (id: string) =>
   request<{ message: string }>(`/admin/games/${id}/lock`, { method: 'DELETE' });
+export const adminUpdateGameOdds = (id: string, home_odds: number, draw_odds: number, away_odds: number) =>
+  request<{ message: string }>(`/admin/games/${id}/odds`, {
+    method: 'PATCH', body: JSON.stringify({ home_odds, draw_odds, away_odds }),
+  });
+export const adminUpdateUser = (id: string, data: { username?: string; display_name?: string }) =>
+  request<{ user: { id: string; username: string; display_name: string | null; email: string } }>(
+    `/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }
+  );
 export const adminGetGameAnalytics = (id: string) =>
   request<{ game: Game; questions: AdminGameAnalyticsQuestion[] }>(`/admin/games/${id}/analytics`);
 export const adminGetUserBets = (userId: string) =>
@@ -538,6 +546,7 @@ export interface AdminStats {
 export interface AdminUser {
   id: string;
   username: string;
+  display_name: string | null;
   email: string;
   points_balance: number;
   total_bets: number;
@@ -571,6 +580,8 @@ export interface AdminGame {
   score_home?: number;
   score_away?: number;
   total_bets: string;
+  odds_source?: string;
+  match_winner_outcomes?: { label: string; odds: number }[];
 }
 
 export interface AdminLeague {

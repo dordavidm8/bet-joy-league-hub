@@ -57,9 +57,9 @@ async function seedBetQuestions(client, gameId, game) {
   const questions = buildBetQuestions(game);
   for (const q of questions) {
     await client.query(
-      `INSERT INTO bet_questions (game_id, type, question_text, outcomes)
-       VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
-      [gameId, q.type, q.question_text, JSON.stringify(q.outcomes)]
+      `INSERT INTO bet_questions (game_id, type, question_text, outcomes, odds_source)
+       VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+      [gameId, q.type, q.question_text, JSON.stringify(q.outcomes), q.odds_source || 'default']
     );
   }
 }

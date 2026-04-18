@@ -171,10 +171,14 @@ function buildBetQuestions(game) {
   const over25    = apiOdds?.over_2_5  ?? 1.85;
   const under25   = apiOdds?.under_2_5 ?? 1.90;
 
+  const winnerSource = espnOdds ? 'espn' : (apiOdds ? 'api' : 'default');
+  const otherSource  = apiOdds  ? 'api'  : 'default';
+
   return [
     {
       type: 'match_winner',
       question_text: `Who will win: ${h} vs ${a}?`,
+      odds_source: winnerSource,
       outcomes: [
         { label: h,      odds: homeOdds },
         { label: 'Draw', odds: drawOdds },
@@ -184,6 +188,7 @@ function buildBetQuestions(game) {
     {
       type: 'both_teams_score',
       question_text: `Both teams to score in ${h} vs ${a}?`,
+      odds_source: otherSource,
       outcomes: [
         { label: 'Yes', odds: bttsYes },
         { label: 'No',  odds: bttsNo  },
@@ -192,6 +197,7 @@ function buildBetQuestions(game) {
     {
       type: 'over_under',
       question_text: `Over/Under 2.5 goals in ${h} vs ${a}?`,
+      odds_source: otherSource,
       outcomes: [
         { label: 'Over 2.5',  odds: over25  },
         { label: 'Under 2.5', odds: under25 },

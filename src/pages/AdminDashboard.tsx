@@ -12,7 +12,7 @@ import {
   adminGetCompetitions, adminGetLog,
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
-  adminLockGame, adminUnlockGame, adminPauseLeague,
+  adminLockGame, adminUnlockGame, adminPauseLeague, adminUpdateGameOdds, adminUpdateUser,
   adminRemoveWaGroup, adminSetWaInviteLink,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
@@ -124,6 +124,10 @@ const UsersTab = () => {
   const [adjustReason, setAdjustReason] = useState("");
   const [adjustMsg, setAdjustMsg] = useState("");
   const [viewBetsUser, setViewBetsUser] = useState<AdminUser | null>(null);
+  const [editUser, setEditUser] = useState<AdminUser | null>(null);
+  const [editUsername, setEditUsername] = useState("");
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editMsg, setEditMsg] = useState("");
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["admin-users", search], queryFn: () => adminGetUsers(search || undefined) });
   const { data: userBetsData } = useQuery({
@@ -147,6 +151,19 @@ const UsersTab = () => {
     onError: (e: any) => setAdjustMsg(`❌ ${e.message}`),
   });
 
+  const editUserMutation = useMutation({
+    mutationFn: () => adminUpdateUser(editUser!.id, {
+      username: editUsername.trim() || undefined,
+      display_name: editDisplayName,
+    }),
+    onSuccess: () => {
+      setEditMsg("✅ פרטים עודכנו");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setTimeout(() => { setEditUser(null); setEditMsg(""); }, 1500);
+    },
+    onError: (e: any) => setEditMsg(`❌ ${e.message}`),
+  });
+
   const users = data?.users ?? [];
 
   return (
@@ -160,21 +177,24 @@ const UsersTab = () => {
 
       {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
         <div className="border rounded-xl overflow-auto">
-          <table className="w-full text-xs min-w-[600px]">
+          <table className="w-full text-xs min-w-[650px]">
             <thead className="bg-muted/50"><tr>
-              {["משתמש", "נקודות", "הימורים", "ניצחון%", "הצטרף", "פעולות"].map(h => (
+              {["משתמש", "שם מלא", "נקודות", "הימורים", "ניצחון%", "הצטרף", "פעולות"].map(h => (
                 <th key={h} className="text-right px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
               ))}
             </tr></thead>
             <tbody>
               {users.map(u => (
                 <tr key={u.id} className="border-t border-border/50 hover:bg-muted/30">
-                  <td className="px-3 py-2"><p className="font-bold">{u.username}</p><p className="text-muted-foreground text-[10px]">{u.email}</p></td>
+                  <td className="px-3 py-2"><p className="font-bold">@{u.username}</p><p className="text-muted-foreground text-[10px]">{u.email}</p></td>
+                  <td className="px-3 py-2 text-muted-foreground">{u.display_name || "—"}</td>
                   <td className="px-3 py-2 font-bold text-primary">{fmt(u.points_balance)}</td>
                   <td className="px-3 py-2">{u.total_bets}</td>
                   <td className="px-3 py-2">{u.total_bets ? `${Math.round(u.total_wins / u.total_bets * 100)}%` : "—"}</td>
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(u.created_at)}</td>
                   <td className="px-3 py-2 flex gap-2 flex-wrap">
+                    <button onClick={() => { setEditUser(u); setEditUsername(u.username); setEditDisplayName(u.display_name || ""); setEditMsg(""); }}
+                      className="text-[11px] text-blue-600 underline whitespace-nowrap">ערוך</button>
                     <button onClick={() => { setAdjustUser(u); setAdjustAmount(""); setAdjustReason(""); setAdjustMsg(""); }}
                       className="text-[11px] text-primary underline whitespace-nowrap">נקודות</button>
                     <button onClick={() => setViewBetsUser(u)}
@@ -186,6 +206,34 @@ const UsersTab = () => {
           </table>
           {users.length === 0 && !isLoading && <p className="text-center text-sm text-muted-foreground py-6">אין תוצאות</p>}
         </div>
+      )}
+
+      {/* Edit user modal */}
+      {editUser && (
+        <Modal onClose={() => setEditUser(null)} title={`עריכת פרטי משתמש — @${editUser.username}`}>
+          <p className="text-xs text-muted-foreground mb-3">{editUser.email}</p>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-muted-foreground">שם משתמש (username)</label>
+              <input value={editUsername} onChange={e => setEditUsername(e.target.value.replace(/\s+/g, '').toLowerCase())}
+                placeholder="username"
+                className="bg-secondary rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-muted-foreground">שם מלא (display name)</label>
+              <input value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)}
+                placeholder="שם מלא"
+                className="bg-secondary rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            {editMsg && <p className="text-xs">{editMsg}</p>}
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={() => editUserMutation.mutate()} disabled={editUserMutation.isPending}>
+                {editUserMutation.isPending ? "שומר..." : "שמור שינויים"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditUser(null)}>ביטול</Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Adjust modal */}
@@ -320,11 +368,18 @@ const GamesTab = () => {
   const [leagueFilter, setLeagueFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [blockedFilter, setBlockedFilter] = useState<"" | "blocked" | "open">("");
+  const [oddsFilter, setOddsFilter] = useState<"" | "espn" | "api" | "default" | "admin">("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showAllGames, setShowAllGames] = useState(false);
+  const [gameTab, setGameTab] = useState<"upcoming" | "finished">("upcoming");
   const [sortField, setSortField] = useState<"time" | "bets" | "score" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [editOddsGame, setEditOddsGame] = useState<AdminGame | null>(null);
+  const [editHomeOdds, setEditHomeOdds] = useState("");
+  const [editDrawOdds, setEditDrawOdds] = useState("");
+  const [editAwayOdds, setEditAwayOdds] = useState("");
+  const [editOddsMsg, setEditOddsMsg] = useState("");
 
   const toggleSort = (field: "time" | "bets" | "score") => {
     if (sortField === field) {
@@ -371,6 +426,21 @@ const GamesTab = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-games"] }),
   });
 
+  const editOddsMutation = useMutation({
+    mutationFn: () => adminUpdateGameOdds(
+      editOddsGame!.id,
+      parseFloat(editHomeOdds),
+      parseFloat(editDrawOdds),
+      parseFloat(editAwayOdds),
+    ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-games"] });
+      setEditOddsMsg("✅ odds עודכנו");
+      setTimeout(() => { setEditOddsGame(null); setEditOddsMsg(""); }, 1500);
+    },
+    onError: (e: any) => setEditOddsMsg(`❌ ${e.message}`),
+  });
+
   const games = data?.games ?? [];
   const featGame = games.find(g => g.id === featuredGameId);
 
@@ -385,8 +455,12 @@ const GamesTab = () => {
     if (statusFilter && g.status !== statusFilter) return false;
     if (blockedFilter === "blocked" && !(g as any).is_fully_locked) return false;
     if (blockedFilter === "open" && (g as any).is_fully_locked) return false;
+    if (oddsFilter && (g as any).odds_source !== oddsFilter) return false;
     if (dateFrom && new Date(g.start_time) < new Date(dateFrom)) return false;
     if (dateTo && new Date(g.start_time) > new Date(dateTo + "T23:59:59")) return false;
+    // gameTab filter
+    if (gameTab === "upcoming" && g.status === "finished") return false;
+    if (gameTab === "finished" && g.status !== "finished") return false;
     return true;
   });
 
@@ -446,10 +520,28 @@ const GamesTab = () => {
           <option value="blocked">חסום</option>
           <option value="open">פתוח</option>
         </select>
-        {(searchTeam || leagueFilter || statusFilter || blockedFilter || dateFrom || dateTo) && (
-          <button onClick={() => { setSearchTeam(""); setLeagueFilter(""); setStatusFilter(""); setBlockedFilter(""); setDateFrom(""); setDateTo(""); }}
+        <select value={oddsFilter} onChange={e => setOddsFilter(e.target.value as any)}
+          className="bg-background border rounded-lg px-2 py-1 text-xs outline-none">
+          <option value="">כל מקורות odds</option>
+          <option value="espn">ESPN</option>
+          <option value="api">API</option>
+          <option value="default">default</option>
+          <option value="admin">admin</option>
+        </select>
+        {(searchTeam || leagueFilter || statusFilter || blockedFilter || oddsFilter || dateFrom || dateTo) && (
+          <button onClick={() => { setSearchTeam(""); setLeagueFilter(""); setStatusFilter(""); setBlockedFilter(""); setOddsFilter(""); setDateFrom(""); setDateTo(""); }}
             className="text-xs text-primary underline">נקה סננים</button>
         )}
+      </div>
+
+      {/* Game tab toggle */}
+      <div className="flex gap-1 bg-secondary rounded-xl p-1 w-fit">
+        {(["upcoming", "finished"] as const).map(t => (
+          <button key={t} onClick={() => setGameTab(t)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${gameTab === t ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            {t === "upcoming" ? "עתידיים / חיים" : "הסתיימו"}
+          </button>
+        ))}
       </div>
 
       {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
@@ -466,6 +558,7 @@ const GamesTab = () => {
               <th className="text-right px-2 py-2 font-semibold text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => toggleSort("score")}>
                 תוצאה {sortField === "score" ? (sortDir === "asc" ? "↑" : "↓") : "⇅"}
               </th>
+              <th className="text-right px-2 py-2 font-semibold text-muted-foreground">odds</th>
               <th className="text-right px-2 py-2 font-semibold text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => toggleSort("bets")}>
                 הימורים {sortField === "bets" ? (sortDir === "asc" ? "↑" : "↓") : "⇅"}
               </th>
@@ -474,90 +567,147 @@ const GamesTab = () => {
               <th className="text-right px-2 py-2 font-semibold text-muted-foreground">אנליטיקות</th>
             </tr></thead>
             <tbody>
-              {filteredGames.map(g => (
-                <>
-                  <tr key={g.id} className={`border-t border-border/50 hover:bg-muted/30 ${(g as any).is_featured ? "bg-amber-50/50" : ""}`}>
-                    <td className="px-2 py-2">
-                      {(g as any).is_featured && <Star size={14} className="text-amber-500 fill-amber-500" />}
-                    </td>
-                    <td className="px-2 py-2 font-bold whitespace-nowrap">
-                      {g.home_team} vs {g.away_team}
-                      {(g as any).is_featured && (
-                        <span className="mr-1 text-[10px] text-amber-600 font-bold">+{(g as any).featured_bonus_pct}%</span>
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-muted-foreground text-[11px]">{g.competition_name ?? "—"}</td>
-                    <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{fmtTime(g.start_time)}</td>
-                    <td className="px-2 py-2"><StatusBadge status={g.status} /></td>
-                    <td className="px-2 py-2 font-bold">{g.score_home != null ? `${g.score_home}–${g.score_away}` : "—"}</td>
-                    <td className="px-2 py-2 font-bold text-primary">{fmt(g.total_bets)}</td>
-                    <td className="px-2 py-2">
-                      {(g as any).is_featured ? (
-                        <button onClick={() => unfeatureMutation.mutate(g.id)}
-                          className="text-amber-500 hover:text-amber-700 flex items-center gap-1">
-                          <StarOff size={13} />
-                        </button>
-                      ) : (
-                        g.status === "scheduled" && (
-                          <button onClick={() => { setFeaturedGameId(g.id); setBonusPct("20"); setHoursBefore("2"); setFeatMsg(""); }}
-                            className="text-muted-foreground hover:text-amber-500 flex items-center gap-1">
-                            <Star size={13} />
+              {filteredGames.map(g => {
+                const oddsSource: string = (g as any).odds_source ?? "default";
+                const oddsSourceColor: Record<string, string> = {
+                  espn: "bg-blue-100 text-blue-700",
+                  api: "bg-green-100 text-green-700",
+                  admin: "bg-purple-100 text-purple-700",
+                  default: "bg-gray-100 text-gray-500",
+                };
+                const scoreDisplay = g.status === "finished" && g.score_home != null
+                  ? `${g.score_home}–${g.score_away}`
+                  : (g.status === "finished" ? "—" : "טרם הסתיים");
+                return (
+                  <>
+                    <tr key={g.id} className={`border-t border-border/50 hover:bg-muted/30 ${(g as any).is_featured ? "bg-amber-50/50" : ""}`}>
+                      <td className="px-2 py-2">
+                        {(g as any).is_featured && <Star size={14} className="text-amber-500 fill-amber-500" />}
+                      </td>
+                      <td className="px-2 py-2 font-bold whitespace-nowrap">
+                        {g.home_team} vs {g.away_team}
+                        {(g as any).is_featured && (
+                          <span className="mr-1 text-[10px] text-amber-600 font-bold">+{(g as any).featured_bonus_pct}%</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-muted-foreground text-[11px]">{g.competition_name ?? "—"}</td>
+                      <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{fmtTime(g.start_time)}</td>
+                      <td className="px-2 py-2"><StatusBadge status={g.status} /></td>
+                      <td className="px-2 py-2 font-bold text-[11px]">{scoreDisplay}</td>
+                      <td className="px-2 py-2">
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${oddsSourceColor[oddsSource] ?? "bg-gray-100 text-gray-500"}`}>
+                            {oddsSource}
+                          </span>
+                          {g.status !== "finished" && (
+                            <button onClick={() => {
+                              const outs: any[] = (g as any).match_winner_outcomes ?? [];
+                              setEditOddsGame(g);
+                              setEditHomeOdds(String(outs[0]?.odds ?? ""));
+                              setEditDrawOdds(String(outs[1]?.odds ?? ""));
+                              setEditAwayOdds(String(outs[2]?.odds ?? ""));
+                              setEditOddsMsg("");
+                            }} className="text-[10px] text-primary underline">ערוך</button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 font-bold text-primary">{fmt(g.total_bets)}</td>
+                      <td className="px-2 py-2">
+                        {(g as any).is_featured ? (
+                          <button onClick={() => unfeatureMutation.mutate(g.id)}
+                            className="text-amber-500 hover:text-amber-700 flex items-center gap-1">
+                            <StarOff size={13} />
                           </button>
-                        )
-                      )}
-                    </td>
-                    <td className="px-2 py-2">
-                      {(g as any).question_count > 0 && (
-                        <button
-                          onClick={() => { if ((g as any).is_fully_locked) unlockMutation.mutate(g.id); else lockMutation.mutate(g.id); }}
-                          title={(g as any).is_fully_locked ? "בטל נעילת הימורים" : "נעל הימורים"}
-                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full border transition-colors ${(g as any).is_fully_locked ? 'bg-red-100 border-red-300 text-red-700' : 'bg-gray-100 border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-700'}`}
-                        >
-                          {(g as any).is_fully_locked ? '🔒' : '🔓'}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-2 py-2">
-                      {Number(g.total_bets) > 0 && (
-                        <button onClick={() => setExpandedId(expandedId === g.id ? null : g.id)}
-                          className="text-primary flex items-center gap-1 text-[11px]">
-                          {expandedId === g.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {expandedId === g.id && (
-                    <tr key={`${g.id}-analytics`} className="bg-muted/20">
-                      <td colSpan={10} className="px-4 py-3">
-                        {!analyticsData ? <p className="text-xs text-muted-foreground">טוען...</p> : (
-                          <div className="flex flex-col gap-3">
-                            {(analyticsData.questions as AdminGameAnalyticsQuestion[]).map((q, qi) => (
-                              <div key={qi}>
-                                <p className="text-xs font-bold mb-1">{q.question_text}</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {q.outcomes.map((o, oi) => (
-                                    <div key={oi} className="bg-background border rounded-lg px-3 py-1.5 text-center min-w-[100px]">
-                                      <p className="text-xs font-bold">{o.outcome}</p>
-                                      <p className="text-[11px] text-muted-foreground">{o.bet_count} הימורים</p>
-                                      <p className="text-[11px] font-bold text-primary">{fmt(o.total_staked)} נק׳</p>
-                                      <p className="text-[10px] text-muted-foreground">{o.pct}%</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                            {analyticsData.questions.length === 0 && <p className="text-xs text-muted-foreground">אין נתונים</p>}
-                          </div>
+                        ) : (
+                          g.status === "scheduled" && (
+                            <button onClick={() => { setFeaturedGameId(g.id); setBonusPct("20"); setHoursBefore("2"); setFeatMsg(""); }}
+                              className="text-muted-foreground hover:text-amber-500 flex items-center gap-1">
+                              <Star size={13} />
+                            </button>
+                          )
+                        )}
+                      </td>
+                      <td className="px-2 py-2">
+                        {(g as any).question_count > 0 && (
+                          <button
+                            onClick={() => { if ((g as any).is_fully_locked) unlockMutation.mutate(g.id); else lockMutation.mutate(g.id); }}
+                            title={(g as any).is_fully_locked ? "בטל נעילת הימורים" : "נעל הימורים"}
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full border transition-colors ${(g as any).is_fully_locked ? 'bg-red-100 border-red-300 text-red-700' : 'bg-gray-100 border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-700'}`}
+                          >
+                            {(g as any).is_fully_locked ? '🔒' : '🔓'}
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-2 py-2">
+                        {Number(g.total_bets) > 0 && (
+                          <button onClick={() => setExpandedId(expandedId === g.id ? null : g.id)}
+                            className="text-primary flex items-center gap-1 text-[11px]">
+                            {expandedId === g.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                          </button>
                         )}
                       </td>
                     </tr>
-                  )}
-                </>
-              ))}
+                    {expandedId === g.id && (
+                      <tr key={`${g.id}-analytics`} className="bg-muted/20">
+                        <td colSpan={11} className="px-4 py-3">
+                          {!analyticsData ? <p className="text-xs text-muted-foreground">טוען...</p> : (
+                            <div className="flex flex-col gap-3">
+                              {(analyticsData.questions as AdminGameAnalyticsQuestion[]).map((q, qi) => (
+                                <div key={qi}>
+                                  <p className="text-xs font-bold mb-1">{q.question_text}</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {q.outcomes.map((o, oi) => (
+                                      <div key={oi} className="bg-background border rounded-lg px-3 py-1.5 text-center min-w-[100px]">
+                                        <p className="text-xs font-bold">{o.outcome}</p>
+                                        <p className="text-[11px] text-muted-foreground">{o.bet_count} הימורים</p>
+                                        <p className="text-[11px] font-bold text-primary">{fmt(o.total_staked)} נק׳</p>
+                                        <p className="text-[10px] text-muted-foreground">{o.pct}%</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                              {analyticsData.questions.length === 0 && <p className="text-xs text-muted-foreground">אין נתונים</p>}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
             </tbody>
           </table>
           {filteredGames.length === 0 && <p className="text-center text-sm text-muted-foreground py-6">אין משחקים</p>}
         </div>
+      )}
+
+      {/* Edit odds modal */}
+      {editOddsGame && (
+        <Modal onClose={() => setEditOddsGame(null)} title="עריכת odds">
+          <p className="text-sm font-bold mb-3">{editOddsGame.home_team} נגד {editOddsGame.away_team}</p>
+          <div className="flex flex-col gap-3">
+            {[
+              { label: editOddsGame.home_team, value: editHomeOdds, set: setEditHomeOdds },
+              { label: "תיקו", value: editDrawOdds, set: setEditDrawOdds },
+              { label: editOddsGame.away_team, value: editAwayOdds, set: setEditAwayOdds },
+            ].map(({ label, value, set }) => (
+              <div key={label} className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground w-28 shrink-0 text-right">{label}</span>
+                <input type="number" step="0.01" min="1.01" value={value} onChange={e => set(e.target.value)}
+                  className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none text-center" />
+              </div>
+            ))}
+            {editOddsMsg && <p className="text-sm">{editOddsMsg}</p>}
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={() => editOddsMutation.mutate()}
+                disabled={editOddsMutation.isPending || !editHomeOdds || !editDrawOdds || !editAwayOdds}>
+                {editOddsMutation.isPending ? "שומר..." : "שמור odds"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditOddsGame(null)}>ביטול</Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Feature modal */}
@@ -1005,8 +1155,15 @@ const MiniGamesTab = () => {
               ) : draft.game_type === "who_are_ya" ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex gap-4 items-center">
-                    {draft.puzzle_data.image_url && <img src={draft.puzzle_data.image_url} className="w-20 h-20 rounded-full object-cover border-2" />}
+                    {draft.puzzle_data.image_url
+                      ? <img src={draft.puzzle_data.image_url} className="w-20 h-20 rounded-full object-cover border-2 shrink-0" onError={e => (e.currentTarget.style.display = 'none')} />
+                      : <div className="w-20 h-20 rounded-full bg-secondary border-2 flex items-center justify-center text-muted-foreground text-xs shrink-0">אין תמונה</div>
+                    }
                     <div className="flex flex-col gap-2 flex-1 w-full text-right">
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs font-bold w-14">תמונה:</span>
+                        <input value={draft.puzzle_data.image_url ?? ''} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, image_url: e.target.value || null }})} placeholder="URL לתמונת שחקן" className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
+                      </div>
                       <div className="flex gap-2 items-center">
                         <span className="text-xs font-bold w-14">לאומיות:</span>
                         <input value={draft.puzzle_data.nationality} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, nationality: e.target.value }})} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
@@ -1023,10 +1180,10 @@ const MiniGamesTab = () => {
                   </div>
                   <div className="pt-2 border-t flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground font-bold">השחקן המסתתר (הפתרון):</span>
-                    <input 
+                    <input
                       value={draft.solution.secret}
                       onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                     />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
                       * המערכת חכמה ויודעת לקבל כשגיאות כתיב קלות, אותיות קטנות/גדולות, חלק מהשם בלבד (מעל 3 אותיות), וכינויים נבחרים אוטומטית כפי שהם מקודדים במשחק. אין צורך להזין את כל הווריאציות.

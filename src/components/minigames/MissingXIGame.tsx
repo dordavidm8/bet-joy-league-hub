@@ -24,14 +24,26 @@ const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, onSolve }) => {
   };
 
 
-  // Group players by formation (e.g. 4-3-3: 1 GK, 4 DEF, 3 MID, 3 FWD)
-  // For simplicity since FBref lineup array might not match strictly, we just render them vertically if format is complex.
+  // Parse formation string e.g. "4-3-3" → [4, 3, 3]; handle 4-line formations like "4-2-3-1"
+  const formationParts = data.formation.split('-').map(Number).filter(n => !isNaN(n) && n > 0);
   const gk = data.players.slice(0, 1);
-  const others = data.players.slice(1);
-  // Just slice naively for visual
-  const def = others.slice(0, 4);
-  const mid = others.slice(4, 7);
-  const fwd = others.slice(7);
+  const outfield = data.players.slice(1);
+
+  // Build rows from back to front using formation parts
+  const rows: { players: typeof outfield; baseIdx: number }[] = [];
+  let cursor = 0;
+  for (const count of formationParts) {
+    rows.push({ players: outfield.slice(cursor, cursor + count), baseIdx: 1 + cursor });
+    cursor += count;
+  }
+  // rows[0] = DEF, rows[last] = FWD; render rows in reverse on pitch (FWD top, DEF bottom, GK bottom)
+  const def = rows[0]?.players ?? outfield.slice(0, 4);
+  const mid = rows.length > 2 ? rows.slice(1, -1).flatMap(r => r.players) : (rows[1]?.players ?? outfield.slice(4, 7));
+  const fwd = rows[rows.length - 1]?.players ?? outfield.slice(7);
+
+  const defBaseIdx = 1;
+  const midBaseIdx = 1 + (formationParts[0] ?? 4);
+  const fwdBaseIdx = 1 + formationParts.slice(0, -1).reduce((a, b) => a + b, 0);
 
   const renderPlayer = (p: any, i: number, baseIdx: number) => {
     const isHidden = (baseIdx + i) === data.hidden_idx;
@@ -81,13 +93,13 @@ const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, onSolve }) => {
         {/* Players mapping */}
         <div className="absolute inset-0 py-4 flex flex-col justify-between items-center h-full">
            <div className="flex justify-around w-full px-4 mt-2">
-             {fwd.map((p, i) => renderPlayer(p, i, 8))}
+             {fwd.map((p, i) => renderPlayer(p, i, fwdBaseIdx))}
            </div>
            <div className="flex justify-around w-4/5">
-             {mid.map((p, i) => renderPlayer(p, i, 5))}
+             {mid.map((p, i) => renderPlayer(p, i, midBaseIdx))}
            </div>
            <div className="flex justify-around w-full px-2">
-             {def.map((p, i) => renderPlayer(p, i, 1))}
+             {def.map((p, i) => renderPlayer(p, i, defBaseIdx))}
            </div>
            <div className="flex justify-center w-full mb-2">
              {gk.map((p, i) => renderPlayer(p, i, 0))}

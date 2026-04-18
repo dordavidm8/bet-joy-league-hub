@@ -25,6 +25,8 @@ const LeagueDetailPage = () => {
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [waMsg, setWaMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [waGroupInput, setWaGroupInput] = useState("");
+  const [waInviteLinkInput, setWaInviteLinkInput] = useState("");
+  const [showWaLinkEdit, setShowWaLinkEdit] = useState(false);
   const [matchTab, setMatchTab] = useState<"upcoming" | "finished">("upcoming");
   const [inviteSearch, setInviteSearch] = useState("");
   const [inviteSearchQuery, setInviteSearchQuery] = useState("");
@@ -79,6 +81,17 @@ const LeagueDetailPage = () => {
   const waUnlinkGroupMutation = useMutation({
     mutationFn: () => unlinkWaGroup(leagueId!),
     onSuccess: () => { setWaMsg({ ok: true, text: 'קבוצה נותקה' }); refetchWaSettings(); },
+    onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
+  });
+
+  const waUpdateLinkMutation = useMutation({
+    mutationFn: () => updateWaLeagueSettings(leagueId!, { invite_link: waInviteLinkInput.trim() || null }),
+    onSuccess: () => {
+      setWaMsg({ ok: true, text: 'לינק עודכן ✅' });
+      setShowWaLinkEdit(false);
+      setWaInviteLinkInput("");
+      refetchWaSettings();
+    },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });
 
@@ -507,8 +520,8 @@ const LeagueDetailPage = () => {
         </div>
       )}
 
-      {/* WhatsApp Bot section */}
-      {!isFinished && (
+      {/* WhatsApp Bot section — hidden for public leagues */}
+      {!isFinished && league.access_type !== 'public' && (
         <div className="px-5">
           <div className="card-kickoff flex flex-col gap-3">
             <p className="text-xs font-bold flex items-center gap-1.5">
@@ -535,6 +548,27 @@ const LeagueDetailPage = () => {
                     <p className="text-[11px] text-muted-foreground">
                       לקישור קבוצה קיימת — הוסף את הבוט לקבוצה ושלח: <span className="font-mono">/kickoff setup {league.invite_code}</span>
                     </p>
+                    {showWaLinkEdit ? (
+                      <div className="flex flex-col gap-2">
+                        <input
+                          value={waInviteLinkInput}
+                          onChange={e => setWaInviteLinkInput(e.target.value)}
+                          placeholder="לינק הזמנה לקבוצת WA"
+                          className="bg-secondary rounded-xl px-3 py-2 text-xs outline-none"
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => waUpdateLinkMutation.mutate()} disabled={waUpdateLinkMutation.isPending}>
+                            {waUpdateLinkMutation.isPending ? "שומר..." : "שמור לינק"}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setShowWaLinkEdit(false)}>ביטול</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setWaInviteLinkInput(waSettingsData?.settings?.invite_link ?? ""); setShowWaLinkEdit(true); }}
+                        className="text-xs text-primary hover:underline self-start">
+                        עדכן לינק הזמנה לקבוצה
+                      </button>
+                    )}
                     <button
                       onClick={() => waUnlinkGroupMutation.mutate()}
                       disabled={waUnlinkGroupMutation.isPending}
@@ -567,6 +601,27 @@ const LeagueDetailPage = () => {
                     /kickoff setup {league.invite_code}
                   </p>
                 </div>
+                {showWaLinkEdit ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      value={waInviteLinkInput}
+                      onChange={e => setWaInviteLinkInput(e.target.value)}
+                      placeholder="לינק הזמנה לקבוצת WA"
+                      className="bg-secondary rounded-xl px-3 py-2 text-xs outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => waUpdateLinkMutation.mutate()} disabled={waUpdateLinkMutation.isPending}>
+                        {waUpdateLinkMutation.isPending ? "שומר..." : "שמור לינק"}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowWaLinkEdit(false)}>ביטול</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { setWaInviteLinkInput(""); setShowWaLinkEdit(true); }}
+                    className="text-xs text-primary hover:underline self-start">
+                    הוסף לינק הזמנה ישיר לקבוצה
+                  </button>
+                )}
               </>
             ) : (
               <p className="text-[11px] text-muted-foreground">

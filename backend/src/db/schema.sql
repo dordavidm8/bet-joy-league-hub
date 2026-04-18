@@ -357,6 +357,9 @@ ALTER TABLE bets
 ALTER TABLE leagues
   ADD COLUMN IF NOT EXISTS wa_enabled BOOLEAN NOT NULL DEFAULT false;
 
+ALTER TABLE bet_questions
+  ADD COLUMN IF NOT EXISTS odds_source VARCHAR(20) NOT NULL DEFAULT 'default';
+
 -- WA league settings
 CREATE TABLE IF NOT EXISTS wa_league_settings (
   league_id              UUID PRIMARY KEY REFERENCES leagues(id) ON DELETE CASCADE,
