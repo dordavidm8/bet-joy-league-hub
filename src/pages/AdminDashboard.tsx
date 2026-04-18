@@ -12,7 +12,7 @@ import {
   adminGetCompetitions, adminGetLog,
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
-  adminLockGame, adminUnlockGame, adminPauseLeague, adminUpdateGameOdds, adminUpdateUser,
+  adminLockGame, adminUnlockGame, adminPauseLeague, adminStopLeague, adminUpdateGameOdds, adminUpdateUser,
   adminRemoveWaGroup, adminSetWaInviteLink,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
@@ -51,6 +51,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     lost: "bg-red-100 text-red-700", active: "bg-blue-100 text-blue-700",
     finished: "bg-gray-100 text-gray-500", scheduled: "bg-purple-100 text-purple-700",
     live: "bg-red-100 text-red-600 animate-pulse", cancelled: "bg-gray-100 text-gray-400",
+    postponed: "bg-orange-100 text-orange-700", paused: "bg-amber-100 text-amber-700",
   };
   return <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${map[status] ?? "bg-gray-100 text-gray-500"}`}>{status}</span>;
 };
@@ -458,8 +459,10 @@ const GamesTab = () => {
     if (oddsFilter && (g as any).odds_source !== oddsFilter) return false;
     if (dateFrom && new Date(g.start_time) < new Date(dateFrom)) return false;
     if (dateTo && new Date(g.start_time) > new Date(dateTo + "T23:59:59")) return false;
-    // gameTab filter
-    if (gameTab === "upcoming" && g.status === "finished") return false;
+    // gameTab filter — upcoming: exclude finished + postponed past their date; finished: only finished
+    const isPast = new Date(g.start_time) < new Date();
+    if (gameTab === "upcoming" && (g.status === "finished" || (g.status === "postponed" && isPast))) return false;
+    if (gameTab === "upcoming" && g.status !== "live" && g.status !== "scheduled" && g.status !== "postponed" && isPast) return false;
     if (gameTab === "finished" && g.status !== "finished") return false;
     return true;
   });
@@ -513,6 +516,7 @@ const GamesTab = () => {
           <option value="scheduled">scheduled</option>
           <option value="live">live</option>
           <option value="finished">finished</option>
+          <option value="postponed">נדחה</option>
         </select>
         <select value={blockedFilter} onChange={e => setBlockedFilter(e.target.value as any)}
           className="bg-background border rounded-lg px-2 py-1 text-xs outline-none">
@@ -751,6 +755,9 @@ const LeaguesTab = () => {
   const [leagueSearch, setLeagueSearch] = useState("");
   const [pauseConfirm, setPauseConfirm] = useState<AdminLeague | null>(null);
   const [pauseMsg, setPauseMsg] = useState("");
+  const [stopConfirm, setStopConfirm] = useState<AdminLeague | null>(null);
+  const [stopMsg, setStopMsg] = useState("");
+  const [statusFilter, setLeagueStatusFilter] = useState<"" | "active" | "paused" | "finished">("");
   const [waModal, setWaModal] = useState<{ league: AdminLeague; mode: 'view' | 'edit' } | null>(null);
   const [waLinkInput, setWaLinkInput] = useState("");
   const [waMsg, setWaMsg] = useState("");
@@ -764,9 +771,12 @@ const LeaguesTab = () => {
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["admin-leagues"], queryFn: adminGetLeagues, staleTime: 30_000 });
   const leagues = (data?.leagues ?? []).filter((l: AdminLeague) => {
-    if (!leagueSearch) return true;
-    const q = leagueSearch.toLowerCase();
-    return l.name.toLowerCase().includes(q) || l.creator_username?.toLowerCase().includes(q);
+    if (leagueSearch) {
+      const q = leagueSearch.toLowerCase();
+      if (!l.name.toLowerCase().includes(q) && !l.creator_username?.toLowerCase().includes(q)) return false;
+    }
+    if (statusFilter && l.status !== statusFilter) return false;
+    return true;
   });
 
   const pauseMutation = useMutation({
@@ -777,6 +787,16 @@ const LeaguesTab = () => {
       setTimeout(() => { setPauseConfirm(null); setPauseMsg(""); }, 1500);
     },
     onError: (e: any) => setPauseMsg(`❌ ${e.message}`),
+  });
+
+  const stopMutation = useMutation({
+    mutationFn: ({ id, distribute }: { id: string; distribute: boolean }) => adminStopLeague(id, distribute),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
+      setStopMsg(`✅ ${res.message}`);
+      setTimeout(() => { setStopConfirm(null); setStopMsg(""); }, 2000);
+    },
+    onError: (e: any) => setStopMsg(`❌ ${e.message}`),
   });
 
   const removeWaMutation = useMutation({
@@ -845,6 +865,13 @@ const LeaguesTab = () => {
         <input value={leagueSearch} onChange={e => setLeagueSearch(e.target.value)}
           placeholder="חיפוש לפי שם ליגה / יוצר..."
           className="bg-transparent flex-1 text-sm outline-none" />
+        <select value={statusFilter} onChange={e => setLeagueStatusFilter(e.target.value as any)}
+          className="bg-background border rounded-lg px-2 py-1 text-xs outline-none">
+          <option value="">כל הסטטוסים</option>
+          <option value="active">פעיל</option>
+          <option value="paused">מושהה</option>
+          <option value="finished">נגמר</option>
+        </select>
       </div>
 
       {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
@@ -881,12 +908,20 @@ const LeaguesTab = () => {
                     </button>
                   </td>
                   <td className="px-3 py-2">
-                    {l.status === "active" && (
-                      <button onClick={() => { setPauseConfirm(l); setPauseMsg(""); }}
-                        className="text-[11px] text-amber-600 border border-amber-300 bg-amber-50 px-2 py-0.5 rounded-full hover:bg-amber-100 transition-colors">
-                        השהה
-                      </button>
-                    )}
+                    <div className="flex gap-1">
+                      {l.status === "active" && (
+                        <button onClick={() => { setPauseConfirm(l); setPauseMsg(""); }}
+                          className="text-[11px] text-amber-600 border border-amber-300 bg-amber-50 px-2 py-0.5 rounded-full hover:bg-amber-100 transition-colors">
+                          השהה
+                        </button>
+                      )}
+                      {(l.status === "active" || l.status === "paused") && (
+                        <button onClick={() => { setStopConfirm(l); setStopMsg(""); }}
+                          className="text-[11px] text-red-600 border border-red-300 bg-red-50 px-2 py-0.5 rounded-full hover:bg-red-100 transition-colors">
+                          עצור
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -907,6 +942,32 @@ const LeaguesTab = () => {
               {pauseMutation.isPending ? "משהה..." : "השהה ליגה"}
             </Button>
             <Button variant="outline" onClick={() => setPauseConfirm(null)}>ביטול</Button>
+          </div>
+        </Modal>
+      )}
+
+      {stopConfirm && (
+        <Modal onClose={() => setStopConfirm(null)} title={`⛔ עצירת ליגה: ${stopConfirm.name}`}>
+          <p className="text-sm text-muted-foreground mb-1">
+            פעולה זו תסגור את הליגה לצמיתות. לא ניתן לבטל.
+          </p>
+          <p className="text-xs bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3 text-amber-800">
+            קופה נוכחית: <b>{fmt(stopConfirm.pool_total)} נק׳</b>
+            {stopConfirm.distribution ? ` • חלוקה מוגדרת: ${stopConfirm.distribution}` : " • אין חלוקת פרסים מוגדרת"}
+          </p>
+          {stopMsg && <p className="text-sm mb-3">{stopMsg}</p>}
+          <div className="flex flex-col gap-2">
+            <Button variant="destructive" className="flex-1"
+              onClick={() => stopMutation.mutate({ id: stopConfirm.id, distribute: true })}
+              disabled={stopMutation.isPending || !stopConfirm.distribution}>
+              {stopMutation.isPending ? "מעצור..." : "עצור וחלק פרסים לפי דירוג"}
+            </Button>
+            <Button className="flex-1 bg-gray-700 hover:bg-gray-800 text-white"
+              onClick={() => stopMutation.mutate({ id: stopConfirm.id, distribute: false })}
+              disabled={stopMutation.isPending}>
+              {stopMutation.isPending ? "מעצור..." : "עצור ללא חלוקת פרסים"}
+            </Button>
+            <Button variant="outline" onClick={() => setStopConfirm(null)}>ביטול</Button>
           </div>
         </Modal>
       )}

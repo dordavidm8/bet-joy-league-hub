@@ -14,6 +14,7 @@ async function upsertGame(client, game) {
        $3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
      ON CONFLICT (espn_id) DO UPDATE SET
        status      = EXCLUDED.status,
+       start_time  = EXCLUDED.start_time,
        minute      = EXCLUDED.minute,
        score_home  = EXCLUDED.score_home,
        score_away  = EXCLUDED.score_away,

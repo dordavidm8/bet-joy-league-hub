@@ -508,7 +508,7 @@ const LeagueDetailPage = () => {
             </>
           )}
 
-          {!isCreator && (
+          {myMember?.is_active && (
             <button
               onClick={() => leaveMutation.mutate()}
               disabled={leaveMutation.isPending}

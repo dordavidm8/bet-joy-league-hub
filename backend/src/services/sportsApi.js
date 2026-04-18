@@ -83,12 +83,15 @@ function mapEvent(event, leagueSlug) {
 
   const espnStatus = status?.type?.name;
   const isCompleted = status?.type?.completed || espnStatus === 'STATUS_FINAL' || espnStatus === 'STATUS_FULL_TIME';
-  
+  const isPostponed = espnStatus === 'STATUS_POSTPONED' || espnStatus === 'STATUS_CANCELED' || espnStatus === 'STATUS_SUSPENDED';
+
   let gameStatus = 'scheduled';
   if (espnStatus && (espnStatus.includes('IN_PROGRESS') || espnStatus.includes('LIVE'))) {
     gameStatus = 'live';
   } else if (isCompleted) {
     gameStatus = 'finished';
+  } else if (isPostponed) {
+    gameStatus = 'postponed';
   }
 
   const minute = gameStatus === 'live'

@@ -101,7 +101,10 @@ router.post('/', authenticate, async (req, res, next) => {
       );
     }
 
-    await client.query(`INSERT INTO league_members (league_id, user_id) VALUES ($1,$2)`, [league.id, req.user.id]);
+    // Public leagues created by admin start empty (no auto-join for creator)
+    if (league.access_type !== 'public') {
+      await client.query(`INSERT INTO league_members (league_id, user_id) VALUES ($1,$2)`, [league.id, req.user.id]);
+    }
     await client.query('COMMIT');
     res.status(201).json({ league });
   } catch (err) {
@@ -184,14 +187,20 @@ router.post('/:id/leave', authenticate, async (req, res, next) => {
     const leagueRes = await client.query(`SELECT * FROM leagues WHERE id = $1`, [req.params.id]);
     const league = leagueRes.rows[0];
     if (!league) return res.status(404).json({ error: 'League not found' });
-    if (league.creator_id === req.user.id) return res.status(400).json({ error: 'Creator cannot leave' });
+    if (league.status !== 'active') return res.status(400).json({ error: 'ליגה אינה פעילה' });
+
+    const memberCheck = await client.query(
+      `SELECT id FROM league_members WHERE league_id = $1 AND user_id = $2 AND is_active = true`,
+      [league.id, req.user.id]
+    );
+    if (!memberCheck.rows[0]) return res.status(400).json({ error: 'אינך חבר בליגה' });
 
     await client.query(
       `UPDATE league_members SET is_active = false WHERE league_id = $1 AND user_id = $2`,
       [league.id, req.user.id]
     );
     await client.query('COMMIT');
-    res.json({ message: 'Left league. Entry fee forfeited.' });
+    res.json({ message: 'עזבת את הליגה. דמי הכניסה אינם מוחזרים.' });
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
@@ -221,7 +230,8 @@ router.get('/my/list', authenticate, async (req, res, next) => {
       `SELECT l.*, lm.points_in_league, lm.is_active,
               (SELECT COUNT(*) FROM league_members WHERE league_id = l.id AND is_active = true) AS member_count
        FROM leagues l JOIN league_members lm ON lm.league_id = l.id
-       WHERE lm.user_id = $1 AND lm.is_active = true ORDER BY l.created_at DESC`,
+       WHERE lm.user_id = $1 AND lm.is_active = true AND l.status IN ('active', 'paused')
+       ORDER BY l.created_at DESC`,
       [req.user.id]
     );
     res.json({ leagues: result.rows });
