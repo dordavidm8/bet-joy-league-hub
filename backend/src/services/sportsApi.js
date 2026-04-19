@@ -191,7 +191,7 @@ function buildBetQuestions(game) {
     },
     {
       type: 'both_teams_score',
-      question_text: `שתי הקבוצות ישכנסו גול: ${h} נגד ${a}?`,
+      question_text: `שתי הקבוצות יבקיעו גול: ${h} נגד ${a}?`,
       odds_source: otherSource,
       outcomes: [
         { label: 'כן', odds: bttsYes },

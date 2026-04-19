@@ -359,7 +359,7 @@ export function translateQuestionText(text: string): string {
   if (whoWin) return `מי ינצח: ${translateTeam(whoWin[1].trim())} נגד ${translateTeam(whoWin[2].trim())}?`;
 
   const btts = text.match(/^Both teams to score in\s*(.+)\s+vs\s+(.+)\?$/i);
-  if (btts) return `שתי הקבוצות ישכנסו גול: ${translateTeam(btts[1].trim())} נגד ${translateTeam(btts[2].trim())}?`;
+  if (btts) return `שתי הקבוצות יבקיעו גול: ${translateTeam(btts[1].trim())} נגד ${translateTeam(btts[2].trim())}?`;
 
   const ou = text.match(/^Over\/Under 2\.5 goals in\s*(.+)\s+vs\s+(.+)\?$/i);
   if (ou) return `מעל/מתחת 2.5 שערים: ${translateTeam(ou[1].trim())} נגד ${translateTeam(ou[2].trim())}?`;
