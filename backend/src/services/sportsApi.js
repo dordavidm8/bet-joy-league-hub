@@ -8,8 +8,25 @@ function americanToDecimal(american) {
   return parseFloat((1 + 100 / Math.abs(val)).toFixed(2));
 }
 
+// Strip accents for fuzzy name matching (e.g. "Atlético" → "atletico")
+function normalizeName(name) {
+  return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
 let _oddsCache = {}; // { 'HomeTeam|AwayTeam': { home_odds, draw_odds, away_odds } }
-function setOddsCache(cache) { _oddsCache = cache; }
+let _oddsCacheNorm = {}; // normalized keys for accent-insensitive fallback lookup
+
+function setOddsCache(cache) {
+  _oddsCache = cache;
+  _oddsCacheNorm = {};
+  for (const [key, val] of Object.entries(cache)) {
+    const pipe = key.indexOf('|');
+    if (pipe === -1) continue;
+    const h = key.slice(0, pipe);
+    const a = key.slice(pipe + 1);
+    _oddsCacheNorm[`${normalizeName(h)}|${normalizeName(a)}`] = val;
+  }
+}
 
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 
@@ -163,9 +180,16 @@ function buildBetQuestions(game) {
   const a = translateTeam(aEn);
 
   // Priority: 1. ESPN live odds, 2. The Odds API cache, 3. Defaults
-  // Use English names for cache lookup — _oddsCache keys are English team names
+  // Use English names for cache lookup. Normalized fallback handles accent mismatches
+  // (e.g. ESPN "Atlético Madrid" vs Odds API "Atletico Madrid")
   const espnOdds  = game.espn_odds || null;
-  const apiOdds   = _oddsCache[`${hEn}|${aEn}`] || _oddsCache[`${aEn}|${hEn}`] || null;
+  const hNorm = normalizeName(hEn);
+  const aNorm = normalizeName(aEn);
+  const apiOdds   = _oddsCache[`${hEn}|${aEn}`]
+    || _oddsCache[`${aEn}|${hEn}`]
+    || _oddsCacheNorm[`${hNorm}|${aNorm}`]
+    || _oddsCacheNorm[`${aNorm}|${hNorm}`]
+    || null;
   const realOdds  = espnOdds || apiOdds;
 
   const homeOdds  = realOdds?.home_odds  ?? 2.10;
