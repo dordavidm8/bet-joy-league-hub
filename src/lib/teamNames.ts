@@ -352,6 +352,8 @@ export function translateOutcomeLabel(label: string): string {
 // Translate old English question_text patterns to Hebrew (handles pre-existing DB records)
 export function translateQuestionText(text: string): string {
   if (!text) return text;
+  // Fix typos that may exist in already-Hebrew DB records
+  text = text.replace(/ישכנסו/g, 'יבקיעו');
   // Already Hebrew
   if (/[\u0590-\u05FF]/.test(text)) return text;
 

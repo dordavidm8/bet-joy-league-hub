@@ -835,8 +835,8 @@ router.post('/regenerate-bet-questions', authenticate, requireAdmin, async (req,
       const q = questions.find((x) => x.type === row.type);
       if (!q) continue;
       await client.query(
-        `UPDATE bet_questions SET question_text = $1, outcomes = $2 WHERE id = $3`,
-        [q.question_text, JSON.stringify(q.outcomes), row.id]
+        `UPDATE bet_questions SET question_text = $1, outcomes = $2, odds_source = $3 WHERE id = $4`,
+        [q.question_text, JSON.stringify(q.outcomes), q.odds_source || 'default', row.id]
       );
       count++;
     }

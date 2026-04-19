@@ -6,6 +6,11 @@ const { queueUnknownTeams } = require('../lib/teamNames');
 
 // ── Upsert a single game row ───────────────────────────────────────────────────
 async function upsertGame(client, game) {
+  // Capture current team names before upsert so we can detect knockout name changes
+  const prev = await client.query(
+    `SELECT home_team, away_team FROM games WHERE espn_id = $1`, [game.espn_id]
+  );
+
   const res = await client.query(
     `INSERT INTO games
        (espn_id, competition_id, home_team, away_team, home_team_logo, away_team_logo,
@@ -14,13 +19,17 @@ async function upsertGame(client, game) {
        (SELECT id FROM competitions WHERE slug = $2 LIMIT 1),
        $3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
      ON CONFLICT (espn_id) DO UPDATE SET
-       status      = EXCLUDED.status,
-       start_time  = EXCLUDED.start_time,
-       minute      = EXCLUDED.minute,
-       score_home  = EXCLUDED.score_home,
-       score_away  = EXCLUDED.score_away,
-       espn_odds   = EXCLUDED.espn_odds,
-       updated_at  = NOW()
+       home_team      = EXCLUDED.home_team,
+       away_team      = EXCLUDED.away_team,
+       home_team_logo = EXCLUDED.home_team_logo,
+       away_team_logo = EXCLUDED.away_team_logo,
+       status         = EXCLUDED.status,
+       start_time     = EXCLUDED.start_time,
+       minute         = EXCLUDED.minute,
+       score_home     = EXCLUDED.score_home,
+       score_away     = EXCLUDED.score_away,
+       espn_odds      = EXCLUDED.espn_odds,
+       updated_at     = NOW()
      RETURNING id, (xmax = 0) AS inserted`,
     [
       game.espn_id, game.competition_slug,
@@ -31,7 +40,14 @@ async function upsertGame(client, game) {
       JSON.stringify(game.espn_odds)
     ]
   );
-  return res.rows[0];
+  const row = res.rows[0];
+
+  // Detect if team names changed (knockout stage: placeholder → real team)
+  if (prev.rows[0]) {
+    const { home_team: oldHome, away_team: oldAway } = prev.rows[0];
+    row.teams_changed = oldHome !== game.home_team || oldAway !== game.away_team;
+  }
+  return row;
 }
 
 // ── Ensure default competitions exist ─────────────────────────────────────────
@@ -64,6 +80,18 @@ async function seedBetQuestions(client, gameId, game) {
       [gameId, q.type, q.question_text, JSON.stringify(q.outcomes), q.odds_source || 'default']
     );
   }
+}
+
+// ── Reseed bet questions when team names change (knockout stage) ───────────────
+// Only deletes questions that have no bets to avoid breaking existing bets
+async function reseedBetQuestionsOnTeamChange(client, gameId, game) {
+  await client.query(`
+    DELETE FROM bet_questions
+    WHERE game_id = $1
+      AND NOT EXISTS (SELECT 1 FROM bets WHERE bet_question_id = bet_questions.id)
+  `, [gameId]);
+  await seedBetQuestions(client, gameId, game);
+  console.log(`[syncGames] Reseeded bet questions for game ${gameId} (team names changed)`);
 }
 
 // ── Main sync function ────────────────────────────────────────────────────────
@@ -105,6 +133,9 @@ async function syncGames() {
         await seedBetQuestions(client, row.id, game);
         inserted++;
       } else {
+        if (row.teams_changed) {
+          await reseedBetQuestionsOnTeamChange(client, row.id, game);
+        }
         updated++;
       }
       if ((j + 1) % 50 === 0) console.log(`[syncGames] Processed ${j + 1}/${games.length} games…`);
