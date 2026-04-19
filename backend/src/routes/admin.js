@@ -781,11 +781,11 @@ opsRouter.post('/reset-minigame-attempts', async (req, res, next) => {
 
 // ── Team name translations ────────────────────────────────────────────────────
 
-// GET /api/admin/team-translations — list all (pending + approved)
+// GET /api/admin/team-translations — pending only
 router.get('/team-translations', authenticate, requireAdmin, async (req, res, next) => {
   try {
     const result = await pool.query(
-      `SELECT name_en, name_he, status, created_at FROM team_name_translations ORDER BY status, created_at DESC`
+      `SELECT name_en, name_he, status, created_at FROM team_name_translations WHERE status = 'pending' ORDER BY created_at DESC`
     );
     res.json({ translations: result.rows });
   } catch (err) { next(err); }

@@ -1654,9 +1654,6 @@ const AdvancedTab = () => {
                   <div key={t.name_en} className="border rounded-xl p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono text-muted-foreground">{t.name_en}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${t.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {t.status === 'approved' ? 'מאושר' : 'ממתין'}
-                      </span>
                     </div>
                     <div className="flex gap-2">
                       <input
