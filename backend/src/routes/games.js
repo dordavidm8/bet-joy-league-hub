@@ -103,4 +103,16 @@ router.get('/:id/bet-questions', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/games/team-translations — approved dynamic translations for frontend
+router.get('/team-translations', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT name_en, name_he FROM team_name_translations WHERE status = 'approved'`
+    );
+    const map = {};
+    result.rows.forEach(({ name_en, name_he }) => { map[name_en] = name_he; });
+    res.json({ translations: map });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

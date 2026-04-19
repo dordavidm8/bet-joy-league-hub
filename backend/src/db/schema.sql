@@ -450,3 +450,12 @@ CREATE TABLE IF NOT EXISTS wa_message_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_wa_log_phone ON wa_message_log(phone, created_at DESC);
+
+-- Dynamic team name translations (approved by admin after LLM suggestion)
+CREATE TABLE IF NOT EXISTS team_name_translations (
+  name_en  VARCHAR(200) PRIMARY KEY,
+  name_he  VARCHAR(200),
+  status   VARCHAR(20) NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_team_translations_status ON team_name_translations(status);

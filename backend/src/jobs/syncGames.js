@@ -2,6 +2,7 @@ const { pool } = require('../config/database');
 const { fetchAllOdds } = require('../services/oddsApi');
 const { setOddsCache } = require('../services/sportsApi');
 const { fetchAllGames, buildBetQuestions } = require('../services/sportsApi');
+const { queueUnknownTeams } = require('../lib/teamNames');
 
 // ── Upsert a single game row ───────────────────────────────────────────────────
 async function upsertGame(client, game) {
@@ -111,6 +112,10 @@ async function syncGames() {
 
     await client.query('COMMIT');
     console.log(`[syncGames] Done — inserted ${inserted}, updated ${updated}`);
+
+    // Queue unknown team names for LLM translation (fire-and-forget)
+    const allNames = games.flatMap((g) => [g.home_team, g.away_team]);
+    queueUnknownTeams(pool, allNames).catch(() => {});
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('[syncGames] DB error:', err.message);

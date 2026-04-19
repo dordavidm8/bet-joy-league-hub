@@ -27,9 +27,10 @@ import PublicProfilePage from "@/pages/PublicProfilePage";
 import BetHistoryPage from "@/pages/BetHistoryPage";
 import StatsPage from "@/pages/StatsPage";
 import { Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { adminGetMe } from "@/lib/api";
+import { adminGetMe, getApprovedTeamTranslations } from "@/lib/api";
+import { setDynamicTranslations } from "@/lib/teamNames";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 const BlockedScreen = () => {
@@ -64,6 +65,17 @@ const AdminRoute = () => {
 };
 
 const queryClient = new QueryClient();
+
+// Loads approved dynamic team translations from DB once on startup
+function DynamicTranslationsLoader() {
+  const { data } = useQuery({
+    queryKey: ['team-translations'],
+    queryFn: getApprovedTeamTranslations,
+    staleTime: 10 * 60 * 1000,
+  });
+  useEffect(() => { if (data?.translations) setDynamicTranslations(data.translations); }, [data]);
+  return null;
+}
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen max-w-lg mx-auto relative">
@@ -124,6 +136,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <DynamicTranslationsLoader />
             <ErrorBoundary>
               <AuthGate />
             </ErrorBoundary>

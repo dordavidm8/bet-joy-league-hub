@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../config/database');
+const { translateTeam } = require('../lib/teamNames');
 
 const BOT_INTERNAL_URL = process.env.BOT_INTERNAL_URL || 'http://localhost:4001';
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || '';
@@ -84,7 +85,7 @@ async function buildResultMessage(gameId, leagueId) {
 
   const rankEmoji = ['🥇', '🥈', '🥉'];
   const score = game.score_home != null ? `${game.score_home}-${game.score_away}` : '';
-  let msg = `━━━━━━━━━━━━━━━━━━━━━━\n📊 ${game.home_team} ${score} ${game.away_team}\n`;
+  let msg = `━━━━━━━━━━━━━━━━━━━━━━\n📊 ${translateTeam(game.home_team)} ${score} ${translateTeam(game.away_team)}\n`;
 
   if (won.length > 0) {
     msg += `\n🏆 מנצחים:\n`;

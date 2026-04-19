@@ -17,6 +17,7 @@ import {
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
   adminGetAdmins, adminAddAdmin, adminRemoveAdmin,
+  adminGetTeamTranslations, adminApproveTeamTranslation, adminDismissTeamTranslation, adminRegenerateBetQuestions,
   createLeague,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
   AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion, AdminUserEntry, getGames,
@@ -1531,13 +1532,18 @@ const MiniGamesTab = () => {
 // ── Advanced Tab ──────────────────────────────────────────────────────────────
 const AdvancedTab = () => {
   const queryClient = useQueryClient();
-  const [section, setSection] = useState<"competitions" | "log" | "admins">("competitions");
+  const [section, setSection] = useState<"competitions" | "log" | "admins" | "translations">("competitions");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [adminMsg, setAdminMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const { data: compsData, isLoading: compsLoading } = useQuery({
     queryKey: ["admin-competitions"], queryFn: adminGetCompetitions, enabled: section === "competitions",
   });
+  const { data: translationsData, isLoading: translationsLoading } = useQuery({
+    queryKey: ["admin-team-translations"], queryFn: adminGetTeamTranslations, enabled: section === "translations",
+  });
+  const [editingHe, setEditingHe] = useState<Record<string, string>>({});
+  const [regenMsg, setRegenMsg] = useState<string | null>(null);
   const { data: logData, isLoading: logLoading } = useQuery({
     queryKey: ["admin-log"], queryFn: adminGetLog, enabled: section === "log", staleTime: 10_000,
   });
@@ -1566,6 +1572,21 @@ const AdvancedTab = () => {
     onError: (e: any) => setAdminMsg({ ok: false, text: `❌ ${e.message}` }),
   });
 
+  const approveTranslationMutation = useMutation({
+    mutationFn: ({ name_en, name_he }: { name_en: string; name_he: string }) =>
+      adminApproveTeamTranslation(name_en, name_he),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-team-translations"] }),
+  });
+  const dismissTranslationMutation = useMutation({
+    mutationFn: adminDismissTeamTranslation,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-team-translations"] }),
+  });
+  const regenMutation = useMutation({
+    mutationFn: adminRegenerateBetQuestions,
+    onSuccess: (d) => { setRegenMsg(`✅ עודכנו ${d.updated} שאלות`); setTimeout(() => setRegenMsg(null), 4000); },
+    onError: (e: any) => setRegenMsg(`❌ ${e.message}`),
+  });
+
   const ACTION_LABELS: Record<string, string> = {
     feature_game: "📌 Featured משחק", unfeature_game: "⬜ הסרת Featured",
     cancel_bet: "❌ ביטול הימור", adjust_points: "💰 התאמת נקודות",
@@ -1575,11 +1596,11 @@ const AdvancedTab = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2">
-        {(["competitions", "admins", "log"] as const).map(s => (
+      <div className="flex flex-wrap gap-2">
+        {(["competitions", "admins", "translations", "log"] as const).map(s => (
           <button key={s} onClick={() => setSection(s)}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${section === s ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
-            {s === "competitions" ? "⚽ תחרויות" : s === "admins" ? "🔑 מנהלים" : "📋 לוג פעולות"}
+            className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${section === s ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
+            {s === "competitions" ? "⚽ תחרויות" : s === "admins" ? "🔑 מנהלים" : s === "translations" ? "🌐 תרגומי קבוצות" : "📋 לוג פעולות"}
           </button>
         ))}
       </div>
@@ -1604,6 +1625,67 @@ const AdvancedTab = () => {
             ))}
           </div>
         )
+      )}
+
+      {section === "translations" && (
+        <div className="flex flex-col gap-4">
+          {/* Regenerate bet questions */}
+          <div className="border rounded-2xl p-4 flex flex-col gap-3">
+            <h3 className="text-sm font-bold">🔄 רענון שאלות הימור לעברית</h3>
+            <p className="text-xs text-muted-foreground">מעדכן שאלות ותוצאות של משחקים עתידיים שטרם הימרו עליהם — לעברית.</p>
+            <button onClick={() => regenMutation.mutate()}
+              disabled={regenMutation.isPending}
+              className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold disabled:opacity-50">
+              {regenMutation.isPending ? "מעדכן..." : "עדכן שאלות לעברית"}
+            </button>
+            {regenMsg && <p className="text-xs font-medium">{regenMsg}</p>}
+          </div>
+
+          {/* Pending / approved team translations */}
+          <div className="border rounded-2xl p-4 flex flex-col gap-3">
+            <h3 className="text-sm font-bold">🌐 תרגומי קבוצות ממתינים לאישור</h3>
+            <p className="text-xs text-muted-foreground">קבוצות חדשות שה-LLM תרגם — ערוך/אשר לפני שיוצגו באתר.</p>
+            {translationsLoading ? <Loader /> : (
+              <div className="flex flex-col gap-2">
+                {(translationsData?.translations ?? []).length === 0 && (
+                  <p className="text-xs text-muted-foreground">אין תרגומים ממתינים</p>
+                )}
+                {(translationsData?.translations ?? []).map((t) => (
+                  <div key={t.name_en} className="border rounded-xl p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono text-muted-foreground">{t.name_en}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${t.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {t.status === 'approved' ? 'מאושר' : 'ממתין'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={editingHe[t.name_en] ?? t.name_he ?? ""}
+                        onChange={(e) => setEditingHe((p) => ({ ...p, [t.name_en]: e.target.value }))}
+                        placeholder="שם בעברית..."
+                        className="flex-1 bg-background border rounded-xl px-3 py-1.5 text-sm outline-none"
+                      />
+                      <button
+                        onClick={() => approveTranslationMutation.mutate({
+                          name_en: t.name_en,
+                          name_he: editingHe[t.name_en] ?? t.name_he ?? "",
+                        })}
+                        disabled={!editingHe[t.name_en] && !t.name_he}
+                        className="px-3 py-1.5 rounded-xl bg-green-600 text-white text-xs font-bold disabled:opacity-40">
+                        אשר
+                      </button>
+                      <button
+                        onClick={() => dismissTranslationMutation.mutate(t.name_en)}
+                        className="px-3 py-1.5 rounded-xl bg-secondary border text-xs font-bold text-muted-foreground">
+                        דחה
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {section === "admins" && (

@@ -779,5 +779,75 @@ opsRouter.post('/reset-minigame-attempts', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── Team name translations ────────────────────────────────────────────────────
+
+// GET /api/admin/team-translations — list all (pending + approved)
+router.get('/team-translations', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT name_en, name_he, status, created_at FROM team_name_translations ORDER BY status, created_at DESC`
+    );
+    res.json({ translations: result.rows });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/admin/team-translations/:name_en — edit Hebrew name + approve
+router.put('/team-translations/:name_en', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const { name_he } = req.body;
+    const { name_en } = req.params;
+    await pool.query(
+      `UPDATE team_name_translations SET name_he = $1, status = 'approved' WHERE name_en = $2`,
+      [name_he, name_en]
+    );
+    await logAdminAction(req.user.email, 'approve_team_translation', 'team_translation', name_en, { name_he });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/team-translations/:name_en — dismiss (remove pending)
+router.delete('/team-translations/:name_en', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    await pool.query(`DELETE FROM team_name_translations WHERE name_en = $1`, [req.params.name_en]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/regenerate-bet-questions — re-generate question_text + outcomes in Hebrew
+// Only touches questions for scheduled games that have zero bets
+router.post('/regenerate-bet-questions', authenticate, requireAdmin, async (req, res, next) => {
+  const { buildBetQuestions } = require('../services/sportsApi');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Find bet_questions with no bets, for scheduled games
+    const toRegen = await client.query(`
+      SELECT bq.id, bq.type, g.home_team, g.away_team, g.espn_odds
+      FROM bet_questions bq
+      JOIN games g ON g.id = bq.game_id
+      WHERE g.status = 'scheduled'
+        AND NOT EXISTS (SELECT 1 FROM bets b WHERE b.bet_question_id = bq.id)
+    `);
+    let count = 0;
+    for (const row of toRegen.rows) {
+      const mockGame = { home_team: row.home_team, away_team: row.away_team, espn_odds: row.espn_odds };
+      const questions = buildBetQuestions(mockGame);
+      const q = questions.find((x) => x.type === row.type);
+      if (!q) continue;
+      await client.query(
+        `UPDATE bet_questions SET question_text = $1, outcomes = $2 WHERE id = $3`,
+        [q.question_text, JSON.stringify(q.outcomes), row.id]
+      );
+      count++;
+    }
+    await client.query('COMMIT');
+    await logAdminAction(req.user.email, 'regenerate_bet_questions', null, null, { count });
+    res.json({ ok: true, updated: count });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
+});
+
 module.exports = router;
 module.exports.opsRouter = opsRouter;

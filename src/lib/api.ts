@@ -706,3 +706,21 @@ export const linkWaGroup = (leagueId: string, wa_group_id: string) =>
 
 export const unlinkWaGroup = (leagueId: string) =>
   request<{ message: string }>(`/whatsapp/leagues/${leagueId}/group`, { method: 'DELETE' });
+
+// ── Team name translations ─────────────────────────────────────────────────────
+export const getApprovedTeamTranslations = () =>
+  request<{ translations: Record<string, string> }>('/games/team-translations');
+
+export const adminGetTeamTranslations = () =>
+  request<{ translations: { name_en: string; name_he: string | null; status: string; created_at: string }[] }>('/admin/team-translations');
+
+export const adminApproveTeamTranslation = (name_en: string, name_he: string) =>
+  request<{ ok: boolean }>(`/admin/team-translations/${encodeURIComponent(name_en)}`, {
+    method: 'PUT', body: JSON.stringify({ name_he }),
+  });
+
+export const adminDismissTeamTranslation = (name_en: string) =>
+  request<{ ok: boolean }>(`/admin/team-translations/${encodeURIComponent(name_en)}`, { method: 'DELETE' });
+
+export const adminRegenerateBetQuestions = () =>
+  request<{ ok: boolean; updated: number }>('/admin/regenerate-bet-questions', { method: 'POST' });

@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const { createNotification } = require('../services/notificationService');
+const { translateTeam } = require('../lib/teamNames');
 
 // Runs every 15 minutes. Finds featured games whose notification window has arrived,
 // sends a push notification to all users, and marks the game as notified.
@@ -31,7 +32,7 @@ async function sendFeaturedMatchNotifications() {
       for (const userId of userIds) {
         await createNotification(userId, {
           type: 'special_offer',
-          title: `🔥 משחק מומלץ — ${game.home_team} נגד ${game.away_team}`,
+          title: `🔥 משחק מומלץ — ${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}`,
           body: `בונוס של +${game.featured_bonus_pct}% על הסיכויים! המשחק מתחיל ב-${kickoffTime}`,
           data: { game_id: game.id, bonus_pct: game.featured_bonus_pct },
         });

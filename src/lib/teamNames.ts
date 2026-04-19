@@ -28,7 +28,7 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Denmark': 'דנמרק',
   'Ecuador': 'אקוודור',
   'Egypt': 'מצרים',
-  'El Salvador': 'אל סלוודור',
+  'El Salvador': 'אל סלבדור',
   'England': 'אנגליה',
   'Finland': 'פינלנד',
   'France': 'צרפת',
@@ -90,7 +90,7 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Uruguay': 'אורוגוואי',
   'Uzbekistan': 'אוזבקיסטן',
   'Venezuela': 'ונצואלה',
-  'Wales': 'ויילס',
+  'Wales': 'ווילס',
 
   // ── Champions League / major clubs ───────────────────────────────────────
   'Real Madrid': 'ריאל מדריד',
@@ -110,14 +110,14 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Paris Saint Germain': 'פ.ס.ז\'',
   'PSG': 'פ.ס.ז\'',
   'Juventus': 'יובנטוס',
-  'Inter Milan': 'אינטר מילאן',
-  'Inter': 'אינטר מילאן',
+  'Inter Milan': 'אינטר',
+  'Inter': 'אינטר',
   'AC Milan': 'מילאן',
   'Milan': 'מילאן',
   'Borussia Dortmund': 'בורוסיה דורטמונד',
   'RB Leipzig': 'לייפציג',
   'Bayer Leverkusen': 'באיירן לברקוזן',
-  'Eintracht Frankfurt': 'איינטרכט פרנקפורט',
+  'Eintracht Frankfurt': 'פרנקפורט',
   'Benfica': 'בנפיקה',
   'SL Benfica': 'בנפיקה',
   'Porto': 'פורטו',
@@ -136,14 +136,14 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Atalanta': 'אטלנטה',
   'Celtic': 'סלטיק',
   'Rangers': 'ריינג\'רס',
-  'Galatasaray': 'גלטסראי',
-  'Fenerbahce': 'פנרבחה',
+  'Galatasaray': 'גלטסראיי',
+  'Fenerbahce': 'פנרבצ׳ה',
   'Club Brugge': 'קלוב ברוז\'',
   'Dinamo Zagreb': 'דינמו זאגרב',
   'Red Bull Salzburg': 'זלצבורג',
   'FC Red Bull Salzburg': 'זלצבורג',
   'RB Salzburg': 'זלצבורג',
-  'Shakhtar Donetsk': 'שחטר דונצק',
+  'Shakhtar Donetsk': 'שחטאר דונייצק',
   'Monaco': 'מונקו',
   'AS Monaco': 'מונקו',
   'Lille': 'ליל',
@@ -163,7 +163,7 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Brentford': 'ברנטפורד',
   'Brighton & Hove Albion': 'ברייטון',
   'Brighton': 'ברייטון',
-  'Burnley': 'בורנלי',
+  'Burnley': 'ברנלי',
   'Crystal Palace': 'קריסטל פאלאס',
   'Everton': 'אברטון',
   'Fulham': 'פולהאם',
@@ -171,8 +171,8 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Nottingham Forest': 'נוטינגהאם פורסט',
   'Sheffield United': 'שפילד יונייטד',
   'West Ham United': 'ווסט האם',
-  'Wolverhampton Wanderers': 'וולברהמפטון',
-  'Wolves': 'וולברהמפטון',
+  'Wolverhampton Wanderers': 'וולבס',
+  'Wolves': 'וולבס',
   'Leicester City': 'לסטר סיטי',
   'Leeds United': 'לידס יונייטד',
   'Southampton': 'סאות\'המפטון',
@@ -197,15 +197,15 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'RCD Espanyol': 'אספניול',
   'Getafe': 'חטאפה',
   'Getafe CF': 'חטאפה',
-  'Girona': 'ז\'ירונה',
-  'Girona FC': 'ז\'ירונה',
+  'Girona': 'ג\'ירונה',
+  'Girona FC': 'ג\'ירונה',
   'Alaves': 'אלאבס',
   'Deportivo Alaves': 'אלאבס',
   'Las Palmas': 'לאס פלמאס',
   'UD Las Palmas': 'לאס פלמאס',
-  'Mallorca': 'מיורקה',
-  'RCD Mallorca': 'מיורקה',
-  'Real Mallorca': 'מיורקה',
+  'Mallorca': 'מאיורקה',
+  'RCD Mallorca': 'מאיורקה',
+  'Real Mallorca': 'מאיורקה',
   'Leganes': 'לגאנס',
   'CD Leganes': 'לגאנס',
   'Valladolid': 'ויאדוליד',
@@ -214,8 +214,8 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Cadiz': 'קאדיס',
 
   // ── Bundesliga ────────────────────────────────────────────────────────────
-  'Borussia Monchengladbach': 'בורוסיה מנכנגלדבך',
-  'Borussia Mönchengladbach': 'בורוסיה מנכנגלדבך',
+  'Borussia Monchengladbach': 'בורוסיה מנשנגלדבך',
+  'Borussia Mönchengladbach': 'בורוסיה מנשנגלדבך',
   'Wolfsburg': 'וולפסבורג',
   'VfL Wolfsburg': 'וולפסבורג',
   'Stuttgart': 'שטוטגרט',
@@ -227,24 +227,24 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'SC Freiburg': 'פרייבורג',
   'Werder Bremen': 'ורדר ברמן',
   'SV Werder Bremen': 'ורדר ברמן',
-  'Union Berlin': 'יוניון ברלין',
-  'FC Union Berlin': 'יוניון ברלין',
-  '1. FC Union Berlin': 'יוניון ברלין',
-  'Hertha Berlin': 'הרתה ברלין',
-  'Hertha BSC': 'הרתה ברלין',
+  'Union Berlin': 'אוניון ברלין',
+  'FC Union Berlin': 'אוניון ברלין',
+  '1. FC Union Berlin': 'אוניון ברלין',
+  'Hertha Berlin': 'הרטה ברלין',
+  'Hertha BSC': 'הרטה ברלין',
   'Cologne': 'קלן',
   'FC Cologne': 'קלן',
   '1. FC Köln': 'קלן',
-  'Augsburg': 'אאוגסבורג',
-  'FC Augsburg': 'אאוגסבורג',
+  'Augsburg': 'אוגסבורג',
+  'FC Augsburg': 'אוגסבורג',
   'Mainz': 'מיינץ',
   'Mainz 05': 'מיינץ',
   'FSV Mainz 05': 'מיינץ',
   '1. FSV Mainz 05': 'מיינץ',
   'Bochum': 'בוכום',
   'VfL Bochum': 'בוכום',
-  'Darmstadt': 'דארמשטט',
-  'SV Darmstadt 98': 'דארמשטט',
+  'Darmstadt': 'דארמשטאדט',
+  'SV Darmstadt 98': 'דארמשטאדט',
   'Heidenheim': 'היידנהיים',
   'FC Heidenheim': 'היידנהיים',
   '1. FC Heidenheim 1846': 'היידנהיים',
@@ -268,8 +268,8 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Hellas Verona': 'ורונה',
   'Verona': 'ורונה',
   'Udinese': 'אודינזה',
-  'Cagliari': 'קאלייארי',
-  'Cagliari Calcio': 'קאלייארי',
+  'Cagliari': 'קאליארי',
+  'Cagliari Calcio': 'קאליארי',
   'Frosinone': 'פרוזינונה',
   'Salernitana': 'סלרניטאנה',
   'US Salernitana': 'סלרניטאנה',
@@ -277,8 +277,8 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'US Lecce': 'לצ\'ה',
   'Empoli': 'אמפולי',
   'FC Empoli': 'אמפולי',
-  'Genoa': 'ג\'נואה',
-  'Genoa CFC': 'ג\'נואה',
+  'Genoa': 'גנואה',
+  'Genoa CFC': 'גנואה',
   'Venezia': 'ונציה',
   'Venezia FC': 'ונציה',
   'Como': 'קומו',
@@ -303,8 +303,8 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Toulouse FC': 'טולוז',
   'Brest': 'ברסט',
   'Stade Brestois': 'ברסט',
-  'Le Havre': 'לה אבר',
-  'Le Havre AC': 'לה אבר',
+  'Le Havre': 'לה האבר',
+  'Le Havre AC': 'לה האבר',
   'Metz': 'מץ',
   'FC Metz': 'מץ',
   'Clermont': 'קלרמון',
@@ -320,12 +320,49 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Bordeaux': 'בורדו',
 };
 
-// Lookup: exact match → case-insensitive → original
+// Dynamic translations loaded from DB (approved by admin)
+let _dynamic: Record<string, string> = {};
+export function setDynamicTranslations(map: Record<string, string>) { _dynamic = map; }
+
+// Lookup: static map → dynamic DB map → original
 export function translateTeam(name: string): string {
   if (!name) return name;
   if (TEAM_NAMES_HE[name]) return TEAM_NAMES_HE[name];
+  if (_dynamic[name]) return _dynamic[name];
   const lower = name.toLowerCase();
-  const found = Object.keys(TEAM_NAMES_HE).find((k) => k.toLowerCase() === lower);
-  if (found) return TEAM_NAMES_HE[found];
+  const found = Object.keys(TEAM_NAMES_HE).find((k) => k.toLowerCase() === lower)
+    ?? Object.keys(_dynamic).find((k) => k.toLowerCase() === lower);
+  if (found) return (TEAM_NAMES_HE[found] ?? _dynamic[found]);
   return name;
+}
+
+// Fixed outcome label translations (handles old English DB records)
+const OUTCOME_LABELS_HE: Record<string, string> = {
+  'Draw': 'תיקו',
+  'Yes': 'כן',
+  'No': 'לא',
+  'Over 2.5': 'מעל 2.5',
+  'Under 2.5': 'מתחת 2.5',
+};
+
+export function translateOutcomeLabel(label: string): string {
+  return OUTCOME_LABELS_HE[label] ?? translateTeam(label);
+}
+
+// Translate old English question_text patterns to Hebrew (handles pre-existing DB records)
+export function translateQuestionText(text: string): string {
+  if (!text) return text;
+  // Already Hebrew
+  if (/[\u0590-\u05FF]/.test(text)) return text;
+
+  const whoWin = text.match(/^Who will win:\s*(.+)\s+vs\s+(.+)\?$/i);
+  if (whoWin) return `מי ינצח: ${translateTeam(whoWin[1].trim())} נגד ${translateTeam(whoWin[2].trim())}?`;
+
+  const btts = text.match(/^Both teams to score in\s*(.+)\s+vs\s+(.+)\?$/i);
+  if (btts) return `שתי הקבוצות ישכנסו גול: ${translateTeam(btts[1].trim())} נגד ${translateTeam(btts[2].trim())}?`;
+
+  const ou = text.match(/^Over\/Under 2\.5 goals in\s*(.+)\s+vs\s+(.+)\?$/i);
+  if (ou) return `מעל/מתחת 2.5 שערים: ${translateTeam(ou[1].trim())} נגד ${translateTeam(ou[2].trim())}?`;
+
+  return text;
 }

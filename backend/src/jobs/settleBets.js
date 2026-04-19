@@ -3,6 +3,7 @@ const { calculatePayout } = require('../services/bettingService');
 const { settleLeaguePool } = require('../routes/leagues');
 const { createNotification } = require('../services/notificationService');
 const { checkAndAwardAchievements } = require('../services/achievementService');
+const { translateTeam } = require('../lib/teamNames');
 
 // ── Resolve a bet_question's correct_outcome based on final score ─────────────
 // Returns the winning outcome label, or null if we can't determine yet.
@@ -202,14 +203,14 @@ async function settleBets() {
           createNotification(userId, {
             type: 'bet_won',
             title: '✅ הימור מוצלח!',
-            body: `${payoutDesc} על ${game.home_team} נגד ${game.away_team}`,
+            body: `${payoutDesc} על ${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}`,
             data: { game_id: game.id },
           }).catch(() => {});
         } else if (r.lost > 0 && r.won === 0) {
           createNotification(userId, {
             type: 'bet_lost',
             title: '❌ הימור לא הצליח',
-            body: `${game.home_team} נגד ${game.away_team}`,
+            body: `${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}`,
             data: { game_id: game.id },
           }).catch(() => {});
         } else if (r.won > 0 && r.lost > 0) {
@@ -219,7 +220,7 @@ async function settleBets() {
           createNotification(userId, {
             type: 'bet_won',
             title: `✅ ${r.won} הימורים עברו`,
-            body: `${mixedDesc} על ${game.home_team} נגד ${game.away_team}`,
+            body: `${mixedDesc} על ${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}`,
             data: { game_id: game.id },
           }).catch(() => {});
         }

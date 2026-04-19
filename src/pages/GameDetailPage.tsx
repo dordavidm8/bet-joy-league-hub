@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Lock, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import AiAdvisor from "@/components/AiAdvisor";
-import { translateTeam } from "@/lib/teamNames";
+import { translateTeam, translateOutcomeLabel, translateQuestionText } from "@/lib/teamNames";
 
 function useBettingCountdown(startTime: string) {
   const [label, setLabel] = useState<string | null>(null);
@@ -267,7 +267,7 @@ const GameDetailPage = () => {
                 transition={{ delay: 0.1 + i * 0.05 }}
                 className="flex flex-col gap-3"
               >
-                <h3 className="font-bold text-base">{q.question_text}</h3>
+                <h3 className="font-bold text-base">{translateQuestionText(q.question_text)}</h3>
 
                 {isLocked ? (
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -287,7 +287,7 @@ const GameDetailPage = () => {
                               : "bg-secondary border-border hover:border-primary/40"
                           }`}
                         >
-                          {translateTeam(o.label)}
+                          {translateOutcomeLabel(o.label)}
                           <span className="ml-1 text-xs opacity-70">×{o.odds}</span>
                         </button>
                       ))}
