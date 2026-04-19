@@ -813,10 +813,31 @@ router.delete('/team-translations/:name_en', authenticate, requireAdmin, async (
   } catch (err) { next(err); }
 });
 
+// GET /api/admin/odds-debug — check odds cache status
+router.get('/odds-debug', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const { fetchAllOdds } = require('../services/oddsApi');
+    const { setOddsCache } = require('../services/sportsApi');
+    const hasKey = !!process.env.THE_ODDS_API_KEY;
+    const cache = await fetchAllOdds();
+    setOddsCache(cache);
+    const keys = Object.keys(cache);
+    res.json({
+      has_api_key: hasKey,
+      total_matches: keys.length,
+      sample_keys: keys.slice(0, 20),
+    });
+  } catch (err) { next(err); }
+});
+
 // POST /api/admin/regenerate-bet-questions — re-generate question_text + outcomes in Hebrew
 // Only touches questions for scheduled games that have zero bets
 router.post('/regenerate-bet-questions', authenticate, requireAdmin, async (req, res, next) => {
-  const { buildBetQuestions } = require('../services/sportsApi');
+  const { fetchAllOdds } = require('../services/oddsApi');
+  const { buildBetQuestions, setOddsCache } = require('../services/sportsApi');
+  // Reload fresh odds before regenerating so new bets get real odds_source
+  const freshOdds = await fetchAllOdds();
+  setOddsCache(freshOdds);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

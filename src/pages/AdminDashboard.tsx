@@ -17,7 +17,7 @@ import {
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
   adminGetAdmins, adminAddAdmin, adminRemoveAdmin,
-  adminGetTeamTranslations, adminApproveTeamTranslation, adminDismissTeamTranslation, adminRegenerateBetQuestions,
+  adminGetTeamTranslations, adminApproveTeamTranslation, adminDismissTeamTranslation, adminRegenerateBetQuestions, adminOddsDebug,
   createLeague,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
   AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion, AdminUserEntry, getGames,
@@ -1643,6 +1643,42 @@ const AdvancedTab = () => {
             </button>
             {regenMsg && <p className="text-xs font-medium">{regenMsg}</p>}
           </div>
+
+          {/* Odds cache diagnostics */}
+          {(() => {
+            const [oddsDebug, setOddsDebug] = useState<{ has_api_key: boolean; total_matches: number; sample_keys: string[] } | null>(null);
+            const [oddsLoading, setOddsLoading] = useState(false);
+            return (
+              <div className="border rounded-2xl p-4 flex flex-col gap-3">
+                <h3 className="text-sm font-bold">🔍 אבחון סיכויי הימורים (Odds API)</h3>
+                <button
+                  onClick={async () => {
+                    setOddsLoading(true);
+                    try { setOddsDebug(await adminOddsDebug()); } catch {}
+                    setOddsLoading(false);
+                  }}
+                  disabled={oddsLoading}
+                  className="px-4 py-2 rounded-xl bg-secondary border text-sm font-bold disabled:opacity-50"
+                >
+                  {oddsLoading ? "בודק..." : "בדוק מצב Odds API"}
+                </button>
+                {oddsDebug && (
+                  <div className="text-xs flex flex-col gap-1">
+                    <p>{oddsDebug.has_api_key ? "✅ API key מוגדר" : "❌ API key חסר (THE_ODDS_API_KEY)"}</p>
+                    <p>משחקים בקאש: <strong>{oddsDebug.total_matches}</strong></p>
+                    {oddsDebug.sample_keys.length > 0 && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-muted-foreground">הצג דוגמאות מהקאש</summary>
+                        <ul className="mt-1 space-y-0.5 font-mono text-[10px] text-muted-foreground">
+                          {oddsDebug.sample_keys.map(k => <li key={k}>{k}</li>)}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Pending / approved team translations */}
           <div className="border rounded-2xl p-4 flex flex-col gap-3">
