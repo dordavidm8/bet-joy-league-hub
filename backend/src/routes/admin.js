@@ -173,10 +173,10 @@ router.delete('/users/:id', async (req, res, next) => {
     await client.query(`UPDATE league_members SET is_active = false WHERE user_id = $1`, [req.params.id]);
     // Cancel pending bets
     await client.query(`UPDATE bets SET status = 'cancelled' WHERE user_id = $1 AND status = 'pending'`, [req.params.id]);
-    // Anonymize user
+    // Anonymize user (firebase_uid kept as placeholder — column is NOT NULL)
     const anonSuffix = req.params.id.slice(0, 8);
     await client.query(
-      `UPDATE users SET username = $1, email = $2, display_name = NULL, firebase_uid = NULL, phone_number = NULL
+      `UPDATE users SET username = $1, email = $2, display_name = NULL, firebase_uid = $1, phone_number = NULL
        WHERE id = $3`,
       [`deleted_${anonSuffix}`, `deleted_${anonSuffix}@deleted.invalid`, req.params.id]
     );
