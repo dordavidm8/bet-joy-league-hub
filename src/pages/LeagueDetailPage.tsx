@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 const FORMAT_LABEL: Record<string, string> = { pool: "קופה משותפת", per_game: "תשלום למשחק" };
 const DURATION_LABEL: Record<string, string> = {
   full_season: "עונה מלאה",
-  single_round: "סבב בודד",
-  cup: "גביע",
+  tournament: "טורניר",
 };
 
 const LeagueDetailPage = () => {

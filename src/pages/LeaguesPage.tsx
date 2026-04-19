@@ -38,7 +38,6 @@ const LeaguesPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [format, setFormat] = useState<"pool" | "per_game">("pool");
-  const [duration, setDuration] = useState("full_season");
   const [entryFee, setEntryFee] = useState("0");
   const [minStake, setMinStake] = useState("10");
   const [maxMembers, setMaxMembers] = useState("");
@@ -96,7 +95,7 @@ const LeaguesPage = () => {
         name,
         description: description.trim() || undefined,
         format,
-        duration_type: isTournament ? "tournament" : duration,
+        duration_type: isTournament ? "tournament" : "full_season",
         access_type: 'invite',
         min_bet: format === "per_game" ? (parseInt(minStake) || 10) : 0,
         entry_fee: parseInt(entryFee) || 0,
@@ -132,7 +131,7 @@ const LeaguesPage = () => {
 
   const resetForm = () => {
     setName(""); setDescription(""); setFormat("pool");
-    setDuration("full_season"); setEntryFee("0"); setMinStake("10"); setMaxMembers("");
+    setEntryFee("0"); setMinStake("10"); setMaxMembers("");
     setDistribution(DEFAULT_DISTRIBUTION);
     setIsTournament(false); setTournamentSlug(""); setStakePerMatch("50");
     setPenaltyPerMissedBet("0"); setSeasonEndDate("");
@@ -294,15 +293,6 @@ const LeaguesPage = () => {
                 </div>
               )}
 
-              {/* Duration (non-tournament only) */}
-              {!isTournament && (
-                <select value={duration} onChange={(e) => setDuration(e.target.value)}
-                  className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
-                  <option value="full_season">עונה מלאה</option>
-                  <option value="single_round">סבב בודד</option>
-                  <option value="cup">גביע</option>
-                </select>
-              )}
 
               {/* Min stake per game (per_game format, non-tournament) */}
               {format === "per_game" && !isTournament && (
