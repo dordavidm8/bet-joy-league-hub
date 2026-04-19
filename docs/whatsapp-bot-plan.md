@@ -1,6 +1,6 @@
 # תוכנית מימוש: WhatsApp Bot לקיקאוף
 
-> **סטטוס:** תשתית Backend + Frontend מומשה במלואה — הבוט עצמו טרם נכתב  
+> **סטטוס:** Backend + Frontend + כל קוד הבוט מומשו במלואם — ממתין לחיבור SIM וסריקת QR  
 > **תאריך עדכון:** אפריל 2026  
 > **ספרייה לבוט:** `whatsapp-web.js` (Puppeteer) — אותה ספרייה שGroupShield בנוי עליה, מוכחת ב-production
 
@@ -50,12 +50,16 @@ INTERNAL_API_KEY=<secret>               # אימות קריאות internal
 
 ---
 
-### ❌ טרם מומש — הבוט עצמו
+### ✅ קוד הבוט — מומש במלואו (whatsapp-bot/)
 
-**כל תיקיית `whatsapp-bot/` אינה קיימת.** צריך ליצור אותה מאפס.
+כל הקוד נכתב ומוכן. **ממתין לחיבור SIM וסריקת QR בלבד.**
 
-**הבלוקר עד היום:** חיבור מספר SIM לבוט  
-**סטטוס SIM:** מתוכנן לחיבור היום (19.4.2026)
+### ⏳ נותר — חיבור SIM וDeploy  
+1. חבר SIM לטלפון/מכשיר
+2. הרץ `node bot.js` — סרוק QR
+3. הגדר Railway service חדש (root: `whatsapp-bot/`)
+4. הוסף Volume לsession + ENV variables
+5. הגדר `BOT_INTERNAL_URL` בbackend service
 
 #### מה צריך לבנות (לפי סדר עדיפות):
 
@@ -1146,24 +1150,24 @@ bet-joy-league-hub/
   ⏳ הבוט עצמו (internal API) — ממתין לחיבור SIM
 
 שלב A — הבוט עולה ← הצעד הבא (אחרי חיבור SIM)
-  ☐ whatsapp-bot/bot.js + whatsapp-web.js + LocalAuth session
-  ☐ whatsapp-bot/src/internalApi.js (port 4001)
-  ☐ Railway: Volume לsession + PM2/Procfile
+  ✅ whatsapp-bot/bot.js + whatsapp-web.js + LocalAuth session
+  ✅ whatsapp-bot/src/internalApi.js (port 4001)
+  ✅ Railway: railway.json + ecosystem.config.js + Volume documented
 
 שלב B — הודעות בוקר + הימור ב-reply
-  ☐ wa_game_messages migration
-  ☐ scheduledJobs.js + morningMessages.js
-  ☐ groupHandler.js + processBetReply()
+  ✅ wa_game_messages migration (כבר קיים בschema.sql)
+  ✅ scheduledJobs.js + morningMessages.js
+  ✅ groupHandler.js + processBetReply() + bet correction
 
 שלב C — תזכורות + תוצאות
-  ☐ wa_reminders_sent migration
-  ☐ reminderNotifier.js
-  ☐ resultNotifier.js (trigger מ-settleBets.js)
+  ✅ wa_reminders_sent migration (כבר קיים בschema.sql)
+  ✅ reminderNotifier.js
+  ✅ resultNotifier.js (trigger מ-settleBets.js — דרך whatsappBotService.js)
   ☐ leaderboardNotifier.js
 
 שלב D — DM State Machine
-  ☐ dmHandler.js + stateRouter.js
-  ☐ פקודות: /balance, /games, /mybets, /bet
+  ✅ dmHandler.js + stateRouter.js
+  ✅ פקודות: יתרה, משחקים, הימורים, עזרה
 ```
 
 ---

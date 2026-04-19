@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'kickoff-wa-bot',
     script: 'bot.js',
-    cwd: './whatsapp-bot',
+    cwd: '/app/whatsapp-bot',
     max_memory_restart: '400M',
     restart_delay: 5000,
     max_restarts: 10,

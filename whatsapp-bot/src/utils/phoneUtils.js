@@ -1,22 +1,22 @@
 'use strict';
 
+// '972501234567@c.us' → '972501234567'
 function extractNumber(jid) {
-  return jid.replace('@c.us', '').replace('@g.us', '').replace(/\D/g, '');
+  return jid.split('@')[0];
 }
 
-function toJid(phone) {
-  return `${phone}@c.us`;
-}
-
+// '050-123-4567' / '0501234567' / '+972501234567' → '972501234567'
 function normalizePhone(raw) {
   const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('0972')) return digits.slice(1);
   if (digits.startsWith('972')) return digits;
   if (digits.startsWith('0')) return '972' + digits.slice(1);
   return '972' + digits;
 }
 
-function formatHHMM(date) {
-  return date.toTimeString().slice(0, 5); // "HH:MM"
+// '972501234567' → '972501234567@c.us'
+function toJid(phone) {
+  return `${normalizePhone(phone)}@c.us`;
 }
 
-module.exports = { extractNumber, toJid, normalizePhone, formatHHMM };
+module.exports = { extractNumber, normalizePhone, toJid };

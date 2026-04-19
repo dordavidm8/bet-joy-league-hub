@@ -1,83 +1,108 @@
 'use strict';
 
 const cron = require('node-cron');
-const pool = require('./utils/db');
-const { formatHHMM } = require('./utils/phoneUtils');
+const { pool } = require('./utils/db');
+const { formatHHMM } = require('./utils/formatters');
 const { sendMorningMessages } = require('./notifications/morningMessages');
+const { sendLeaderboard } = require('./notifications/leaderboardNotifier');
 const { sendReminders } = require('./notifications/reminderNotifier');
-const { sendScheduledLeaderboards } = require('./notifications/leaderboardNotifier');
 
 function startScheduledJobs(client) {
-  // Every minute: morning messages + leaderboards
+  // ── Every minute: morning messages + leaderboard ────────────────────────────
   cron.schedule('* * * * *', async () => {
     const now = new Date();
-    const timeStr = formatHHMM(now);
-    const dayOfWeek = now.getDay();
+    const hhmm = formatHHMM(new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })));
+    const dayOfWeek = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })).getDay();
 
     try {
-      const leagues = await pool.query(
-        `SELECT wls.*, wg.wa_group_id, l.tournament_slug, l.id AS league_id
+      // Morning messages
+      const morningLeagues = await pool.query(
+        `SELECT wls.*, wg.wa_group_id, l.name AS league_name, l.id AS league_id_val
          FROM wa_league_settings wls
          JOIN wa_groups wg ON wg.league_id = wls.league_id AND wg.is_active = true
          JOIN leagues l ON l.id = wls.league_id
-         WHERE wls.morning_message_time::TEXT = $1`,
-        [timeStr]
+         WHERE wls.morning_message_time::text LIKE $1`,
+        [`${hhmm}%`]
       );
-      for (const league of leagues.rows) {
-        sendMorningMessages(client, league).catch(err =>
-          console.error('[WA] morning msg error:', err.message)
+      for (const league of morningLeagues.rows) {
+        await sendMorningMessages(client, league).catch(e =>
+          console.error(`[jobs] morning error league ${league.league_id}:`, e.message)
+        );
+      }
+
+      // Daily leaderboard
+      const dailyLeagues = await pool.query(
+        `SELECT wls.*, wg.wa_group_id, l.name AS league_name
+         FROM wa_league_settings wls
+         JOIN wa_groups wg ON wg.league_id = wls.league_id AND wg.is_active = true
+         JOIN leagues l ON l.id = wls.league_id
+         WHERE wls.leaderboard_frequency = 'daily' AND wls.leaderboard_time::text LIKE $1`,
+        [`${hhmm}%`]
+      );
+      for (const league of dailyLeagues.rows) {
+        await sendLeaderboard(client, league).catch(e =>
+          console.error(`[jobs] leaderboard error:`, e.message)
+        );
+      }
+
+      // Weekly leaderboard
+      const weeklyLeagues = await pool.query(
+        `SELECT wls.*, wg.wa_group_id, l.name AS league_name
+         FROM wa_league_settings wls
+         JOIN wa_groups wg ON wg.league_id = wls.league_id AND wg.is_active = true
+         JOIN leagues l ON l.id = wls.league_id
+         WHERE wls.leaderboard_frequency = 'weekly'
+           AND wls.leaderboard_day = $1
+           AND wls.leaderboard_time::text LIKE $2`,
+        [dayOfWeek, `${hhmm}%`]
+      );
+      for (const league of weeklyLeagues.rows) {
+        await sendLeaderboard(client, league).catch(e =>
+          console.error(`[jobs] weekly leaderboard error:`, e.message)
         );
       }
     } catch (err) {
-      console.error('[WA] cron morning error:', err.message);
-    }
-
-    try {
-      await sendScheduledLeaderboards(client, timeStr, dayOfWeek);
-    } catch (err) {
-      console.error('[WA] cron leaderboard error:', err.message);
+      console.error('[jobs] minute tick error:', err.message);
     }
   });
 
-  // Every 5 minutes: reminder check
+  // ── Every 5 minutes: reminders before bet close ──────────────────────────────
   cron.schedule('*/5 * * * *', async () => {
     try {
       await sendReminders(client);
     } catch (err) {
-      console.error('[WA] cron reminder error:', err.message);
+      console.error('[jobs] reminder error:', err.message);
     }
   });
 
-  // Every 30 minutes: session cleanup (idle >30min already handled inline; this cleans DB)
-  cron.schedule('*/30 * * * *', async () => {
+  // ── Every 10 minutes: flush pending messages ──────────────────────────────────
+  cron.schedule('*/10 * * * *', async () => {
     try {
-      await pool.query(
-        `UPDATE wa_sessions SET state = 'idle', context = '{}' WHERE last_msg_at < NOW() - INTERVAL '30 minutes'`
+      const rows = await pool.query(
+        `SELECT id, phone, group_jid, text FROM wa_pending_messages WHERE sent = false ORDER BY created_at LIMIT 30`
       );
-    } catch (err) {
-      console.error('[WA] session cleanup error:', err.message);
-    }
-  });
-
-  // Hourly: flush pending messages
-  cron.schedule('0 * * * *', async () => {
-    try {
-      const pending = await pool.query(
-        `SELECT * FROM wa_pending_messages WHERE sent = false ORDER BY created_at LIMIT 20`
-      );
-      for (const row of pending.rows) {
+      for (const row of rows.rows) {
         try {
           const jid = row.group_jid || `${row.phone}@c.us`;
           await client.sendMessage(jid, row.text);
           await pool.query(`UPDATE wa_pending_messages SET sent = true WHERE id = $1`, [row.id]);
-        } catch (_) {}
+        } catch {}
       }
+    } catch {}
+  });
+
+  // ── Daily at 03:00: clean expired sessions + OTP codes ───────────────────────
+  cron.schedule('0 3 * * *', async () => {
+    try {
+      await pool.query(`DELETE FROM wa_verification_codes WHERE expires_at < NOW()`);
+      await pool.query(`DELETE FROM wa_sessions WHERE last_msg_at < NOW() - INTERVAL '7 days'`);
+      console.log('[jobs] cleanup done');
     } catch (err) {
-      console.error('[WA] pending flush error:', err.message);
+      console.error('[jobs] cleanup error:', err.message);
     }
   });
 
-  console.log('[WA] Scheduled jobs started');
+  console.log('[WA] Scheduled jobs פעילים ✅');
 }
 
 module.exports = { startScheduledJobs };

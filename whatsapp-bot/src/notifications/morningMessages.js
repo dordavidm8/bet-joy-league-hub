@@ -1,68 +1,75 @@
 'use strict';
 
-const pool = require('../utils/db');
+const { pool } = require('../utils/db');
 const { buildGameMessage } = require('../utils/formatters');
 
 async function sendMorningMessages(client, league) {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const dateStr = tomorrow.toISOString().slice(0, 10);
+  const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0)).toISOString();
+  const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999)).toISOString();
 
-  let gamesQuery;
-  if (league.tournament_slug) {
-    gamesQuery = await pool.query(
-      `SELECT g.* FROM games g
-       JOIN competitions c ON c.id = g.competition_id
-       WHERE c.slug = $1 AND DATE(g.start_time) = $2 AND g.status = 'scheduled'
-       ORDER BY g.start_time`,
-      [league.tournament_slug, dateStr]
-    );
-  } else {
-    gamesQuery = await pool.query(
-      `SELECT * FROM games WHERE DATE(start_time) = $1 AND status = 'scheduled' ORDER BY start_time`,
-      [dateStr]
-    );
-  }
-
-  const settings = await pool.query(
-    `SELECT * FROM wa_league_settings WHERE league_id = $1`, [league.league_id]
+  // Fetch games for tomorrow that belong to leagues this league cares about
+  // (all games — league filtering happens through league_members / bets context)
+  const gamesRes = await pool.query(
+    `SELECT g.id, g.home_team, g.away_team, g.commence_time
+     FROM games g
+     WHERE g.status = 'scheduled'
+       AND g.commence_time BETWEEN $1 AND $2
+     ORDER BY g.commence_time`,
+    [tomorrowStart, tomorrowEnd]
   );
-  const wls = settings.rows[0];
 
-  for (const game of gamesQuery.rows) {
-    const text = buildGameMessage(game, wls);
+  if (gamesRes.rows.length === 0) return;
+
+  for (const game of gamesRes.rows) {
+    // Check if we already sent a message for this game+league today
+    const existing = await pool.query(
+      `SELECT id FROM wa_game_messages
+       WHERE league_id = $1 AND game_id = $2 AND group_jid IS NOT NULL`,
+      [league.league_id, game.id]
+    );
+    if (existing.rows.length > 0) continue;
+
+    const text = buildGameMessage(game, league);
 
     // Send to group
-    if (league.wa_group_id) {
-      try {
-        const groupMsg = await client.sendMessage(league.wa_group_id, text);
-        await pool.query(
-          `INSERT INTO wa_game_messages (league_id, game_id, wa_message_id, group_jid)
-           VALUES ($1,$2,$3,$4) ON CONFLICT (wa_message_id) DO NOTHING`,
-          [league.league_id, game.id, groupMsg.id._serialized, league.wa_group_id]
-        );
-      } catch (err) {
-        console.error('[WA] Group send failed:', err.message);
-      }
-    }
+    const groupMsg = await client.sendMessage(league.wa_group_id, text);
 
-    // Send DMs to opted-in members
-    const members = await pool.query(
-      `SELECT u.phone_number
-       FROM league_members lm JOIN users u ON u.id = lm.user_id
-       WHERE lm.league_id = $1 AND u.phone_verified = true AND u.wa_opt_in = true AND lm.is_active = true`,
-      [league.league_id]
+    // Save message ID for reply detection
+    await pool.query(
+      `INSERT INTO wa_game_messages (league_id, game_id, wa_message_id, group_jid, sent_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [league.league_id, game.id, groupMsg.id._serialized, league.wa_group_id]
     );
 
-    for (const member of members.rows) {
-      try {
-        const dmMsg = await client.sendMessage(`${member.phone_number}@c.us`, text);
-        await pool.query(
-          `INSERT INTO wa_game_messages (league_id, game_id, wa_message_id, dm_phone)
-           VALUES ($1,$2,$3,$4) ON CONFLICT (wa_message_id) DO NOTHING`,
-          [league.league_id, game.id, dmMsg.id._serialized, member.phone_number]
-        );
-      } catch (_) {}
+    // Send DM to all opted-in members
+    await sendGameMessageToDMs(client, league, game, text);
+  }
+}
+
+async function sendGameMessageToDMs(client, league, game, text) {
+  const membersRes = await pool.query(
+    `SELECT u.phone_number
+     FROM league_members lm
+     JOIN users u ON u.id = lm.user_id
+     WHERE lm.league_id = $1 AND lm.is_active = true
+       AND u.phone_verified = true AND u.wa_opt_in = true`,
+    [league.league_id]
+  );
+
+  for (const member of membersRes.rows) {
+    try {
+      const jid = `${member.phone_number}@c.us`;
+      const dmMsg = await client.sendMessage(jid, text);
+
+      await pool.query(
+        `INSERT INTO wa_game_messages (league_id, game_id, wa_message_id, dm_phone, sent_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [league.league_id, game.id, dmMsg.id._serialized, member.phone_number]
+      );
+    } catch (err) {
+      console.error(`[morningMsg] DM error for ${member.phone_number}:`, err.message);
     }
   }
 }

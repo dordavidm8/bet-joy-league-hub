@@ -1,31 +1,51 @@
 'use strict';
 
-function buildGameMessage(game, league) {
-  const startTime = new Date(game.start_time);
-  const timeStr = startTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = startTime.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
+function formatHHMM(date) {
+  return date.toTimeString().slice(0, 5); // 'HH:MM'
+}
 
-  let msg = `⚽ *${game.home_team}* נגד *${game.away_team}*\n`;
+function formatDate(date) {
+  return date.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function formatPoints(n) {
+  return Number(n).toLocaleString('he-IL');
+}
+
+// Build the morning game message text
+function buildGameMessage(game, leagueSettings) {
+  const homeName = game.home_team_he || game.home_team;
+  const awayName = game.away_team_he || game.away_team;
+  const kickoff = new Date(game.commence_time);
+  const timeStr = kickoff.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
+  const dateStr = kickoff.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric', timeZone: 'Asia/Jerusalem' });
+
+  let msg = `⚽ *${homeName} נגד ${awayName}*\n`;
   msg += `🗓 ${dateStr} | ${timeStr}\n\n`;
   msg += `הגב להודעה זו עם ההימור שלך:\n`;
-  msg += `• *1* — ניצחון ${game.home_team}\n`;
+  msg += `• *1* — ניצחון ${homeName}\n`;
   msg += `• *X* — תיקו\n`;
-  msg += `• *2* — ניצחון ${game.away_team}\n`;
+  msg += `• *2* — ניצחון ${awayName}\n`;
 
-  if (league?.exact_score_enabled) {
-    msg += `\nלהימור על תוצאה מדויקת, הוסף שורה שנייה:\n  1\n  2-0\n(מכפיל x3 על יחס הניצחון)`;
+  if (leagueSettings?.exact_score_enabled) {
+    msg += `\nלהימור על *תוצאה מדויקת* (x3), הוסף שורה שנייה:\n`;
+    msg += `  1\n  2-0`;
   }
+
   return msg;
 }
 
-function buildLeaderboardMessage(members, leagueName) {
-  const rankEmoji = ['🥇', '🥈', '🥉'];
-  let msg = `📊 *טבלת ליגת "${leagueName}"*\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+const RANK_EMOJI = ['🥇', '🥈', '🥉'];
+
+function buildLeaderboardMessage(leagueName, members) {
+  let msg = `📊 *טבלת ליגת "${leagueName}"*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
   members.forEach((m, i) => {
-    msg += `${rankEmoji[i] || `${i + 1}.`} ${m.username} — ${m.points_in_league.toLocaleString()} נקודות\n`;
+    const emoji = RANK_EMOJI[i] || `${i + 1}.`;
+    msg += `${emoji} ${m.username} — ${formatPoints(m.points_in_league)} נקודות\n`;
   });
   msg += `━━━━━━━━━━━━━━━━━━━━━━`;
   return msg;
 }
 
-module.exports = { buildGameMessage, buildLeaderboardMessage };
+module.exports = { formatHHMM, formatDate, formatPoints, buildGameMessage, buildLeaderboardMessage, RANK_EMOJI };

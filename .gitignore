@@ -30,3 +30,9 @@ dist-ssr
 *.sw?
 kickoff-c1b6a-firebase-adminsdk-fbsvc-*.json
 backend/.env
+
+# WhatsApp bot session
+whatsapp-bot/.wwebjs_auth/
+whatsapp-bot/.wwebjs_cache/
+whatsapp-bot/node_modules/
+whatsapp-bot/.env

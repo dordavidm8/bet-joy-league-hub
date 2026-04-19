@@ -1,9 +1,10 @@
 'use strict';
-
 const { Pool } = require('pg');
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 5,
+});
 
-pool.on('error', (err) => console.error('[WA-Bot] DB pool error:', err.message));
-
-module.exports = pool;
+module.exports = { pool };
