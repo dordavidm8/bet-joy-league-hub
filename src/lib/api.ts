@@ -20,6 +20,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
+export const getEmailByUsername = (username: string) =>
+  request<{ email: string }>('/users/email-by-username', {
+    method: 'POST', body: JSON.stringify({ username }),
+  });
+
 export const registerUser = (username: string, referral_code?: string, avatar_url?: string, display_name?: string) =>
   request<{ user: BackendUser }>('/auth/register', {
     method: 'POST',

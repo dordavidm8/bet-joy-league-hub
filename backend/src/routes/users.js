@@ -4,6 +4,19 @@ const { pool } = require('../config/database');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { getStreak } = require('../services/achievementService');
 
+// POST /api/users/email-by-username — resolve username → email for login (no auth required)
+router.post('/email-by-username', async (req, res, next) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  try {
+    const result = await pool.query(
+      `SELECT email FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1`, [username]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
+    res.json({ email: result.rows[0].email });
+  } catch (err) { next(err); }
+});
+
 // GET /api/users/search?q=...
 router.get('/search', async (req, res, next) => {
   const { q } = req.query;

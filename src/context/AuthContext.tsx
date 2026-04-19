@@ -6,20 +6,22 @@ import {
   signOut as firebaseSignOut,
   GoogleAuthProvider,
   signInWithPopup,
+  sendPasswordResetEmail,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { registerUser, getMe, BackendUser } from '@/lib/api';
+import { registerUser, getMe, getEmailByUsername, BackendUser } from '@/lib/api';
 
 interface AuthState {
   firebaseUser: FirebaseUser | null;
   backendUser: BackendUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (emailOrUsername: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string, referralCode?: string, displayName?: string) => Promise<void>;
   signInWithGoogle: (username?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  sendPasswordReset: (emailOrUsername: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -76,17 +78,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsub;
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  // Resolve username → email if the input doesn't look like an email
+  const resolveEmail = async (emailOrUsername: string): Promise<string> => {
+    if (emailOrUsername.includes('@')) return emailOrUsername;
+    const { email } = await getEmailByUsername(emailOrUsername.trim());
+    return email;
+  };
+
+  const signIn = async (emailOrUsername: string, password: string) => {
+    const email = await resolveEmail(emailOrUsername);
     const cred = await signInWithEmailAndPassword(auth, email, password);
     try {
       const data = await getMe();
       setBackendUser(data.user);
     } catch {
-      // Backend user missing (e.g. account was deleted) — re-register with 5000 pts
       const name = cred.user.displayName || cred.user.email?.split('@')[0] || 'User';
       const data = await registerUser(name, undefined, cred.user.photoURL || undefined);
       setBackendUser(data.user);
     }
+  };
+
+  const sendPasswordReset = async (emailOrUsername: string) => {
+    const email = await resolveEmail(emailOrUsername);
+    await sendPasswordResetEmail(auth, email);
   };
 
   const signUp = async (email: string, password: string, username: string, referralCode?: string, displayName?: string) => {
@@ -140,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, backendUser, loading, signIn, signUp, signInWithGoogle, signOut, refreshUser }}>
+    <AuthContext.Provider value={{ firebaseUser, backendUser, loading, signIn, signUp, signInWithGoogle, signOut, refreshUser, sendPasswordReset }}>
       {children}
     </AuthContext.Provider>
   );
