@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
 function friendlyError(err: any): string {
@@ -24,8 +24,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
-  const [referralCode, setReferralCode] = useState('');
+  const [referralCode, setReferralCode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('ref') ?? '';
+  });
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+
+  // Auto-switch to register when arriving via referral link
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('ref')) setMode('register');
+  }, []);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);

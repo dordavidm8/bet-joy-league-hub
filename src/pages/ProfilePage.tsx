@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMyBets, getMyReferralCode, updateAvatar, updateProfile, deleteAccount, getMyAchievements, getDetailedStats, ACHIEVEMENTS, getWaStatus, linkPhone, verifyPhone, unlinkPhone, setWaOptIn } from "@/lib/api";
 import AvatarUploader from "@/components/AvatarUploader";
 import { motion } from "framer-motion";
-import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X, Smartphone } from "lucide-react";
+import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X, Smartphone, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
@@ -13,6 +13,7 @@ const ProfilePage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [showAvatarUploader, setShowAvatarUploader] = useState(false);
 
   // Settings edit state
@@ -132,12 +133,27 @@ const ProfilePage = () => {
     }
   };
 
+  const referralCode = referralData?.referral_code ?? backendUser?.referral_code;
+  const referralLink = referralCode ? `${window.location.origin}?ref=${referralCode}` : null;
+
   const copyReferral = () => {
-    const code = referralData?.referral_code ?? backendUser?.referral_code;
-    if (!code) return;
-    navigator.clipboard.writeText(code);
+    if (!referralCode) return;
+    navigator.clipboard.writeText(referralCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyReferralLink = () => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const shareWhatsApp = () => {
+    if (!referralLink) return;
+    const text = `הצטרף אליי ל-Kickoff 🎯⚽ — פלטפורמת הימורי כדורגל! הירשם דרך הלינק וקבל 1,000 נקודות בונוס: ${referralLink}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   return (
@@ -207,18 +223,35 @@ const ProfilePage = () => {
       </button>
 
       {/* Referral */}
-      {(referralData?.referral_code || backendUser?.referral_code) && (
-        <div className="card-kickoff flex items-center justify-between">
+      {referralCode && (
+        <div className="card-kickoff flex flex-col gap-3">
           <div>
-            <p className="text-sm font-bold">קוד הפניה שלי</p>
+            <p className="text-sm font-bold">הפניה שלי</p>
             <p className="text-xs text-muted-foreground">חבר שנרשם = +1,000 נקודות לך</p>
-            <p className="font-mono text-base font-black tracking-widest mt-1">
-              {referralData?.referral_code ?? backendUser?.referral_code}
-            </p>
           </div>
-          <button onClick={copyReferral} className="text-muted-foreground hover:text-primary transition-colors">
-            {copied ? <Check size={18} className="text-primary" /> : <Copy size={18} />}
-          </button>
+          {/* Code row */}
+          <div className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2">
+            <p className="font-mono text-sm font-black tracking-widest">{referralCode}</p>
+            <button onClick={copyReferral} className="text-muted-foreground hover:text-primary transition-colors mr-2">
+              {copied ? <Check size={16} className="text-primary" /> : <Copy size={16} />}
+            </button>
+          </div>
+          {/* Link row */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center justify-between bg-secondary rounded-lg px-3 py-2 min-w-0">
+              <p className="text-xs text-muted-foreground truncate">{referralLink}</p>
+              <button onClick={copyReferralLink} className="text-muted-foreground hover:text-primary transition-colors mr-2 shrink-0">
+                {copiedLink ? <Check size={16} className="text-primary" /> : <Copy size={16} />}
+              </button>
+            </div>
+            <button
+              onClick={shareWhatsApp}
+              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shrink-0"
+            >
+              <Share2 size={14} />
+              WhatsApp
+            </button>
+          </div>
         </div>
       )}
 
