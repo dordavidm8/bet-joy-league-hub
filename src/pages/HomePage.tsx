@@ -54,7 +54,7 @@ const HomePage = () => {
         className="px-5 pt-4"
       >
         <h2 className="text-3xl font-black tracking-tight leading-tight">המשחק מתחיל כאן.</h2>
-        <p className="text-muted-foreground mt-1">הימרו על המשחקים הגדולים וצברו נקודות</p>
+        <p className="text-muted-foreground mt-1">המרו על המשחקים הגדולים וצברו נקודות</p>
       </motion.div>
 
       {/* Live Games */}
