@@ -10,7 +10,10 @@ const TopBar = () => {
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md">
       <div className="flex items-center justify-between px-5 h-14 max-w-lg mx-auto">
-        <button onClick={() => navigate("/")} className="text-xl font-black tracking-tight">Kickoff</button>
+        <button onClick={() => navigate("/")} className="flex items-center gap-2">
+          <img src="/kickoff_logo_no_bg.png" alt="Kickoff" className="h-8 w-auto" />
+          <span className="text-xl font-black tracking-tight">Kickoff</span>
+        </button>
         <div className="flex items-center gap-2">
           <NotificationBell />
           <div className="flex items-center gap-1.5 bg-secondary rounded-full px-3 py-1.5">

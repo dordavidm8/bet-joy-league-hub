@@ -712,6 +712,14 @@ export const linkWaGroup = (leagueId: string, wa_group_id: string) =>
 export const unlinkWaGroup = (leagueId: string) =>
   request<{ message: string }>(`/whatsapp/leagues/${leagueId}/group`, { method: 'DELETE' });
 
+export const refreshWaInviteLink = (leagueId: string) =>
+  request<{ invite_link: string }>(`/whatsapp/leagues/${leagueId}/refresh-invite-link`, { method: 'POST' });
+
+export const setWaInviteLink = (leagueId: string, invite_link: string) =>
+  request<{ ok: boolean }>(`/whatsapp/leagues/${leagueId}/invite-link`, {
+    method: 'PUT', body: JSON.stringify({ invite_link }),
+  });
+
 // ── Team name translations ─────────────────────────────────────────────────────
 export const getApprovedTeamTranslations = () =>
   request<{ translations: Record<string, string> }>('/games/team-translations');

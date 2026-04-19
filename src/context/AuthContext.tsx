@@ -100,7 +100,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendPasswordReset = async (emailOrUsername: string) => {
     const email = await resolveEmail(emailOrUsername);
-    await sendPasswordResetEmail(auth, email);
+    await sendPasswordResetEmail(auth, email, {
+      url: window.location.origin,
+      handleCodeInApp: false,
+    });
   };
 
   const signUp = async (email: string, password: string, username: string, referralCode?: string, displayName?: string) => {

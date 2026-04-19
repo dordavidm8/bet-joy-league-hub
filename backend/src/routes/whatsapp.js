@@ -175,6 +175,47 @@ router.post('/leagues/:id/link-group', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/whatsapp/leagues/:id/refresh-invite-link — try to get invite link from bot
+router.post('/leagues/:id/refresh-invite-link', authenticate, async (req, res, next) => {
+  const { id: leagueId } = req.params;
+  try {
+    const leagueRes = await pool.query(`SELECT creator_id FROM leagues WHERE id = $1`, [leagueId]);
+    if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not found' });
+    if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
+
+    const groupRes = await pool.query(
+      `SELECT wa_group_id FROM wa_groups WHERE league_id = $1 AND is_active = true LIMIT 1`, [leagueId]
+    );
+    if (!groupRes.rows[0]) return res.status(404).json({ error: 'No active WA group' });
+
+    const result = await callBot('/internal/get-invite-link', { groupJid: groupRes.rows[0].wa_group_id });
+    if (!result?.invite_link) return res.status(503).json({ error: 'הבוט לא הצליח לקבל לינק. הוסף את הבוט כמנהל בקבוצה ונסה שוב.' });
+
+    await pool.query(
+      `UPDATE wa_groups SET invite_link = $1 WHERE league_id = $2 AND is_active = true`,
+      [result.invite_link, leagueId]
+    );
+    res.json({ invite_link: result.invite_link });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/whatsapp/leagues/:id/invite-link — manually set invite link
+router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
+  const { id: leagueId } = req.params;
+  const { invite_link } = req.body;
+  try {
+    const leagueRes = await pool.query(`SELECT creator_id FROM leagues WHERE id = $1`, [leagueId]);
+    if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not found' });
+    if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
+
+    await pool.query(
+      `UPDATE wa_groups SET invite_link = $1 WHERE league_id = $2 AND is_active = true`,
+      [invite_link || null, leagueId]
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // DELETE /api/whatsapp/leagues/:id/group
 router.delete('/leagues/:id/group', authenticate, async (req, res, next) => {
   const { id: leagueId } = req.params;

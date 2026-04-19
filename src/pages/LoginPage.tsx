@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
+function friendlyError(err: any): string {
+  const code: string = err?.code ?? '';
+  const msg: string = err?.message ?? '';
+  if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found')
+    return 'שם המשתמש, האימייל או הסיסמה שגויים';
+  if (code === 'auth/email-already-in-use') return 'כתובת האימייל כבר קיימת במערכת';
+  if (code === 'auth/weak-password') return 'הסיסמה חייבת להכיל לפחות 6 תווים';
+  if (code === 'auth/invalid-email') return 'כתובת האימייל אינה תקינה';
+  if (code === 'auth/too-many-requests') return 'יותר מדי ניסיונות. אנא המתן מספר דקות ונסה שוב';
+  if (code === 'auth/network-request-failed') return 'בעיית חיבור לאינטרנט. בדוק את החיבור ונסה שוב';
+  if (code === 'auth/user-disabled') return 'החשבון הושהה. פנה לתמיכה';
+  if (msg.includes('User not found') || msg.includes('404')) return 'שם המשתמש לא נמצא במערכת';
+  if (msg.includes('already exists') || msg.includes('409')) return 'שם המשתמש כבר תפוס, אנא בחר שם אחר';
+  return 'שגיאה לא מוכרת, אנא נסו במועד מאוחר יותר';
+}
+
 export default function LoginPage() {
   const { signIn, signUp, signInWithGoogle, sendPasswordReset } = useAuth();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
@@ -30,7 +46,7 @@ export default function LoginPage() {
         setSuccessMsg('נשלח אימייל לאיפוס סיסמה. בדוק את תיבת הדואר שלך.');
       }
     } catch (err: any) {
-      setError(err.message || 'שגיאה, נסה שוב');
+      setError(friendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -42,7 +58,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle(username || undefined);
     } catch (err: any) {
-      setError(err.message || 'שגיאה, נסה שוב');
+      setError(friendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -59,7 +75,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="w-full max-w-sm bg-gray-900 rounded-2xl p-6 shadow-xl border border-gray-700">
-        <h1 className="text-2xl font-bold text-white text-center mb-1">⚽ Kickoff</h1>
+        <div className="flex justify-center mb-2">
+          <img src="/kickoff_logo_no_bg.png" alt="Kickoff" className="h-16 w-auto" />
+        </div>
+        <h1 className="text-2xl font-bold text-white text-center mb-1">Kickoff</h1>
         <p className="text-gray-400 text-center text-sm mb-6">{titleMap[mode]}</p>
 
         <form onSubmit={handle} className="space-y-3">

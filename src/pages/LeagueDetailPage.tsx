@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, searchUsers, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, TournamentMatch } from "@/lib/api";
+import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, searchUsers, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, refreshWaInviteLink, setWaInviteLink, TournamentMatch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone } from "lucide-react";
@@ -85,13 +85,19 @@ const LeagueDetailPage = () => {
   });
 
   const waUpdateLinkMutation = useMutation({
-    mutationFn: () => updateWaLeagueSettings(leagueId!, { invite_link: waInviteLinkInput.trim() || null }),
+    mutationFn: () => setWaInviteLink(leagueId!, waInviteLinkInput.trim()),
     onSuccess: () => {
       setWaMsg({ ok: true, text: 'לינק עודכן ✅' });
       setShowWaLinkEdit(false);
       setWaInviteLinkInput("");
       refetchWaSettings();
     },
+    onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
+  });
+
+  const waRefreshLinkMutation = useMutation({
+    mutationFn: () => refreshWaInviteLink(leagueId!),
+    onSuccess: (d) => { setWaMsg({ ok: true, text: 'לינק עודכן ✅' }); refetchWaSettings(); },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });
 
@@ -532,7 +538,9 @@ const LeagueDetailPage = () => {
             {waSettingsData?.settings?.group_active ? (
               <>
                 <p className="text-xs text-green-600">קבוצה מחוברת ✅</p>
-                {waSettingsData.settings.invite_link && (
+
+                {/* Invite link — show join button or prompt to add one */}
+                {waSettingsData.settings.invite_link ? (
                   <a
                     href={waSettingsData.settings.invite_link}
                     target="_blank"
@@ -542,7 +550,23 @@ const LeagueDetailPage = () => {
                     <Smartphone size={14} />
                     הצטרף לקבוצת WhatsApp
                   </a>
+                ) : isCreator ? (
+                  <div className="flex flex-col gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-xs font-bold text-amber-800">הוסף לינק הצטרפות לקבוצה</p>
+                    <p className="text-[10px] text-amber-700">כדי שחברים יוכלו להצטרף, הוסף את הבוט כמנהל בקבוצה ולחץ ״קבל לינק אוטומטית״, או הדבק לינק ידנית.</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button size="sm" variant="outline" onClick={() => waRefreshLinkMutation.mutate()} disabled={waRefreshLinkMutation.isPending}>
+                        {waRefreshLinkMutation.isPending ? "מנסה..." : "קבל לינק אוטומטית"}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setWaInviteLinkInput(""); setShowWaLinkEdit(true); }}>
+                        הזן לינק ידנית
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">מנהל הליגה טרם הוסיף לינק הצטרפות לקבוצה</p>
                 )}
+
                 {isCreator && (
                   <>
                     <p className="text-[11px] text-muted-foreground">
@@ -563,12 +587,12 @@ const LeagueDetailPage = () => {
                           <Button size="sm" variant="outline" onClick={() => setShowWaLinkEdit(false)}>ביטול</Button>
                         </div>
                       </div>
-                    ) : (
+                    ) : waSettingsData.settings.invite_link ? (
                       <button onClick={() => { setWaInviteLinkInput(waSettingsData?.settings?.invite_link ?? ""); setShowWaLinkEdit(true); }}
                         className="text-xs text-primary hover:underline self-start">
-                        עדכן לינק הזמנה לקבוצה
+                        עדכן לינק הזמנה
                       </button>
-                    )}
+                    ) : null}
                     <button
                       onClick={() => waUnlinkGroupMutation.mutate()}
                       disabled={waUnlinkGroupMutation.isPending}
