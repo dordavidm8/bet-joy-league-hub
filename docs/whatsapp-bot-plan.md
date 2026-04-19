@@ -2,7 +2,7 @@
 
 > **סטטוס:** תשתית Backend + Frontend מומשה במלואה — הבוט עצמו טרם נכתב  
 > **תאריך עדכון:** אפריל 2026  
-> **ספרייה מתוכננת לבוט:** Baileys (נבחרה בפועל, ראה `whatsappBotService.js`)
+> **ספרייה לבוט:** `whatsapp-web.js` (Puppeteer) — אותה ספרייה שGroupShield בנוי עליה, מוכחת ב-production
 
 ---
 
@@ -88,7 +88,7 @@ INTERNAL_API_KEY=<secret>               # אימות קריאות internal
 
 ### ⚠️ הערות לממש הבא
 
-1. **Baileys ולא whatsapp-web.js** — `whatsappBotService.js` קורא ל-`WHATSAPP_BOT_URL`, הבוט חושף REST API, הטכנולוגיה הפנימית לא חשובה לbackend.
+1. **whatsapp-web.js (Puppeteer)** — `whatsappBotService.js` קורא ל-`WHATSAPP_BOT_URL`, הבוט חושף REST API, ובפנים משתמשים ב-whatsapp-web.js כמו GroupShield. `LocalAuth` שומר session בקבצים — לא צריך QR אחרי login ראשוני.
 
 2. **`wa_game_messages` טבלה** — צריך לוודא שהיא קיימת ב-DB (לא נוצרה עדיין, כי הבוט לא פועל). הוסף migration לפני שלב B.
 
@@ -1146,7 +1146,7 @@ bet-joy-league-hub/
   ⏳ הבוט עצמו (internal API) — ממתין לחיבור SIM
 
 שלב A — הבוט עולה ← הצעד הבא (אחרי חיבור SIM)
-  ☐ whatsapp-bot/bot.js + Baileys session
+  ☐ whatsapp-bot/bot.js + whatsapp-web.js + LocalAuth session
   ☐ whatsapp-bot/src/internalApi.js (port 4001)
   ☐ Railway: Volume לsession + PM2/Procfile
 
