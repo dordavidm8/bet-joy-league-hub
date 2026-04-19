@@ -25,6 +25,7 @@ const ProfilePage = () => {
   const [fieldLoading, setFieldLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [waExpanded, setWaExpanded] = useState(false);
 
   const { data: betsData } = useQuery({ queryKey: ["my-bets"], queryFn: () => getMyBets({ limit: 5 }) });
   const { data: referralData } = useQuery({ queryKey: ["my-referral"], queryFn: getMyReferralCode });
@@ -315,7 +316,7 @@ const ProfilePage = () => {
         </section>
       )}
 
-      {/* Settings */}
+      {/* Settings — unified section */}
       <section className="flex flex-col gap-2">
         <span className="section-label">הגדרות</span>
 
@@ -365,6 +366,15 @@ const ProfilePage = () => {
           </button>
         )}
 
+        {/* Email — read only */}
+        <div className="card-kickoff flex items-center justify-between opacity-70">
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">אימייל</p>
+            <p className="text-sm font-medium">{firebaseUser?.email || '—'}</p>
+          </div>
+          <span className="text-xs text-muted-foreground">לא ניתן לשינוי</span>
+        </div>
+
         {/* Password — only for email/password accounts */}
         {firebaseUser?.providerData.some(p => p.providerId === 'password') && (
           editField === 'password' ? (
@@ -384,7 +394,7 @@ const ProfilePage = () => {
           ) : (
             <button onClick={() => openEdit('password')} className="card-kickoff flex items-center justify-between">
               <div className="text-right">
-                <p className="text-xs text-muted-foreground">סיסמה</p>
+                <p className="text-xs text-muted-foreground">שינוי סיסמה</p>
                 <p className="text-sm font-medium">••••••••</p>
               </div>
               <Pencil size={15} className="text-muted-foreground" />
@@ -392,104 +402,82 @@ const ProfilePage = () => {
           )
         )}
 
-        <button
-          onClick={() => signOut()}
-          className="card-kickoff flex items-center gap-3 text-right text-muted-foreground"
-        >
-          <LogOut size={18} />
-          <span className="text-sm font-medium">התנתק</span>
-        </button>
-      </section>
-
-      {/* WhatsApp Section */}
-      <section className="px-5 flex flex-col gap-3">
-        <h2 className="section-label">📱 WhatsApp Bot</h2>
+        {/* WhatsApp */}
         <div className="card-kickoff flex flex-col gap-3">
-          {waData?.phone_verified ? (
-            <>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold flex items-center gap-1.5">
-                    <Smartphone size={14} className="text-green-500" />
-                    מספר מקושר
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{waData.phone_number}</p>
-                </div>
-                <button
-                  onClick={() => waUnlinkMutation.mutate()}
-                  disabled={waUnlinkMutation.isPending}
-                  className="text-xs text-destructive hover:underline"
-                >
-                  {waUnlinkMutation.isPending ? "מנתק..." : "נתק"}
-                </button>
-              </div>
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-muted-foreground">קבל הודעות ממשחקים</span>
-                <button
-                  onClick={() => waOptInMutation.mutate(!waData.wa_opt_in)}
-                  className={`w-11 h-6 rounded-full relative transition-colors ${waData.wa_opt_in ? 'bg-primary' : 'bg-border'}`}
-                >
-                  <span className={`absolute top-0.5 w-5 h-5 bg-card rounded-full shadow-sm transition-transform ${waData.wa_opt_in ? 'left-0.5' : 'left-[calc(100%-1.375rem)]'}`} />
-                </button>
-              </label>
-            </>
-          ) : waStep === "awaiting_code" ? (
-            <>
-              <p className="text-sm text-muted-foreground">הזן את הקוד שנשלח אליך</p>
-              <input
-                type="text"
-                placeholder="קוד 6 ספרות"
-                value={waCode}
-                onChange={e => setWaCode(e.target.value)}
-                maxLength={6}
-                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 tracking-widest text-center"
-              />
-              <button
-                onClick={() => waVerifyMutation.mutate()}
-                disabled={waCode.length < 6 || waVerifyMutation.isPending}
-                className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold disabled:opacity-50"
-              >
-                {waVerifyMutation.isPending ? "מאמת..." : "אמת קוד"}
-              </button>
-              <button onClick={() => { setWaStep("idle"); setWaMsg(null); }} className="text-xs text-muted-foreground text-center">
-                ← חזרה
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="text-xs text-muted-foreground">קשר את מספר הוואטסאפ שלך כדי להמר ישירות מהקבוצה</p>
-              <input
-                type="tel"
-                placeholder="מספר טלפון (050XXXXXXX)"
-                value={waPhone}
-                onChange={e => setWaPhone(e.target.value)}
-                className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                dir="ltr"
-              />
-              <button
-                onClick={() => { setWaMsg(null); waLinkMutation.mutate(); }}
-                disabled={!waPhone || waLinkMutation.isPending}
-                className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold disabled:opacity-50"
-              >
-                {waLinkMutation.isPending ? "שולח..." : "שלח קוד אימות"}
-              </button>
-            </>
-          )}
-          {waMsg && (
-            <p className={`text-xs text-center ${waMsg.ok ? 'text-green-600' : 'text-destructive'}`}>
-              {waMsg.text}
-            </p>
+          <button
+            onClick={() => setWaExpanded(v => !v)}
+            className="flex items-center justify-between w-full"
+          >
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">חיבור לווטסאפ</p>
+              <p className="text-sm font-medium flex items-center gap-1.5">
+                {waData?.phone_verified
+                  ? <><Smartphone size={13} className="text-green-500" />{waData.phone_number}</>
+                  : 'לא מקושר'}
+              </p>
+            </div>
+            <ChevronRight size={15} className={`text-muted-foreground transition-transform ${waExpanded ? 'rotate-90' : ''}`} />
+          </button>
+
+          {waExpanded && (
+            <div className="flex flex-col gap-3 pt-1 border-t border-border">
+              {waData?.phone_verified ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => waUnlinkMutation.mutate()}
+                      disabled={waUnlinkMutation.isPending}
+                      className="text-xs text-destructive hover:underline"
+                    >
+                      {waUnlinkMutation.isPending ? "מנתק..." : "נתק מספר"}
+                    </button>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <span className="text-xs text-muted-foreground">הודעות ממשחקים</span>
+                      <button
+                        onClick={() => waOptInMutation.mutate(!waData.wa_opt_in)}
+                        className={`w-11 h-6 rounded-full relative transition-colors ${waData.wa_opt_in ? 'bg-primary' : 'bg-border'}`}
+                      >
+                        <span className={`absolute top-0.5 w-5 h-5 bg-card rounded-full shadow-sm transition-transform ${waData.wa_opt_in ? 'left-0.5' : 'left-[calc(100%-1.375rem)]'}`} />
+                      </button>
+                    </label>
+                  </div>
+                </>
+              ) : waStep === "awaiting_code" ? (
+                <>
+                  <p className="text-xs text-muted-foreground">הזן את הקוד שנשלח אליך</p>
+                  <input type="text" placeholder="קוד 6 ספרות" value={waCode} onChange={e => setWaCode(e.target.value)}
+                    maxLength={6} className="bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary tracking-widest text-center" />
+                  <button onClick={() => waVerifyMutation.mutate()} disabled={waCode.length < 6 || waVerifyMutation.isPending}
+                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
+                    {waVerifyMutation.isPending ? "מאמת..." : "אמת קוד"}
+                  </button>
+                  <button onClick={() => { setWaStep("idle"); setWaMsg(null); }} className="text-xs text-muted-foreground text-center">← חזרה</button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">קשר את מספר הוואטסאפ שלך</p>
+                  <input type="tel" placeholder="מספר טלפון (050XXXXXXX)" value={waPhone} onChange={e => setWaPhone(e.target.value)}
+                    className="bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" dir="ltr" />
+                  <button onClick={() => { setWaMsg(null); waLinkMutation.mutate(); }} disabled={!waPhone || waLinkMutation.isPending}
+                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
+                    {waLinkMutation.isPending ? "שולח..." : "שלח קוד אימות"}
+                  </button>
+                </>
+              )}
+              {waMsg && <p className={`text-xs text-center ${waMsg.ok ? 'text-green-600' : 'text-destructive'}`}>{waMsg.text}</p>}
+            </div>
           )}
         </div>
-      </section>
 
-      <section className="px-5 flex flex-col gap-3">
-        <h2 className="section-label">⚙️ הגדרות</h2>
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="card-kickoff flex items-center gap-3 text-right text-destructive"
-        >
-          <span className="text-sm font-medium">מחק חשבון</span>
+        {/* Sign out */}
+        <button onClick={() => signOut()} className="card-kickoff flex items-center gap-3 text-right text-muted-foreground">
+          <LogOut size={18} />
+          <span className="text-sm font-medium">התנתקות</span>
+        </button>
+
+        {/* Delete account */}
+        <button onClick={() => setShowDeleteConfirm(true)} className="card-kickoff flex items-center gap-3 text-right text-destructive">
+          <span className="text-sm font-medium">מחיקת חשבון</span>
         </button>
       </section>
 
