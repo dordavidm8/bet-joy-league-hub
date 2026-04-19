@@ -45,7 +45,7 @@ const ResultModal: React.FC<ResultModalProps> = ({
               : isExhausted
                 ? `התשובה הנכונה הייתה: ${solution}. אל תדאגו, תמיד יש אתגרים חדשים!`
                 : attemptsLeft !== undefined
-                  ? `נשארו לכם ${attemptsLeft} ניסיון${attemptsLeft === 1 ? '' : 'ות'} נוסף${attemptsLeft === 1 ? '' : 'ים'}`
+                  ? `נשארו לכם ${attemptsLeft} ניסיון${attemptsLeft === 1 ? '' : 'ות'} נוסף${attemptsLeft === 1 ? '' : 'ות'}`
                   : 'נסו שוב!'}
           </p>
           {submitError && (
