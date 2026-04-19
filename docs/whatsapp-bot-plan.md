@@ -1,8 +1,104 @@
 # תוכנית מימוש: WhatsApp Bot לקיקאוף
 
-> **סטטוס:** תכנון בלבד — אין שינויי קוד עדיין  
-> **תאריך:** אפריל 2026  
-> **ספרייה:** `whatsapp-web.js` — אותה ספרייה שGroupShield בנוי עליה
+> **סטטוס:** תשתית Backend + Frontend מומשה במלואה — הבוט עצמו טרם נכתב  
+> **תאריך עדכון:** אפריל 2026  
+> **ספרייה מתוכננת לבוט:** Baileys (נבחרה בפועל, ראה `whatsappBotService.js`)
+
+---
+
+## סטטוס נוכחי — מה מומש ומה נותר
+
+### ✅ מומש במלואו
+
+#### Backend (`backend/src/routes/whatsapp.js`)
+כל ה-API routes קיימים ועובדים:
+- `POST /api/whatsapp/link-phone` — שליחת OTP
+- `POST /api/whatsapp/verify` — אימות OTP
+- `DELETE /api/whatsapp/unlink` — ניתוק מספר
+- `GET /api/whatsapp/status` — סטטוס קישור
+- `PATCH /api/whatsapp/opt-in` — הגדרות הודעות
+- `POST /api/whatsapp/leagues/:id/create-group` — יצירת קבוצה
+- `POST /api/whatsapp/leagues/:id/link-group` — קישור קבוצה קיימת
+- `POST /api/whatsapp/leagues/:id/refresh-invite-link` — קבלת invite link מהבוט
+- `PUT /api/whatsapp/leagues/:id/invite-link` — הגדרת invite link ידנית
+- `DELETE /api/whatsapp/leagues/:id/group` — ניתוק קבוצה
+- `GET/PUT /api/whatsapp/leagues/:id/settings` — הגדרות WA לליגה
+
+#### Backend Service (`backend/src/services/whatsappBotService.js`)
+- `sendDM(phone, text)` — שולח הודעה דרך הבוט (STUB_MODE בסביבת dev)
+- `callBot(endpoint, body)` — קריאות internal API לבוט
+
+#### DB — כל הטבלאות קיימות ב-production
+- `wa_verification_codes` — OTP codes
+- `wa_sessions` — שיחות פעילות (state machine)
+- `wa_groups` — קבוצות מקושרות לליגות
+- `wa_league_settings` — הגדרות WA לכל ליגה
+- `users.phone_number`, `users.phone_verified`, `users.wa_opt_in` — שדות משתמש
+- `leagues.wa_enabled` — האם הליגה מחוברת ל-WA
+- `bets.wa_bet`, `bets.wa_source`, `bets.wa_bet_message_id` — שדות הימור WA
+
+#### Frontend
+- **ProfilePage** — סקשן "חיבור לווטסאפ" משולב תחת "הגדרות": OTP flow, opt-in toggle, unlink
+- **LeagueDetailPage** — סקשן WA לניהול קבוצה: create/link/unlink, invite link עם כפתור רענון ועדכון ידני
+
+#### ENV Variables (Railway)
+```
+WHATSAPP_BOT_URL=http://localhost:4001   # כתובת internal API של הבוט
+STUB_MODE=false                          # true בפיתוח — מחזיר OTP ב-response
+INTERNAL_API_KEY=<secret>               # אימות קריאות internal
+```
+
+---
+
+### ❌ טרם מומש — הבוט עצמו
+
+**כל תיקיית `whatsapp-bot/` אינה קיימת.** צריך ליצור אותה מאפס.
+
+**הבלוקר עד היום:** חיבור מספר SIM לבוט  
+**סטטוס SIM:** מתוכנן לחיבור היום (19.4.2026)
+
+#### מה צריך לבנות (לפי סדר עדיפות):
+
+**שלב A — הבוט עולה (הכי קריטי)**
+- [ ] `whatsapp-bot/bot.js` — entry point עם Baileys (ולא whatsapp-web.js כפי שתוכנן)
+- [ ] Session persistence — שמירת credentials בקובץ / Railway Volume
+- [ ] `whatsapp-bot/src/internalApi.js` — HTTP server על port 4001:
+  - `POST /internal/send` — DM לטלפון
+  - `POST /internal/send-group` — הודעה לקבוצה
+  - `POST /internal/create-group` — יצירת קבוצה חדשה
+  - `POST /internal/get-invite-link` — קבלת invite link לקבוצה קיימת
+  - `POST /internal/add-member` — הוספת חבר לקבוצה
+  - `POST /internal/react` — React על הודעה
+
+**שלב B — הודעות בוקר + הימור**
+- [ ] `scheduledJobs.js` — cron לשליחת הודעות בוקר לכל ליגה בשעה המוגדרת
+- [ ] `morningMessages.js` — בניית טקסט הודעה + שמירת wa_message_id ב-`wa_game_messages`
+- [ ] `groupHandler.js` — reply detection: זיהוי שהתגובה היא לאחת מהודעות המשחק
+- [ ] `betCommands.js` — `processBetReply()`: פרסינג (1/X/2 + תוצאה מדויקת), יצירת הימור ב-DB, react 👍
+
+**שלב C — תזכורות + תוצאות**
+- [ ] `reminderNotifier.js` — @mentions לפני נעילה
+- [ ] `resultNotifier.js` — הודעת תוצאה + ניקוד אחרי `settleBets.js`
+- [ ] `leaderboardNotifier.js` — טבלה תקופתית
+
+**שלב D — DM State Machine**
+- [ ] `dmHandler.js` + `stateRouter.js` — פקודות כמו `/balance`, `/games`, `/mybets`
+
+---
+
+### ⚠️ הערות לממש הבא
+
+1. **Baileys ולא whatsapp-web.js** — `whatsappBotService.js` קורא ל-`WHATSAPP_BOT_URL`, הבוט חושף REST API, הטכנולוגיה הפנימית לא חשובה לbackend.
+
+2. **`wa_game_messages` טבלה** — צריך לוודא שהיא קיימת ב-DB (לא נוצרה עדיין, כי הבוט לא פועל). הוסף migration לפני שלב B.
+
+3. **`wa_reminders_sent` טבלה** — גם היא צריכה migration לפני שלב C.
+
+4. **Railway Deployment** — הבוט אמור לרוץ כ-process נפרד באותו service ב-Railway (PM2 / Procfile). ראה סעיף 18.
+
+5. **`BOT_PHONE` ENV** — חשוב להגדיר אחרי חיבור ה-SIM: המספר שהבוט מחובר אליו (לlinks בהודעות).
+
+---
 
 ---
 
@@ -1034,43 +1130,42 @@ bet-joy-league-hub/
 ## 20. סדר מימוש
 
 ```
-שלב 1 — תשתית (יום 1-2)
-  ✓ whatsapp-bot/ setup: bot.js + LocalAuth + internal API
-  ✓ PostgreSQL connection
-  ✓ wa_* tables: migration
-  ✓ Backend: whatsapp routes + whatsappBotService
+שלב 1 — תשתית Backend + Frontend ✅ הושלם
+  ✅ wa_* tables: migration (כולל wa_groups, wa_league_settings, wa_verification_codes, wa_sessions)
+  ✅ Backend: כל whatsapp routes (link-phone, verify, unlink, status, opt-in,
+              create-group, link-group, refresh-invite-link, invite-link, settings)
+  ✅ whatsappBotService.js: sendDM + callBot עם STUB_MODE
 
-שלב 2 — קישור משתמש (יום 3)
-  ✓ OTP flow (link-phone + verify)
-  ✓ ProfilePage: WhatsApp section
+שלב 2 — קישור משתמש ✅ הושלם
+  ✅ OTP flow (link-phone + verify)
+  ✅ ProfilePage: WhatsApp section (משולב תחת הגדרות)
 
-שלב 3 — חיבור קבוצה (יום 4-5)
-  ✓ create-group + link-group (setup command)
-  ✓ wa_league_settings form בCreate League Modal
-  ✓ LeagueDetailPage: WhatsApp section
+שלב 3 — חיבור קבוצה ✅ הושלם (צד Backend + Frontend בלבד)
+  ✅ API: create-group, link-group, refresh-invite-link, invite-link
+  ✅ LeagueDetailPage: WhatsApp section עם invite link UI
+  ⏳ הבוט עצמו (internal API) — ממתין לחיבור SIM
 
-שלב 4 — הודעות בוקר + הימור ב-reply (יום 6-9)
-  ✓ morningMessages.js + cron
-  ✓ wa_game_messages storage
-  ✓ groupHandler: reply detection + processBetReply
-  ✓ DM reply support
-  ✓ שני מצבי הימור (prediction / fixed)
-  ✓ exact score
+שלב A — הבוט עולה ← הצעד הבא (אחרי חיבור SIM)
+  ☐ whatsapp-bot/bot.js + Baileys session
+  ☐ whatsapp-bot/src/internalApi.js (port 4001)
+  ☐ Railway: Volume לsession + PM2/Procfile
 
-שלב 5 — תיקון הימור + תזכורת (יום 10-11)
-  ✓ bet correction via reply to own message
-  ✓ reminderNotifier.js + cron
+שלב B — הודעות בוקר + הימור ב-reply
+  ☐ wa_game_messages migration
+  ☐ scheduledJobs.js + morningMessages.js
+  ☐ groupHandler.js + processBetReply()
 
-שלב 6 — תוצאות + טבלה + סיום (יום 12-14)
-  ✓ resultNotifier.js (trigger מ-settleBets)
-  ✓ leaderboardNotifier.js + cron
-  ✓ notifyLeagueEnd (trigger מ-settle)
+שלב C — תזכורות + תוצאות
+  ☐ wa_reminders_sent migration
+  ☐ reminderNotifier.js
+  ☐ resultNotifier.js (trigger מ-settleBets.js)
+  ☐ leaderboardNotifier.js
 
-שלב 7 — DM State Machine + Admin Tab (יום 15-16)
-  ✓ stateRouter.js + כל פקודות DM
-  ✓ AdminDashboard: WhatsApp tab
+שלב D — DM State Machine
+  ☐ dmHandler.js + stateRouter.js
+  ☐ פקודות: /balance, /games, /mybets, /bet
 ```
 
 ---
 
-*תאריך עדכון: אפריל 2026*
+*תאריך עדכון: 19.4.2026*
