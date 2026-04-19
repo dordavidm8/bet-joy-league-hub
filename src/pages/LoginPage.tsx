@@ -76,7 +76,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="w-full max-w-sm bg-gray-900 rounded-2xl p-6 shadow-xl border border-gray-700">
         <div className="flex justify-center mb-2">
-          <img src="/kickoff_logo_no_bg.png" alt="Kickoff" className="h-28 w-auto" />
+          <img src="/kickoff_logo_no_bg.png" alt="Kickoff" className="h-44 w-auto" />
         </div>
         <h1 className="text-2xl font-bold text-white text-center mb-1">Kickoff</h1>
         <p className="text-gray-400 text-center text-sm mb-6">{titleMap[mode]}</p>
