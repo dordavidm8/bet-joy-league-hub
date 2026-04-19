@@ -157,12 +157,15 @@ async function fetchGameById(leagueSlug, espnId) {
 // ── Build bet questions for a game ────────────────────────────────────────────
 // Returns array of { question_text, outcomes: [{label, odds}], type }
 function buildBetQuestions(game) {
-  const h = translateTeam(game.home_team);
-  const a = translateTeam(game.away_team);
+  const hEn = game.home_team;
+  const aEn = game.away_team;
+  const h = translateTeam(hEn);
+  const a = translateTeam(aEn);
 
   // Priority: 1. ESPN live odds, 2. The Odds API cache, 3. Defaults
+  // Use English names for cache lookup — _oddsCache keys are English team names
   const espnOdds  = game.espn_odds || null;
-  const apiOdds   = _oddsCache[`${h}|${a}`] || _oddsCache[`${a}|${h}`] || null;
+  const apiOdds   = _oddsCache[`${hEn}|${aEn}`] || _oddsCache[`${aEn}|${hEn}`] || null;
   const realOdds  = espnOdds || apiOdds;
 
   const homeOdds  = realOdds?.home_odds  ?? 2.10;

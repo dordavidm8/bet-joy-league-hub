@@ -354,9 +354,22 @@ export function translateQuestionText(text: string): string {
   if (!text) return text;
   // Fix typos that may exist in already-Hebrew DB records
   text = text.replace(/ישכנסו/g, 'יבקיעו');
-  // Already Hebrew
+
+  // Handle Hebrew question patterns — backend generates these but team names may still be English
+  // (e.g. "מי ינצח: Sunderland נגד Burnley?")
+  const heWin = text.match(/^מי ינצח:\s*(.+?)\s+נגד\s+(.+?)\?$/);
+  if (heWin) return `מי ינצח: ${translateTeam(heWin[1].trim())} נגד ${translateTeam(heWin[2].trim())}?`;
+
+  const heBtts = text.match(/^שתי הקבוצות יבקיעו גול:\s*(.+?)\s+נגד\s+(.+?)\?$/);
+  if (heBtts) return `שתי הקבוצות יבקיעו גול: ${translateTeam(heBtts[1].trim())} נגד ${translateTeam(heBtts[2].trim())}?`;
+
+  const heOu = text.match(/^מעל\/מתחת 2\.5 שערים:\s*(.+?)\s+נגד\s+(.+?)\?$/);
+  if (heOu) return `מעל/מתחת 2.5 שערים: ${translateTeam(heOu[1].trim())} נגד ${translateTeam(heOu[2].trim())}?`;
+
+  // Already fully Hebrew (not one of our known patterns)
   if (/[\u0590-\u05FF]/.test(text)) return text;
 
+  // English patterns (old records before Hebrew generation was added)
   const whoWin = text.match(/^Who will win:\s*(.+)\s+vs\s+(.+)\?$/i);
   if (whoWin) return `מי ינצח: ${translateTeam(whoWin[1].trim())} נגד ${translateTeam(whoWin[2].trim())}?`;
 

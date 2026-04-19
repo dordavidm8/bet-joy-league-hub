@@ -1575,7 +1575,10 @@ const AdvancedTab = () => {
   const approveTranslationMutation = useMutation({
     mutationFn: ({ name_en, name_he }: { name_en: string; name_he: string }) =>
       adminApproveTeamTranslation(name_en, name_he),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-team-translations"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-team-translations"] });
+      queryClient.invalidateQueries({ queryKey: ["team-translations"] });
+    },
   });
   const dismissTranslationMutation = useMutation({
     mutationFn: adminDismissTeamTranslation,

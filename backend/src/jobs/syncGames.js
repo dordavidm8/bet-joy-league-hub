@@ -83,13 +83,39 @@ async function seedBetQuestions(client, gameId, game) {
 }
 
 // ── Reseed bet questions when team names change (knockout stage) ───────────────
-// Only deletes questions that have no bets to avoid breaking existing bets
+// Cancels and refunds any pending bets, then reseeds all questions
 async function reseedBetQuestionsOnTeamChange(client, gameId, game) {
-  await client.query(`
-    DELETE FROM bet_questions
-    WHERE game_id = $1
-      AND NOT EXISTS (SELECT 1 FROM bets WHERE bet_question_id = bet_questions.id)
+  // Find all pending bets on this game's questions
+  const pendingBets = await client.query(`
+    SELECT b.id, b.user_id, b.stake
+    FROM bets b
+    JOIN bet_questions bq ON bq.id = b.bet_question_id
+    WHERE bq.game_id = $1 AND b.status = 'pending'
   `, [gameId]);
+
+  if (pendingBets.rows.length > 0) {
+    const betIds = pendingBets.rows.map(r => r.id);
+
+    // Cancel all pending bets
+    await client.query(`
+      UPDATE bets SET status = 'cancelled' WHERE id = ANY($1::uuid[])
+    `, [betIds]);
+
+    // Refund stakes to each user's balance + log the transaction
+    for (const bet of pendingBets.rows) {
+      await client.query(`
+        UPDATE users SET points_balance = points_balance + $1 WHERE id = $2
+      `, [bet.stake, bet.user_id]);
+      await client.query(`
+        INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+        VALUES ($1, $2, 'bet_refund', $3, 'החזר הימור - שינוי קבוצות משחק')
+      `, [bet.user_id, bet.stake, bet.id]);
+    }
+    console.log(`[syncGames] Cancelled ${pendingBets.rows.length} pending bets and refunded stakes for game ${gameId}`);
+  }
+
+  // Delete all bet questions (including those that had bets, which are now cancelled)
+  await client.query(`DELETE FROM bet_questions WHERE game_id = $1`, [gameId]);
   await seedBetQuestions(client, gameId, game);
   console.log(`[syncGames] Reseeded bet questions for game ${gameId} (team names changed)`);
 }

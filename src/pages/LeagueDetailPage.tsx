@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { translateTeam } from "@/lib/teamNames";
 
 const FORMAT_LABEL: Record<string, string> = { pool: "קופה משותפת", per_game: "תשלום למשחק" };
 const DURATION_LABEL: Record<string, string> = {
@@ -439,10 +440,10 @@ const LeagueDetailPage = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 text-xs font-semibold truncate">
                       {match.home_team_logo && <img src={match.home_team_logo} className="w-4 h-3 object-contain" alt="" />}
-                      <span className="truncate">{match.home_team}</span>
+                      <span className="truncate">{translateTeam(match.home_team)}</span>
                       <span className="text-muted-foreground shrink-0">נגד</span>
                       {match.away_team_logo && <img src={match.away_team_logo} className="w-4 h-3 object-contain" alt="" />}
-                      <span className="truncate">{match.away_team}</span>
+                      <span className="truncate">{translateTeam(match.away_team)}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] text-muted-foreground">

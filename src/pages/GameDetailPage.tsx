@@ -295,8 +295,8 @@ const GameDetailPage = () => {
 
                     {selections[q.id] && (
                       <div className="flex flex-col gap-3">
-                        {/* Exact score prediction — optional bonus ×3 */}
-                        {(() => {
+                        {/* Exact score prediction — optional bonus ×3, only for match winner */}
+                        {q.type === 'match_winner' && (() => {
                           const raw = exactScores[q.id] ?? "";
                           const scoreErr = raw ? getExactScoreError(raw, selections[q.id]) : null;
                           const isValid = raw && !scoreErr;

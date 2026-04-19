@@ -28,7 +28,7 @@ import BetHistoryPage from "@/pages/BetHistoryPage";
 import StatsPage from "@/pages/StatsPage";
 import { Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminGetMe, getApprovedTeamTranslations } from "@/lib/api";
 import { setDynamicTranslations } from "@/lib/teamNames";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -68,12 +68,22 @@ const queryClient = new QueryClient();
 
 // Loads approved dynamic team translations from DB once on startup
 function DynamicTranslationsLoader() {
+  const queryClient = useQueryClient();
   const { data } = useQuery({
     queryKey: ['team-translations'],
     queryFn: getApprovedTeamTranslations,
     staleTime: 10 * 60 * 1000,
   });
-  useEffect(() => { if (data?.translations) setDynamicTranslations(data.translations); }, [data]);
+  useEffect(() => {
+    if (data?.translations) {
+      setDynamicTranslations(data.translations);
+      // Force game components to re-render so they pick up the updated translations
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      queryClient.invalidateQueries({ queryKey: ['game'] });
+      queryClient.invalidateQueries({ queryKey: ['finished-games'] });
+      queryClient.invalidateQueries({ queryKey: ['all-games'] });
+    }
+  }, [data, queryClient]);
   return null;
 }
 
