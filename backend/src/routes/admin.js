@@ -158,6 +158,37 @@ router.patch('/users/:id', async (req, res, next) => {
   }
 });
 
+// DELETE /api/admin/users/:id — soft-delete a user
+router.delete('/users/:id', async (req, res, next) => {
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const userRes = await client.query(`SELECT username, email FROM users WHERE id = $1`, [req.params.id]);
+    if (!userRes.rows[0]) return res.status(404).json({ error: 'User not found' });
+    if (ADMIN_EMAILS.includes(userRes.rows[0].email)) {
+      return res.status(403).json({ error: 'לא ניתן למחוק חשבון מנהל' });
+    }
+    // Deactivate league memberships
+    await client.query(`UPDATE league_members SET is_active = false WHERE user_id = $1`, [req.params.id]);
+    // Cancel pending bets
+    await client.query(`UPDATE bets SET status = 'cancelled' WHERE user_id = $1 AND status = 'pending'`, [req.params.id]);
+    // Anonymize user
+    const anonSuffix = req.params.id.slice(0, 8);
+    await client.query(
+      `UPDATE users SET username = $1, email = $2, display_name = NULL, firebase_uid = NULL, phone_number = NULL
+       WHERE id = $3`,
+      [`deleted_${anonSuffix}`, `deleted_${anonSuffix}@deleted.invalid`, req.params.id]
+    );
+    await client.query('COMMIT');
+    await logAdminAction(req.user.email, 'delete_user', 'user', req.params.id, { username: userRes.rows[0].username });
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
+});
+
 // GET /api/admin/bets
 router.get('/bets', async (req, res, next) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 200);

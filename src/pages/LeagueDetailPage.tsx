@@ -520,8 +520,8 @@ const LeagueDetailPage = () => {
         </div>
       )}
 
-      {/* WhatsApp Bot section — hidden for public leagues */}
-      {!isFinished && league.access_type !== 'public' && (
+      {/* WhatsApp Bot section — only for tournament leagues */}
+      {!isFinished && isTournament && league.access_type !== 'public' && (
         <div className="px-5">
           <div className="card-kickoff flex flex-col gap-3">
             <p className="text-xs font-bold flex items-center gap-1.5">

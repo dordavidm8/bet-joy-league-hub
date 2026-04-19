@@ -12,7 +12,7 @@ import {
   adminGetCompetitions, adminGetLog,
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
-  adminLockGame, adminUnlockGame, adminPauseLeague, adminStopLeague, adminUpdateGameOdds, adminUpdateUser,
+  adminLockGame, adminUnlockGame, adminPauseLeague, adminStopLeague, adminUpdateGameOdds, adminUpdateUser, adminDeleteUser,
   adminRemoveWaGroup, adminSetWaInviteLink,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
@@ -129,6 +129,8 @@ const UsersTab = () => {
   const [editUsername, setEditUsername] = useState("");
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editMsg, setEditMsg] = useState("");
+  const [deleteUserConfirm, setDeleteUserConfirm] = useState<AdminUser | null>(null);
+  const [deleteUserMsg, setDeleteUserMsg] = useState("");
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["admin-users", search], queryFn: () => adminGetUsers(search || undefined) });
   const { data: userBetsData } = useQuery({
@@ -163,6 +165,16 @@ const UsersTab = () => {
       setTimeout(() => { setEditUser(null); setEditMsg(""); }, 1500);
     },
     onError: (e: any) => setEditMsg(`❌ ${e.message}`),
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: () => adminDeleteUser(deleteUserConfirm!.id),
+    onSuccess: () => {
+      setDeleteUserMsg("✅ המשתמש נמחק");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setTimeout(() => { setDeleteUserConfirm(null); setDeleteUserMsg(""); }, 1500);
+    },
+    onError: (e: any) => setDeleteUserMsg(`❌ ${e.message}`),
   });
 
   const users = data?.users ?? [];
@@ -200,6 +212,8 @@ const UsersTab = () => {
                       className="text-[11px] text-primary underline whitespace-nowrap">נקודות</button>
                     <button onClick={() => setViewBetsUser(u)}
                       className="text-[11px] text-muted-foreground underline whitespace-nowrap">הימורים</button>
+                    <button onClick={() => { setDeleteUserConfirm(u); setDeleteUserMsg(""); }}
+                      className="text-[11px] text-destructive underline whitespace-nowrap">מחק</button>
                   </td>
                 </tr>
               ))}
@@ -233,6 +247,24 @@ const UsersTab = () => {
               </Button>
               <Button variant="outline" onClick={() => setEditUser(null)}>ביטול</Button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete user modal */}
+      {deleteUserConfirm && (
+        <Modal onClose={() => setDeleteUserConfirm(null)} title={`🗑️ מחיקת משתמש`}>
+          <p className="text-sm font-bold mb-1">@{deleteUserConfirm.username}</p>
+          <p className="text-xs text-muted-foreground mb-3">{deleteUserConfirm.email}</p>
+          <p className="text-xs bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-3 text-red-800">
+            פעולה זו תאנונם את חשבון המשתמש ותבטל את כל חברויותיו בליגות. לא ניתן לבטל.
+          </p>
+          {deleteUserMsg && <p className="text-sm mb-2">{deleteUserMsg}</p>}
+          <div className="flex gap-2">
+            <Button variant="destructive" className="flex-1" onClick={() => deleteUserMutation.mutate()} disabled={deleteUserMutation.isPending}>
+              {deleteUserMutation.isPending ? "מוחק..." : "מחק משתמש לצמיתות"}
+            </Button>
+            <Button variant="outline" onClick={() => setDeleteUserConfirm(null)}>ביטול</Button>
           </div>
         </Modal>
       )}
@@ -767,6 +799,8 @@ const LeaguesTab = () => {
   const [pubName, setPubName] = useState("");
   const [pubDesc, setPubDesc] = useState("");
   const [pubFormat, setPubFormat] = useState<"pool" | "per_game">("pool");
+  const [pubEntryFee, setPubEntryFee] = useState("0");
+  const [pubMaxMembers, setPubMaxMembers] = useState("");
   const [pubMsg, setPubMsg] = useState("");
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["admin-leagues"], queryFn: adminGetLeagues, staleTime: 30_000 });
@@ -820,11 +854,19 @@ const LeaguesTab = () => {
   });
 
   const createPublicMutation = useMutation({
-    mutationFn: () => createLeague({ name: pubName, description: pubDesc.trim() || undefined, format: pubFormat, duration_type: 'full_season', access_type: 'public' }),
+    mutationFn: () => createLeague({
+      name: pubName,
+      description: pubDesc.trim() || undefined,
+      format: pubFormat,
+      duration_type: 'full_season',
+      access_type: 'public',
+      entry_fee: parseInt(pubEntryFee) || 0,
+      max_members: parseInt(pubMaxMembers) || undefined,
+    }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
       setPubMsg(`✅ ליגה ציבורית נוצרה: ${res.league.name}`);
-      setPubName(""); setPubDesc(""); setPubFormat("pool");
+      setPubName(""); setPubDesc(""); setPubFormat("pool"); setPubEntryFee("0"); setPubMaxMembers("");
       setTimeout(() => { setShowCreatePublic(false); setPubMsg(""); }, 2000);
     },
     onError: (e: any) => setPubMsg(`❌ ${e.message}`),
@@ -851,6 +893,18 @@ const LeaguesTab = () => {
                   {f === "pool" ? "קופה משותפת" : "תשלום למשחק"}
                 </button>
               ))}
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1 flex flex-col gap-1">
+                <label className="text-[11px] text-muted-foreground">דמי כניסה (נק׳)</label>
+                <input type="number" min={0} value={pubEntryFee} onChange={e => setPubEntryFee(e.target.value)}
+                  className="bg-background border rounded-xl px-3 py-2 text-sm outline-none" />
+              </div>
+              <div className="flex-1 flex flex-col gap-1">
+                <label className="text-[11px] text-muted-foreground">מקס׳ חברים (ריק=ללא הגבלה)</label>
+                <input type="number" min={1} value={pubMaxMembers} onChange={e => setPubMaxMembers(e.target.value)}
+                  placeholder="ללא הגבלה" className="bg-background border rounded-xl px-3 py-2 text-sm outline-none" />
+              </div>
             </div>
             {pubMsg && <p className="text-xs">{pubMsg}</p>}
             <Button onClick={() => createPublicMutation.mutate()} disabled={!pubName || createPublicMutation.isPending} className="bg-primary">
@@ -1021,11 +1075,20 @@ const NotificationsTab = () => {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [target, setTarget] = useState("all");
+  const [userSearch, setUserSearch] = useState("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const { data: userSearchData } = useQuery({
+    queryKey: ["notif-user-search", userSearchQuery],
+    queryFn: () => adminGetUsers(userSearchQuery),
+    enabled: userSearchQuery.length >= 2,
+    staleTime: 10_000,
+  });
 
   const sendMutation = useMutation({
     mutationFn: () => adminSendNotification({ type, title, body, target }),
-    onSuccess: (res) => { setResult({ ok: true, text: `✅ נשלח ל-${res.sent_to} משתמשים` }); setTitle(""); setBody(""); setTarget("all"); },
+    onSuccess: (res) => { setResult({ ok: true, text: `✅ נשלח ל-${res.sent_to} משתמשים` }); setTitle(""); setBody(""); setTarget("all"); setUserSearch(""); },
     onError: (e: any) => setResult({ ok: false, text: `❌ ${e.message}` }),
   });
 
@@ -1041,15 +1104,40 @@ const NotificationsTab = () => {
             </button>
           ))}
         </div>
-        <div className="flex gap-2 items-center">
-          <button onClick={() => setTarget("all")}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold border shrink-0 transition-colors ${target === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
-            כולם
-          </button>
-          <input value={target === "all" ? "" : target} onChange={e => setTarget(e.target.value || "all")}
-            placeholder="שם משתמש ספציפי..."
-            className="flex-1 bg-secondary rounded-xl px-3 py-1.5 text-sm outline-none" />
+
+        {/* Target selector with user search */}
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2 items-center">
+            <button onClick={() => { setTarget("all"); setUserSearch(""); setUserSearchQuery(""); }}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold border shrink-0 transition-colors ${target === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
+              כולם
+            </button>
+            <div className="flex-1 relative">
+              <input
+                value={userSearch}
+                onChange={e => { setUserSearch(e.target.value); setUserSearchQuery(e.target.value); if (!e.target.value) setTarget("all"); }}
+                placeholder="חפש משתמש ספציפי..."
+                className="w-full bg-secondary rounded-xl px-3 py-1.5 text-sm outline-none"
+              />
+              {userSearchData?.users && userSearchQuery.length >= 2 && target === "all" && (
+                <div className="absolute top-full mt-1 left-0 right-0 bg-background border rounded-xl shadow-lg z-20 max-h-40 overflow-y-auto">
+                  {userSearchData.users.slice(0, 8).map((u: AdminUser) => (
+                    <button key={u.id} onClick={() => { setTarget(u.username); setUserSearch(`@${u.username}`); setUserSearchQuery(""); }}
+                      className="w-full text-right px-3 py-2 text-xs hover:bg-secondary flex items-center gap-2">
+                      <span className="font-bold">@{u.username}</span>
+                      <span className="text-muted-foreground">{u.display_name}</span>
+                    </button>
+                  ))}
+                  {userSearchData.users.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">לא נמצאו משתמשים</p>}
+                </div>
+              )}
+            </div>
+          </div>
+          {target !== "all" && (
+            <p className="text-xs text-primary font-bold">שולח ל: @{target}</p>
+          )}
         </div>
+
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="כותרת"
           className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none" />
         <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="תוכן (אופציונלי)" rows={3}
@@ -1057,7 +1145,7 @@ const NotificationsTab = () => {
         {result && <p className={`text-sm ${result.ok ? "text-green-600" : "text-destructive"}`}>{result.text}</p>}
         <Button onClick={() => { setResult(null); sendMutation.mutate(); }} disabled={!title || sendMutation.isPending}>
           <Send size={15} className="ml-2" />
-          {sendMutation.isPending ? "שולח..." : `שלח${target === "all" ? " לכולם" : ` ל-${target}`}`}
+          {sendMutation.isPending ? "שולח..." : `שלח${target === "all" ? " לכולם" : ` ל-@${target}`}`}
         </Button>
       </div>
       <div className="bg-muted/30 rounded-xl p-3 text-xs text-muted-foreground">

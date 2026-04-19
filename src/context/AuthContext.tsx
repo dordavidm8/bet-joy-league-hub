@@ -132,6 +132,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   };
 
+  // Auto-refresh balance when tab becomes visible (handles stale cached balance)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshUser(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   return (
     <AuthContext.Provider value={{ firebaseUser, backendUser, loading, signIn, signUp, signInWithGoogle, signOut, refreshUser }}>
       {children}

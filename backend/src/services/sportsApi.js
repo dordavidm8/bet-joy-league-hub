@@ -180,30 +180,30 @@ function buildBetQuestions(game) {
   return [
     {
       type: 'match_winner',
-      question_text: `Who will win: ${h} vs ${a}?`,
+      question_text: `מי ינצח: ${h} נגד ${a}?`,
       odds_source: winnerSource,
       outcomes: [
-        { label: h,      odds: homeOdds },
-        { label: 'Draw', odds: drawOdds },
-        { label: a,      odds: awayOdds },
+        { label: h,       odds: homeOdds },
+        { label: 'תיקו',  odds: drawOdds },
+        { label: a,       odds: awayOdds },
       ],
     },
     {
       type: 'both_teams_score',
-      question_text: `Both teams to score in ${h} vs ${a}?`,
+      question_text: `שתי הקבוצות ישכנסו גול: ${h} נגד ${a}?`,
       odds_source: otherSource,
       outcomes: [
-        { label: 'Yes', odds: bttsYes },
-        { label: 'No',  odds: bttsNo  },
+        { label: 'כן', odds: bttsYes },
+        { label: 'לא', odds: bttsNo  },
       ],
     },
     {
       type: 'over_under',
-      question_text: `Over/Under 2.5 goals in ${h} vs ${a}?`,
+      question_text: `מעל/מתחת 2.5 שערים: ${h} נגד ${a}?`,
       odds_source: otherSource,
       outcomes: [
-        { label: 'Over 2.5',  odds: over25  },
-        { label: 'Under 2.5', odds: under25 },
+        { label: 'מעל 2.5',  odds: over25  },
+        { label: 'מתחת 2.5', odds: under25 },
       ],
     },
   ];

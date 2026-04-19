@@ -127,9 +127,9 @@ router.post('/join', authenticate, async (req, res, next) => {
     if (league.status !== 'active') return res.status(400).json({ error: 'League is not active' });
 
     const memberCheck = await client.query(
-      `SELECT id FROM league_members WHERE league_id = $1 AND user_id = $2`, [league.id, req.user.id]
+      `SELECT id, is_active FROM league_members WHERE league_id = $1 AND user_id = $2`, [league.id, req.user.id]
     );
-    if (memberCheck.rows[0]) return res.status(409).json({ error: 'Already a member' });
+    if (memberCheck.rows[0]?.is_active) return res.status(409).json({ error: 'כבר חבר פעיל בליגה' });
 
     // Max members check
     if (league.max_members) {
@@ -170,7 +170,11 @@ router.post('/join', authenticate, async (req, res, next) => {
       );
     }
 
-    await client.query(`INSERT INTO league_members (league_id, user_id) VALUES ($1,$2)`, [league.id, req.user.id]);
+    if (memberCheck.rows[0]) {
+      await client.query(`UPDATE league_members SET is_active = true WHERE league_id = $1 AND user_id = $2`, [league.id, req.user.id]);
+    } else {
+      await client.query(`INSERT INTO league_members (league_id, user_id) VALUES ($1,$2)`, [league.id, req.user.id]);
+    }
     await client.query('COMMIT');
     res.json({ message: 'Joined', league });
   } catch (err) {
@@ -199,6 +203,21 @@ router.post('/:id/leave', authenticate, async (req, res, next) => {
       `UPDATE league_members SET is_active = false WHERE league_id = $1 AND user_id = $2`,
       [league.id, req.user.id]
     );
+
+    // Transfer ownership if the creator is leaving
+    if (league.creator_id === req.user.id) {
+      const nextCreator = await client.query(
+        `SELECT user_id FROM league_members WHERE league_id = $1 AND user_id != $2 AND is_active = true ORDER BY RANDOM() LIMIT 1`,
+        [league.id, req.user.id]
+      );
+      if (nextCreator.rows[0]) {
+        await client.query(
+          `UPDATE leagues SET creator_id = $1 WHERE id = $2`,
+          [nextCreator.rows[0].user_id, league.id]
+        );
+      }
+    }
+
     await client.query('COMMIT');
     res.json({ message: 'עזבת את הליגה. דמי הכניסה אינם מוחזרים.' });
   } catch (err) {
@@ -250,9 +269,9 @@ router.post('/:id/join-public', authenticate, async (req, res, next) => {
     if (league.status !== 'active') return res.status(400).json({ error: 'הליגה אינה פעילה' });
 
     const memberCheck = await client.query(
-      `SELECT id FROM league_members WHERE league_id = $1 AND user_id = $2`, [league.id, req.user.id]
+      `SELECT id, is_active FROM league_members WHERE league_id = $1 AND user_id = $2`, [league.id, req.user.id]
     );
-    if (memberCheck.rows[0]) return res.status(409).json({ error: 'כבר חבר בליגה' });
+    if (memberCheck.rows[0]?.is_active) return res.status(409).json({ error: 'כבר חבר פעיל בליגה' });
 
     if (league.max_members) {
       const countRes = await client.query(
@@ -278,7 +297,11 @@ router.post('/:id/join-public', authenticate, async (req, res, next) => {
       );
     }
 
-    await client.query(`INSERT INTO league_members (league_id, user_id) VALUES ($1,$2)`, [league.id, req.user.id]);
+    if (memberCheck.rows[0]) {
+      await client.query(`UPDATE league_members SET is_active = true WHERE league_id = $1 AND user_id = $2`, [league.id, req.user.id]);
+    } else {
+      await client.query(`INSERT INTO league_members (league_id, user_id) VALUES ($1,$2)`, [league.id, req.user.id]);
+    }
     await client.query('COMMIT');
     res.json({ message: 'הצטרפת לליגה', league });
   } catch (err) {
