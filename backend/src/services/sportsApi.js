@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { translateTeam } = require('../lib/teamNames');
 
 function americanToDecimal(american) {
   const val = parseInt(american);
@@ -156,8 +157,8 @@ async function fetchGameById(leagueSlug, espnId) {
 // ── Build bet questions for a game ────────────────────────────────────────────
 // Returns array of { question_text, outcomes: [{label, odds}], type }
 function buildBetQuestions(game) {
-  const h = game.home_team;
-  const a = game.away_team;
+  const h = translateTeam(game.home_team);
+  const a = translateTeam(game.away_team);
 
   // Priority: 1. ESPN live odds, 2. The Odds API cache, 3. Defaults
   const espnOdds  = game.espn_odds || null;

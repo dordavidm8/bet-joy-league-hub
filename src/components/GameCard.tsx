@@ -2,6 +2,7 @@ import { Game } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { translateTeam } from "@/lib/teamNames";
 
 interface GameCardProps {
   game: Game;
@@ -46,7 +47,7 @@ const GameCard = ({ game, index }: GameCardProps) => {
           {game.home_team_logo
             ? <img src={game.home_team_logo} className="w-8 h-8 object-contain" alt="" />
             : <span className="text-2xl">⚽</span>}
-          <span className="text-sm font-bold text-center leading-tight">{game.home_team}</span>
+          <span className="text-sm font-bold text-center leading-tight">{translateTeam(game.home_team)}</span>
         </div>
 
         <div className="flex flex-col items-center">
@@ -64,7 +65,7 @@ const GameCard = ({ game, index }: GameCardProps) => {
           {game.away_team_logo
             ? <img src={game.away_team_logo} className="w-8 h-8 object-contain" alt="" />
             : <span className="text-2xl">⚽</span>}
-          <span className="text-sm font-bold text-center leading-tight">{game.away_team}</span>
+          <span className="text-sm font-bold text-center leading-tight">{translateTeam(game.away_team)}</span>
         </div>
       </div>
 

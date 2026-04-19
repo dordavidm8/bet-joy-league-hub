@@ -1,6 +1,7 @@
 import { Game } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { translateTeam } from "@/lib/teamNames";
 
 interface GameListItemProps {
   game: Game;
@@ -55,12 +56,12 @@ const GameListItem = ({ game }: GameListItemProps) => {
           {game.home_team_logo
             ? <img src={game.home_team_logo} className="w-4 h-4 object-contain" alt="" />
             : <span className="text-sm">⚽</span>}
-          <span className="text-sm font-bold truncate">{game.home_team}</span>
+          <span className="text-sm font-bold truncate">{translateTeam(game.home_team)}</span>
           <span className="text-xs text-muted-foreground mx-1">נגד</span>
           {game.away_team_logo
             ? <img src={game.away_team_logo} className="w-4 h-4 object-contain" alt="" />
             : <span className="text-sm">⚽</span>}
-          <span className="text-sm font-bold truncate">{game.away_team}</span>
+          <span className="text-sm font-bold truncate">{translateTeam(game.away_team)}</span>
         </div>
       </div>
 

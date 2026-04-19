@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Lock, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import AiAdvisor from "@/components/AiAdvisor";
+import { translateTeam } from "@/lib/teamNames";
 
 function useBettingCountdown(startTime: string) {
   const [label, setLabel] = useState<string | null>(null);
@@ -77,7 +78,7 @@ const GameDetailPage = () => {
   const { game, bet_questions } = data;
   const isLive = game.status === "live";
   const isFinished = game.status === "finished";
-  const gameLabel = `${game.home_team} נגד ${game.away_team}`;
+  const gameLabel = `${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}`;
 
   const timeLabel = isLive
     ? game.minute ? `${game.minute}′` : "LIVE"
@@ -214,7 +215,7 @@ const GameDetailPage = () => {
               {game.home_team_logo
                 ? <img src={game.home_team_logo} className="w-10 h-10 object-contain" alt="" />
                 : <span className="text-3xl">⚽</span>}
-              <span className="text-sm font-bold text-center">{game.home_team}</span>
+              <span className="text-sm font-bold text-center">{translateTeam(game.home_team)}</span>
             </div>
             <div className="flex flex-col items-center">
               {(isLive || isFinished) && game.score_home != null ? (
@@ -232,7 +233,7 @@ const GameDetailPage = () => {
               {game.away_team_logo
                 ? <img src={game.away_team_logo} className="w-10 h-10 object-contain" alt="" />
                 : <span className="text-3xl">⚽</span>}
-              <span className="text-sm font-bold text-center">{game.away_team}</span>
+              <span className="text-sm font-bold text-center">{translateTeam(game.away_team)}</span>
             </div>
           </div>
         </motion.div>
@@ -286,7 +287,7 @@ const GameDetailPage = () => {
                               : "bg-secondary border-border hover:border-primary/40"
                           }`}
                         >
-                          {o.label}
+                          {translateTeam(o.label)}
                           <span className="ml-1 text-xs opacity-70">×{o.odds}</span>
                         </button>
                       ))}
