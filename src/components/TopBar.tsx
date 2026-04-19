@@ -11,7 +11,7 @@ const TopBar = () => {
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md">
       <div className="flex items-center justify-between px-5 h-14 max-w-lg mx-auto">
         <button onClick={() => navigate("/")} className="flex items-center gap-2">
-          <img src="/kickoff_logo_cropped.png" alt="Kickoff" className="h-8 w-auto" />
+          <img src="/kickoff_logo_cropped.png" alt="Kickoff" className="h-6 w-auto" />
           <span className="text-xl font-black tracking-tight">Kickoff</span>
         </button>
         <div className="flex items-center gap-2">
