@@ -85,9 +85,10 @@ async function handleGroupMessage(client, msg, chat) {
   const body = (msg.body || '').toLowerCase();
   const botNumber = client.info?.wid?.user;
   
-  const isBotMentioned = msg.mentionedIds?.some(id => id === client.info.wid._serialized) || 
-                         body.includes('@kickoff') ||
-                         (botNumber && body.includes(`@${botNumber}`));
+  // Lenient check for bot mention or name
+  const isBotMentioned = msg.mentionedIds?.some(id => id.includes(botNumber)) || 
+                         /(@kickoff|@\d+)/i.test(body) ||
+                         (msg.hasQuotedMsg && (await msg.getQuotedMessage()).fromMe);
 
   if (isBotMentioned && body.includes('טבלה')) {
     const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
