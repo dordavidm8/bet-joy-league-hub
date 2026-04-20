@@ -114,57 +114,63 @@ async function handleGroupMessage(client, msg, chat) {
     );
 
     const bet = betRes.rows[0];
-    if (bet) {
-      if (bet.game_status !== 'scheduled') {
-        await msg.reply('❌ לא ניתן לתקן הימור למשחק שכבר החל או הסתיים');
-        return;
-      }
-
-      // 3. Parse the new bet from the correction message
-      // Expected format:
-      // תיקון
-      // 1 2-1
-      const lines = msg.body.split('\n').map(l => l.trim()).filter(Boolean);
-      if (lines.length < 2) {
-        await msg.reply('❌ פורמט תיקון לא תקין. יש לרשום "תיקון" ובשורה מתחת את ההימור החדש (למשל: 1 2-0)');
-        return;
-      }
-
-      const betDetail = lines[1]; // e.g. "1 2-1"
-      const [resultPart, scorePart] = betDetail.split(/\s+/);
-      
-      if (!['1', 'x', '2'].includes(resultPart.toLowerCase())) {
-        await msg.reply('❌ המנצחת חייבת להיות 1, X או 2');
-        return;
-      }
-
-      const outcomeMap = { '1': bet.home_team, 'x': 'Draw', '2': bet.away_team };
-      const newOutcome = outcomeMap[resultPart.toLowerCase()];
-      
-      let newScore = null;
-      if (scorePart) {
-        const scoreObj = parseScore(scorePart);
-        if (!scoreObj) {
-          await msg.reply('❌ פורמט תוצאה לא תקין. דוגמה: 2-1');
-          return;
-        }
-        const validation = validateAndNormalizeScore(scoreObj, newOutcome, bet.home_team, bet.away_team);
-        if (validation.error) {
-          await msg.reply(validation.error);
-          return;
-        }
-        newScore = validation.normalized;
-      }
-
-      // 4. Update the bet
-      await pool.query(
-        `UPDATE bets SET selected_outcome = $1, exact_score = $2, updated_at = NOW() WHERE id = $3`,
-        [newOutcome, newScore, bet.id]
-      );
-
-      await msg.react('👍');
+    if (!bet) {
+      await msg.reply('❌ לא מצאתי הימור ששייך לך על ההודעה הזו. וודא שאתה עושה Reply להודעת האישור של הבוט או להודעת ההימור המקורית שלך.');
       return;
     }
+
+    if (bet.game_status !== 'scheduled') {
+      await msg.reply('❌ לא ניתן לתקן הימור למשחק שכבר החל או הסתיים');
+      return;
+    }
+
+    // 3. Parse the new bet from the correction message
+    // Expected format:
+    // תיקון
+    // 1 2-1
+    const lines = msg.body.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+      await msg.reply('❌ פורמט תיקון לא תקין. יש לרשום "תיקון" ובשורה מתחת את ההימור החדש (מנצחת ותוצאה).\nלדוגמה:\nתיקון\n1 2-1');
+      return;
+    }
+
+    const betDetail = lines[1]; // e.g. "1 2-1"
+    const [resultPart, scorePart] = betDetail.split(/\s+/);
+    
+    if (!resultPart || !['1', 'x', '2'].includes(resultPart.toLowerCase())) {
+      await msg.reply('❌ המנצחת חייבת להיות 1 (בית), X (תיקו) או 2 (חוץ)');
+      return;
+    }
+
+    const outcomeMap = { '1': bet.home_team, 'x': 'Draw', '2': bet.away_team };
+    const newOutcome = outcomeMap[resultPart.toLowerCase()];
+    
+    let newScore = null;
+    if (scorePart) {
+      const scoreObj = parseScore(scorePart);
+      if (!scoreObj) {
+        await msg.reply('❌ פורמט תוצאה לא תקין. דוגמה: 2-0');
+        return;
+      }
+      const validation = validateAndNormalizeScore(scoreObj, newOutcome, bet.home_team, bet.away_team);
+      if (validation.error) {
+        await msg.reply(validation.error);
+        return;
+      }
+      newScore = validation.normalized;
+    } else {
+      await msg.reply('❌ חסרה תוצאה מדויקת להימור. דוגמה: 2-1');
+      return;
+    }
+
+    // 4. Update the bet
+    await pool.query(
+      `UPDATE bets SET selected_outcome = $1, exact_score = $2, updated_at = NOW() WHERE id = $3`,
+      [newOutcome, newScore, bet.id]
+    );
+
+    await msg.react('👍');
+    return;
   }
 
   // Check if this is a registered Kickoff group for other features (betting)
