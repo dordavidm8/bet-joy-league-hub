@@ -870,5 +870,22 @@ router.post('/regenerate-bet-questions', authenticate, requireAdmin, async (req,
   } finally { client.release(); }
 });
 
+// POST /api/admin/run-settlement — manually trigger bet settlement (for missed games)
+router.post('/run-settlement', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const { settleBets } = require('../jobs/settleBets');
+    // Count pending bets before to report how many were settled
+    const before = await pool.query(`SELECT COUNT(*) FROM bets WHERE status = 'pending'`);
+    const gamesBefore = await pool.query(
+      `SELECT COUNT(DISTINCT g.id) FROM games g JOIN bets b ON b.game_id = g.id WHERE g.status = 'finished' AND b.status = 'pending'`
+    );
+    await settleBets();
+    const after = await pool.query(`SELECT COUNT(*) FROM bets WHERE status = 'pending'`);
+    const settled = parseInt(before.rows[0].count) - parseInt(after.rows[0].count);
+    await logAdminAction(req.user.email, 'run_settlement', null, null, { settled });
+    res.json({ ok: true, settled, games: parseInt(gamesBefore.rows[0].count) });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
 module.exports.opsRouter = opsRouter;

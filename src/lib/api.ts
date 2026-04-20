@@ -735,6 +735,9 @@ export const adminApproveTeamTranslation = (name_en: string, name_he: string) =>
 export const adminDismissTeamTranslation = (name_en: string) =>
   request<{ ok: boolean }>(`/admin/team-translations/${encodeURIComponent(name_en)}`, { method: 'DELETE' });
 
+export const adminRunSettlement = () =>
+  request<{ ok: boolean; settled: number; games: number }>('/admin/run-settlement', { method: 'POST' });
+
 export const adminOddsDebug = () =>
   request<{ has_api_key: boolean; total_matches: number; sample_keys: string[] }>('/admin/odds-debug');
 

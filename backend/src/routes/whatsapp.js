@@ -125,6 +125,7 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
     const leagueRes = await pool.query(`SELECT * FROM leagues WHERE id = $1`, [leagueId]);
     const league = leagueRes.rows[0];
     if (!league) return res.status(404).json({ error: 'League not found' });
+    if (league.access_type === 'public') return res.status(403).json({ error: 'ליגות ציבוריות אינן יכולות להתחבר לקבוצת ווטסאפ' });
     if (league.creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator can manage WA' });
 
     const userRes = await pool.query(`SELECT phone_number, phone_verified FROM users WHERE id = $1`, [req.user.id]);
@@ -162,6 +163,7 @@ router.post('/leagues/:id/link-group', authenticate, async (req, res, next) => {
     const leagueRes = await pool.query(`SELECT * FROM leagues WHERE id = $1`, [leagueId]);
     const league = leagueRes.rows[0];
     if (!league) return res.status(404).json({ error: 'League not found' });
+    if (league.access_type === 'public') return res.status(403).json({ error: 'ליגות ציבוריות אינן יכולות להתחבר לקבוצת ווטסאפ' });
     if (league.creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
 
     await pool.query(
