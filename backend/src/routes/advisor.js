@@ -23,6 +23,7 @@ router.post('/:gameId', authenticate, async (req, res, next) => {
   } catch (e) {
     if (e.message === 'Game not found') return res.status(404).json({ error: 'משחק לא נמצא' });
     if (e.status === 429) return res.status(429).json({ error: 'הגעת למגבלת השימוש היומית (20 הודעות)' });
+    if (e.status === 403) return res.status(403).json({ error: e.message });
     next(e);
   }
 });

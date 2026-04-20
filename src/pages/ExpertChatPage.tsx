@@ -101,12 +101,20 @@ const ExpertChatPage = () => {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
+      let errorContent: string;
+
+      if (msg.includes("20 הודעות")) {
+        errorContent = "הגעת למגבלת ה-20 הודעות להיום. נתראה מחר! 👋";
+      } else if (msg.includes("לא ניתן לשאול")) {
+        errorContent = `⚠️ ${msg}`;
+      } else {
+        errorContent = "אירעה שגיאה. נסה שוב בעוד רגע.";
+      }
+
       setMessages((prev) => prev.map((m) =>
         m.id === assistantId ? {
           ...m,
-          content: msg.includes("20 הודעות")
-            ? "הגעת למגבלת ה-20 הודעות להיום. נתראה מחר! 👋"
-            : "אירעה שגיאה. נסה שוב בעוד רגע.",
+          content: errorContent,
         } : m
       ));
     } finally {

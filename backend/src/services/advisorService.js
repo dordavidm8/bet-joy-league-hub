@@ -28,7 +28,7 @@ async function getConfig() {
   }
 }
 
-async function getGameContext(gameId) {
+async function getGameContext(gameId, skipStatusCheck = false) {
   const gameRes = await pool.query(
     `SELECT g.*, c.name AS competition_name
      FROM games g LEFT JOIN competitions c ON c.id = g.competition_id
@@ -36,11 +36,28 @@ async function getGameContext(gameId) {
     [gameId]
   );
   if (!gameRes.rows[0]) throw new Error('Game not found');
+
+  const game = gameRes.rows[0];
+
+  // Validate game status is scheduled (unless explicitly skipped for admin playground)
+  if (!skipStatusCheck && game.status !== 'scheduled') {
+    const statusErrors = {
+      'live': 'לא ניתן לשאול על משחק חי - השתמש בעמוד המשחק',
+      'finished': 'לא ניתן לשאול על משחק שנגמר',
+      'postponed': 'המשחק נדחה - המתן לעדכון מועד חדש',
+      'cancelled': 'המשחק בוטל'
+    };
+    const message = statusErrors[game.status] || `משחק בסטטוס '${game.status}' לא זמין ליועץ`;
+    const err = new Error(message);
+    err.status = 403;
+    throw err;
+  }
+
   const questionsRes = await pool.query(
     `SELECT question_text, outcomes, is_locked FROM bet_questions WHERE game_id = $1 ORDER BY created_at ASC`,
     [gameId]
   );
-  return { game: gameRes.rows[0], questions: questionsRes.rows };
+  return { game, questions: questionsRes.rows };
 }
 
 function buildSystemPrompt(cfg, game, questions) {
@@ -201,7 +218,7 @@ async function chatStream(gameId, userId, messages, onEvent, isPlayground = fals
 
   const cfg = await getConfig();
   let gameCtx = null;
-  try { gameCtx = await getGameContext(gameId); } catch {}
+  try { gameCtx = await getGameContext(gameId, isPlayground); } catch {}
 
   const systemPrompt = buildSystemPrompt(cfg, gameCtx?.game, gameCtx?.questions ?? []);
   const groq = await getGroq();
