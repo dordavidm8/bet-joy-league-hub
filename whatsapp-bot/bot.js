@@ -18,25 +18,9 @@ const client = new Client({
 });
 
 // ── QR ──────────────────────────────────────────────────────────────────────
-client.on('qr', async (qr) => {
+client.on('qr', (qr) => {
   console.log('[WA] סרוק את הQR:');
   qrcode.generate(qr, { small: true });
-
-  const phone = process.env.BOT_PHONE;
-  if (phone) {
-    setTimeout(async () => {
-      try {
-        const code = await client.requestPairingCode(phone);
-        console.log('\n===========================================');
-        console.log('[WA] או קשר בעזרת קוד שיוך (Pairing Code) במקום ברקוד!');
-        console.log(`[WA] כנס ל"מכשירים מקושרים" בוואטסאפ במכשיר שלך > "קישור באמצעות מספר טלפון" > הזן את הקוד:`);
-        console.log(`[WA] --->  ${code}  <---`);
-        console.log('===========================================\n');
-      } catch (err) {
-        console.error('[WA] כשלון בקבלת קוד מזהה:', err.message);
-      }
-    }, 4000);
-  }
 });
 
 // ── Ready ────────────────────────────────────────────────────────────────────
