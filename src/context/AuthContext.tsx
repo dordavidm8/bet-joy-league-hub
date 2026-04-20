@@ -31,6 +31,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [backendUser, setBackendUser] = useState<BackendUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper to ensure username contains only English letters, numbers, and basic symbols
+  const sanitizeUsername = (name: string): string => {
+    return name.replace(/[^a-zA-Z0-9._-]/g, '') || 'User';
+  };
+
   // Sync backend user after Firebase auth state changes
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
@@ -41,8 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setBackendUser(data.user);
         } catch (err: any) {
           // User exists in Firebase but not in backend — try auto-registration
-          const baseName = (fbUser.displayName || fbUser.email?.split('@')[0] || 'User')
-            .replace(/[^a-zA-Z0-9._-]/g, ''); // Remove non-English/symbols
+          const baseName = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
+          const sanitizedVal = sanitizeUsername(baseName);
             
           const tryRegister = async (username: string): Promise<void> => {
             try {
@@ -67,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             }
           };
-          await tryRegister(baseName || 'User');
+          await tryRegister(sanitizedVal);
         }
       } else {
         setBackendUser(null);
@@ -108,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, username: string, referralCode?: string, displayName?: string) => {
     await createUserWithEmailAndPassword(auth, email, password);
     try {
-      const data = await registerUser(username, referralCode, undefined, displayName);
+      const data = await registerUser(sanitizeUsername(username), referralCode, undefined, displayName);
       setBackendUser(data.user);
     } catch (err: any) {
       // If auto-registration already fired via onAuthStateChanged, just fetch existing user
@@ -131,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBackendUser(data.user);
     } catch {
       const name = username || result.user.displayName || 'User';
-      const data = await registerUser(name, referralCode, photoURL);
+      const data = await registerUser(sanitizeUsername(name), referralCode, photoURL);
       setBackendUser(data.user);
     }
   };
