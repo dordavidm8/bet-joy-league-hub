@@ -125,9 +125,100 @@ Discourages last-minute "safe" bets by reducing payout:
 
 ---
 
-## Admin Panel
-- Access: Developers only (controlled via `ADMIN_UIDS` env var)
-- Analytics: total users, DAU/MAU, bets placed, geographic distribution, full logs
+## Admin Panel (Dashboard)
+
+### Access Control
+- Route: `/admin` — wrapped in `AdminRoute` component that calls `GET /api/admin/me`
+- Backend: `requireAdmin` middleware checks `ADMIN_EMAILS` env var first, then `admin_users` DB table
+- Railway env var: `ADMIN_EMAILS=nir.dahan2001@gmail.com,dordavidm8@gmail.com,kickoffsportsapp@gmail.com`
+- New admins can be added dynamically via the dashboard (no redeploy needed)
+- No AppLayout wrapper — own header with "קיקאוף ניהול" title + "חזור לאפליקציה" button
+
+### Tabs (8 total)
+
+#### 1. סקירה (Stats)
+- 6 KPI cards: total users (+ new today/month), total bets (+ pending + live), wins/losses + win rate, active leagues, total staked, platform profit
+- Transactions by type table: type, count, volume (points)
+
+#### 2. משתמשים (Users)
+- Search by username/email (live filter, up to 200 results)
+- **Adjust points** modal: amount (positive/negative) + reason text
+- **View bets** modal: all user bets with status badges + cancel button for pending
+- **Edit user** modal: change username and/or display name
+- **Delete user** with confirmation (permanent)
+- **Unlink phone** for a user
+
+#### 3. הימורים (Bets)
+- Filter by status: all | pending | won | lost | cancelled
+- Cancel button per row (pending bets only) — refunds stake, cancels parlay if applicable
+
+#### 4. משחקים (Games)
+- Tabs: upcoming / finished
+- Filters: team name search, league, status, blocked/open, odds source (espn/api/default/admin), date range
+- Sortable by: time, bet count, score
+- **Feature game** (⭐): set bonus % and hours_before — live payout preview shown
+- **Unfeature** a featured game
+- **Lock / Unlock** game (blocks new bets)
+- **Edit odds** modal: override home/draw/away odds manually
+- **Expand row** (⌄): inline analytics — outcome breakdown (bet_count, total_staked, %)
+
+#### 5. ליגות (Leagues)
+- Search by league name or creator username
+- Filter by status: active | paused | finished
+- **Pause league** with confirmation
+- **Stop league** with option to distribute prize pool or not
+- **WhatsApp group** management per league: view/edit invite link, remove WA group
+- **Create public league** form directly from admin (name, description, format, entry fee, max members)
+- Click row → navigate to `/leagues/:id` (read-only view in main app)
+
+#### 6. התראות (Notifications)
+- Type: `admin_message` | `special_offer`
+- Target: all users | specific username
+- Title + body fields → `POST /admin/notify`
+
+#### 7. אתגרים (Mini Games / Challenges)
+- Generate questions for any mini game type via AI: **Trivia יומית (AI)**, Missing XI, Who Are Ya?, Career Path, Box2Box, Guess Club
+- For trivia: choose category (general/football/etc.), optional custom topic, type (free/premium)
+- Preview generated draft before saving
+- **Save to queue** — each day the system pulls the first item in queue per category
+- **Queue management**: view upcoming scheduled items, change play date, delete from queue
+
+#### 8. מתקדם (Advanced) — 4 sub-sections
+- **⚽ תחרויות**: table of all competitions with is_active toggle
+- **🔑 מנהלים**: list current admins (env=ראשי / DB=removable), add by email, remove
+- **🌐 תרגומי קבוצות**: approve/dismiss AI-suggested Hebrew team name translations, regenerate bet questions
+- **📋 לוג פעולות**: last 100 admin actions with Hebrew labels and timestamps
+
+### Backend Routes (`backend/src/routes/admin.js`)
+All require `requireAdmin` middleware.
+- `GET /admin/me` → `{ is_admin, email }`
+- `GET /admin/stats`, `GET /admin/users`, `GET /admin/bets`, `GET /admin/games`, `GET /admin/leagues`
+- `POST /admin/users/:id/adjust-points`
+- `PATCH /admin/users/:id` (edit username/display name), `DELETE /admin/users/:id`
+- `POST /admin/users/:id/unlink-phone`
+- `POST /admin/notify`
+- `GET /admin/quiz`, `POST /admin/quiz`, `DELETE /admin/quiz/:id`
+- `POST /admin/games/:id/feature`, `DELETE /admin/games/:id/feature`
+- `POST /admin/games/:id/lock`, `POST /admin/games/:id/unlock`
+- `PATCH /admin/games/:id/odds`
+- `GET /admin/games/:id/analytics`
+- `GET /admin/users/:id/bets`, `POST /admin/bets/:id/cancel`
+- `POST /admin/leagues/:id/pause`, `POST /admin/leagues/:id/stop`
+- `POST /admin/leagues/:id/wa-group`, `DELETE /admin/leagues/:id/wa-group`
+- `GET /admin/competitions`, `PATCH /admin/competitions/:id/toggle`
+- `GET /admin/log`
+- `GET /admin/admins`, `POST /admin/admins`, `DELETE /admin/admins/:email`
+- `GET /admin/team-translations`, `POST /admin/team-translations/approve`, `POST /admin/team-translations/dismiss`
+- `POST /admin/regenerate-bet-questions`
+- `GET /admin/mini-game-draft`, `POST /admin/mini-game-draft`
+- `GET /admin/mini-game-queue`, `PATCH /admin/mini-game-queue/:id`, `DELETE /admin/mini-game-queue/:id`
+
+### DB tables
+- `admin_users`: dynamically-added admins (email, added_by, added_at)
+- `admin_action_log`: id, admin_email, action, entity_type, entity_id, details (JSONB), created_at
+
+### Services
+- `backend/src/services/adminLogService.js` — `logAdminAction(adminEmail, action, entityType, entityId, details)` called after every admin mutation
 
 ---
 
