@@ -942,5 +942,154 @@ router.post('/run-settlement', authenticate, requireAdmin, async (req, res, next
   } catch (err) { next(err); }
 });
 
+// ═══════════════════════════════════════════════════════════════
+// AI ADVISOR ADMIN ROUTES
+// ═══════════════════════════════════════════════════════════════
+const advisorMetrics = require('../services/advisorMetrics');
+const { encrypt, makePreview } = require('../lib/crypto');
+const { invalidateCache, getSecret } = require('../lib/secrets');
+const { chatStream } = require('../services/advisorService');
+
+// GET /api/admin/advisor/stats
+router.get('/advisor/stats', async (req, res, next) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const [overview, daily] = await Promise.all([advisorMetrics.getStats(days), advisorMetrics.getDaily(days)]);
+    res.json({ overview, daily });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/advisor/stats/tools
+router.get('/advisor/stats/tools', async (req, res, next) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    res.json(await advisorMetrics.getToolBreakdown(days));
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/advisor/stats/users
+router.get('/advisor/stats/users', async (req, res, next) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    res.json(await advisorMetrics.getTopUsers(days));
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/advisor/events
+router.get('/advisor/events', async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const offset = parseInt(req.query.offset) || 0;
+    res.json(await advisorMetrics.getEvents(limit, offset));
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/advisor/config
+router.get('/advisor/config', async (req, res, next) => {
+  try {
+    const result = await pool.query('SELECT key, value, updated_at, updated_by FROM advisor_config ORDER BY key');
+    res.json(Object.fromEntries(result.rows.map(r => [r.key, { value: r.value, updated_at: r.updated_at, updated_by: r.updated_by }])));
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/advisor/config
+router.patch('/advisor/config', async (req, res, next) => {
+  const allowed = ['model', 'daily_limit', 'temperature', 'max_tokens', 'system_prompt'];
+  const updates = Object.entries(req.body).filter(([k]) => allowed.includes(k));
+  if (!updates.length) return res.status(400).json({ error: 'No valid config keys' });
+  try {
+    for (const [key, value] of updates) {
+      await pool.query(
+        `INSERT INTO advisor_config (key, value, updated_at, updated_by) VALUES ($1, $2, NOW(), $3)
+         ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW(), updated_by = $3`,
+        [key, String(value), req.user.email]
+      );
+    }
+    await logAdminAction(req.user.email, 'update_advisor_config', 'advisor_config', null, req.body);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/advisor/secrets
+router.get('/advisor/secrets', async (req, res, next) => {
+  try {
+    const dbRes = await pool.query('SELECT key, preview, updated_at, updated_by FROM encrypted_secrets ORDER BY key');
+    const ENV_KEYS = ['GROQ_API_KEY', 'THE_ODDS_API_KEY', 'FIREBASE_API_KEY', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL', 'WHATSAPP_API_KEY'];
+    const dbKeys = new Set(dbRes.rows.map(r => r.key));
+    const all = ENV_KEYS.map(key => {
+      if (dbKeys.has(key)) return dbRes.rows.find(r => r.key === key);
+      const envVal = process.env[key];
+      return { key, preview: envVal ? makePreview(envVal) : null, source: 'env', updated_at: null };
+    });
+    res.json(all);
+  } catch (err) { next(err); }
+});
+
+// PUT /api/admin/advisor/secrets/:key
+router.put('/advisor/secrets/:key', async (req, res, next) => {
+  const { key } = req.params;
+  const { value } = req.body;
+  if (!value || typeof value !== 'string') return res.status(400).json({ error: 'value is required' });
+  const ALLOWED_KEYS = ['GROQ_API_KEY', 'THE_ODDS_API_KEY', 'FIREBASE_API_KEY', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL', 'WHATSAPP_API_KEY'];
+  if (!ALLOWED_KEYS.includes(key)) return res.status(400).json({ error: 'Unknown secret key' });
+  try {
+    const { value_encrypted, iv, auth_tag } = encrypt(value);
+    const preview = makePreview(value);
+    await pool.query(
+      `INSERT INTO encrypted_secrets (key, value_encrypted, iv, auth_tag, preview, updated_at, updated_by)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+       ON CONFLICT (key) DO UPDATE SET value_encrypted=$2, iv=$3, auth_tag=$4, preview=$5, updated_at=NOW(), updated_by=$6`,
+      [key, value_encrypted, iv, auth_tag, preview, req.user.email]
+    );
+    invalidateCache(key);
+    await logAdminAction(req.user.email, 'update_secret', 'encrypted_secrets', key, { key, preview });
+    res.json({ ok: true, preview });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/advisor/secrets/:key/test
+router.post('/advisor/secrets/:key/test', async (req, res, next) => {
+  const { key } = req.params;
+  try {
+    const value = await getSecret(key);
+    if (!value) return res.json({ ok: false, message: 'מפתח לא מוגדר' });
+    if (key === 'GROQ_API_KEY') {
+      const Groq = require('groq-sdk');
+      const groq = new Groq({ apiKey: value });
+      await groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 });
+      return res.json({ ok: true, message: 'GROQ_API_KEY תקין' });
+    }
+    if (key === 'THE_ODDS_API_KEY') {
+      const axios = require('axios');
+      const r = await axios.get(`https://api.the-odds-api.com/v4/sports?apiKey=${value}`, { timeout: 8000 });
+      return res.json({ ok: r.status === 200, message: r.status === 200 ? 'THE_ODDS_API_KEY תקין' : 'שגיאה' });
+    }
+    return res.json({ ok: true, message: `${key} — קיים` });
+  } catch (err) {
+    res.json({ ok: false, message: err.message });
+  }
+});
+
+// GET /api/admin/advisor/playground (SSE — bypasses rate limit)
+router.get('/advisor/playground', async (req, res) => {
+  let messages;
+  try { messages = JSON.parse(req.query.messages || '[]'); } catch { return res.status(400).json({ error: 'Invalid messages JSON' }); }
+  if (!Array.isArray(messages) || messages.length === 0) return res.status(400).json({ error: 'messages required' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  try {
+    await chatStream(null, req.user.id, messages, send, true);
+  } catch (e) {
+    send('error', { message: e.message });
+  } finally {
+    res.end();
+  }
+});
+
 module.exports = router;
 module.exports.opsRouter = opsRouter;
