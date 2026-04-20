@@ -61,7 +61,7 @@ client.on('disconnected', (reason) => {
 });
 
 // ── Messages ──────────────────────────────────────────────────────────────────
-client.on('message_create', async (msg) => {
+client.on('message', async (msg) => {
   // Ignore messages sent by the bot itself
   if (msg.fromMe) return;
 
