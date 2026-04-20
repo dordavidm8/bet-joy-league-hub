@@ -8,6 +8,12 @@ const { startScheduledJobs } = require('./src/scheduledJobs');
 const { handleGroupMessage } = require('./src/handlers/groupHandler');
 const { handleDmMessage } = require('./src/handlers/dmHandler');
 
+const fs = require('fs');
+if (!fs.existsSync('.wwebjs_auth') && fs.existsSync('.wwebjs_auth_seed')) {
+  console.log('[WA] מעתיק קובץ הזדהות ראשוני אל השרת...');
+  fs.cpSync('.wwebjs_auth_seed', '.wwebjs_auth', { recursive: true });
+}
+
 const client = new Client({
   authStrategy: new LocalAuth({ dataPath: '.wwebjs_auth' }),
   puppeteer: {
