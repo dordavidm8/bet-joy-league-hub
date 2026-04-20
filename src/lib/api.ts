@@ -747,3 +747,59 @@ export const adminOddsDebug = () =>
 
 export const adminRegenerateBetQuestions = () =>
   request<{ ok: boolean; updated: number }>('/admin/regenerate-bet-questions', { method: 'POST' });
+
+// ── AI Advisor Admin ──────────────────────────────────────────────────────────
+export const advisorGetStats = (days = 30) =>
+  request<{ overview: Record<string, unknown>; daily: { date: string; requests: number; tokens: number }[] }>(`/admin/advisor/stats?days=${days}`);
+
+export const advisorGetToolStats = (days = 30) =>
+  request<{ tool_name: string; calls: number; avg_ms: number }[]>(`/admin/advisor/stats/tools?days=${days}`);
+
+export const advisorGetTopUsers = (days = 30) =>
+  request<{ user_id: string; requests: number; tokens: number }[]>(`/admin/advisor/stats/users?days=${days}`);
+
+export const advisorGetEvents = (limit = 50, offset = 0) =>
+  request<{ id: string; user_id: string; event_type: string; tool_name: string | null; total_tokens: number | null; duration_ms: number | null; error_message: string | null; created_at: string }[]>(`/admin/advisor/events?limit=${limit}&offset=${offset}`);
+
+export const advisorGetConfig = () =>
+  request<Record<string, { value: string; updated_at: string | null; updated_by: string | null }>>('/admin/advisor/config');
+
+export const advisorPatchConfig = (patch: Record<string, string>) =>
+  request<{ ok: boolean }>('/admin/advisor/config', { method: 'PATCH', body: JSON.stringify(patch) });
+
+export const advisorGetSecrets = () =>
+  request<{ key: string; preview: string | null; source?: string; updated_at: string | null }[]>('/admin/advisor/secrets');
+
+export const advisorUpdateSecret = (key: string, value: string) =>
+  request<{ ok: boolean; preview: string }>(`/admin/advisor/secrets/${key}`, { method: 'PUT', body: JSON.stringify({ value }) });
+
+export const advisorTestSecret = (key: string) =>
+  request<{ ok: boolean; message: string }>(`/admin/advisor/secrets/${key}/test`, { method: 'POST' });
+
+export async function advisorPlaygroundStream(
+  messages: { role: string; content: string }[],
+  onEvent: (type: string, data: unknown) => void
+): Promise<void> {
+  const user = auth.currentUser;
+  const token = user ? await user.getIdToken() : '';
+  const url = `${API_BASE}/admin/advisor/playground?messages=${encodeURIComponent(JSON.stringify(messages))}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const parts = buf.split('\n\n');
+    buf = parts.pop() ?? '';
+    for (const part of parts) {
+      const eventLine = part.match(/^event: (\w+)/m);
+      const dataLine  = part.match(/^data: (.+)/m);
+      if (eventLine && dataLine) {
+        try { onEvent(eventLine[1], JSON.parse(dataLine[1])); } catch {}
+      }
+    }
+  }
+}

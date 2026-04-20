@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import {
   BarChart2, Users, Target, Trophy, Bell, HelpCircle, Settings,
   Search, Plus, Trash2, Send, Star, StarOff, ChevronDown, ChevronUp,
-  LogOut, XCircle, ToggleLeft, ToggleRight, Activity, X, Check,
+  LogOut, XCircle, ToggleLeft, ToggleRight, Activity, X, Check, Bot,
 } from "lucide-react";
+import { AdvisorTab } from "@/components/admin/AdvisorTab";
 import { Button } from "@/components/ui/button";
 import {
   adminGetStats, adminGetUsers, adminGetBets, adminGetGames, adminGetLeagues,
@@ -29,7 +30,7 @@ export const ADMIN_EMAILS = [
   "kickoffsportsapp@gmail.com",
 ];
 
-type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "advanced";
+type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "advanced" | "advisor";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "stats",         label: "סקירה",      icon: <BarChart2 size={14} /> },
@@ -38,8 +39,9 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "games",        label: "משחקים",     icon: <Trophy size={14} /> },
   { id: "leagues",      label: "ליגות",      icon: <Trophy size={14} /> },
   { id: "notifications",label: "התראות",     icon: <Bell size={14} /> },
-  { id: "minigames",    label: "אתגרים", icon: <Target size={14} /> },
+  { id: "minigames",    label: "אתגרים",     icon: <Target size={14} /> },
   { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
+  { id: "advisor",      label: "יועץ AI",    icon: <Bot size={14} /> },
 ];
 
 const fmt = (n: string | number) => Number(n).toLocaleString("he-IL");
@@ -1907,6 +1909,7 @@ const AdminDashboard = () => {
     stats: <StatsTab />, users: <UsersTab />, bets: <BetsTab />,
     games: <GamesTab />, leagues: <LeaguesTab />, notifications: <NotificationsTab />,
     minigames: <MiniGamesTab />, advanced: <AdvancedTab />,
+    advisor: <AdvisorTab />,
   };
 
   return (
