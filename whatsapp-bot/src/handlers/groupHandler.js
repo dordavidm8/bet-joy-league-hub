@@ -67,37 +67,30 @@ function parseBetMessage(body) {
 async function handleGroupMessage(client, msg, chat) {
   const groupJid = chat.id._serialized;
   const body = (msg.body || '').toLowerCase();
-  
-  console.log(`[WA-DEBUG] Incoming msg from ${groupJid}: "${msg.body}"`);
 
-  // Log incoming message for debugging at the very top
-  await pool.query(
-    `INSERT INTO wa_message_log (direction, phone, group_jid, message, action)
-     VALUES ('in', $1, $2, $3, 'group_message')`,
-    [extractNumber(msg.from), groupJid, msg.body]
-  ).catch(err => console.error('[DEBUG-LOG] Error inserting log:', err.message));
-
-  // ── Command: טבלה ────────────────────────────────────────────────
+  // ── Command: @kickoff טבלה ────────────────────────────────────────────────
   if (body.includes('טבלה')) {
-    console.log(`[WA-DEBUG] Leaderboard command detected in body`);
-    const groupRes = await pool.query(
-      `SELECT league_id, is_active FROM wa_groups WHERE wa_group_id = $1`,
-      [groupJid]
-    );
-    
-    const groupFound = groupRes.rows[0];
-    console.log(`[WA-DEBUG] Group lookup result:`, groupFound);
+    const botNumber = client.info?.wid?.user;
+    const isBotMentioned = msg.mentionedIds?.some(id => id.includes(botNumber)) || 
+                           body.includes('kickoff') || 
+                           (botNumber && body.includes(botNumber));
 
-    if (groupFound && groupFound.is_active) {
-      console.log(`[WA-DEBUG] Attempting to send leaderboard for league ${groupFound.league_id}`);
-      const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
-      await sendLeaderboard(client, {
-        league_id: groupFound.league_id,
-        league_name: chat.name,
-        wa_group_id: groupJid
-      }).then(() => console.log(`[WA-DEBUG] Leaderboard sent successfully`))
-        .catch(e => console.error(`[WA-DEBUG] Leaderboard error:`, e.message));
-      return;
+    if (isBotMentioned) {
+      const groupRes = await pool.query(
+        `SELECT league_id, is_active FROM wa_groups WHERE wa_group_id = $1`,
+        [groupJid]
+      );
+      
+      const groupFound = groupRes.rows[0];
+      if (groupFound && groupFound.is_active) {
+        const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
+        await sendLeaderboard(client, {
+          league_id: groupFound.league_id,
+          league_name: chat.name,
+          wa_group_id: groupJid
+        }).catch(e => console.error('[command] leaderboard error:', e.message));
+        return;
+      }
     }
   }
 
@@ -106,12 +99,8 @@ async function handleGroupMessage(client, msg, chat) {
     `SELECT league_id FROM wa_groups WHERE wa_group_id = $1 AND is_active = true`,
     [groupJid]
   );
-  if (!groupRes.rows[0]) {
-    console.log(`[WA-DEBUG] Group ${groupJid} not linked/active. Ignoring message.`);
-    return;
-  }
+  if (!groupRes.rows[0]) return;
 
-  console.log(`[WA-DEBUG] Processing potential bet message...`);
   // Only handle replies for betting — ignore all other group messages silently
   if (!msg.hasQuotedMsg) return;
 
@@ -126,7 +115,6 @@ async function handleGroupMessage(client, msg, chat) {
   );
 
   if (gameMsgRes.rows[0]) {
-    console.log(`[WA-DEBUG] Found game message match, processing bet...`);
     await processBetReply(client, msg, senderPhone, gameMsgRes.rows[0], 'group');
     return;
   }

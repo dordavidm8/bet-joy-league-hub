@@ -44,7 +44,6 @@ function buildLeaderboardMessage(leagueName, members) {
     const emoji = RANK_EMOJI[i] || `${i + 1}.`;
     msg += `${emoji} ${m.username} — ${formatPoints(m.points_in_league)} נקודות\n`;
   });
-  msg += `━━━━━━━━━━━━━━━━━━━━━━`;
   return msg;
 }
 
