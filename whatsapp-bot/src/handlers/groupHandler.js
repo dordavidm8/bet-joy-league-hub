@@ -75,9 +75,11 @@ async function handleGroupMessage(client, msg, chat) {
   if (!groupRes.rows[0]) return;
 
   // ── Command: @kickoff טבלה ────────────────────────────────────────────────
-  const mentions = await msg.getMentions();
-  const isBotMentioned = mentions.some(m => m.id._serialized === client.info.wid._serialized);
-  if (isBotMentioned && msg.body.includes('טבלה')) {
+  const body = (msg.body || '').toLowerCase();
+  const isBotMentioned = msg.mentionedIds?.some(id => id === client.info.wid._serialized) || 
+                         body.includes('@kickoff');
+
+  if (isBotMentioned && body.includes('טבלה')) {
     const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
     await sendLeaderboard(client, {
       league_id: groupRes.rows[0].league_id,
