@@ -90,6 +90,83 @@ async function handleGroupMessage(client, msg, chat) {
     }
   }
 
+  // ── Command: Bet Correction (Reply with "תיקון") ─────────────────────────
+  if (body.startsWith('תיקון') && msg.hasQuotedMsg) {
+    const quoted = await msg.getQuotedMessage();
+    const quotedId = quoted.id._serialized;
+    const senderPhone = extractNumber(msg.from);
+
+    // 1. Resolve user
+    const userRes = await pool.query(`SELECT id FROM users WHERE phone = $1`, [senderPhone]);
+    if (!userRes.rows[0]) return;
+    const user = userRes.rows[0];
+
+    // 2. Find the bet associated with the quoted message
+    // Users might reply to the BOT's confirmation message or their own original bet.
+    const betRes = await pool.query(
+      `SELECT b.*, g.status as game_status, g.home_team, g.away_team
+       FROM bets b
+       JOIN games g ON g.id = b.game_id
+       WHERE b.user_id = $1 AND (b.wa_bet_message_id = $2 OR b.wa_source_message_id = $2)
+       AND b.status = 'pending'
+       ORDER BY b.placed_at DESC LIMIT 1`,
+      [user.id, quotedId]
+    );
+
+    const bet = betRes.rows[0];
+    if (bet) {
+      if (bet.game_status !== 'scheduled') {
+        await msg.reply('❌ לא ניתן לתקן הימור למשחק שכבר החל או הסתיים');
+        return;
+      }
+
+      // 3. Parse the new bet from the correction message
+      // Expected format:
+      // תיקון
+      // 1 2-1
+      const lines = msg.body.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length < 2) {
+        await msg.reply('❌ פורמט תיקון לא תקין. יש לרשום "תיקון" ובשורה מתחת את ההימור החדש (למשל: 1 2-0)');
+        return;
+      }
+
+      const betDetail = lines[1]; // e.g. "1 2-1"
+      const [resultPart, scorePart] = betDetail.split(/\s+/);
+      
+      if (!['1', 'x', '2'].includes(resultPart.toLowerCase())) {
+        await msg.reply('❌ המנצחת חייבת להיות 1, X או 2');
+        return;
+      }
+
+      const outcomeMap = { '1': bet.home_team, 'x': 'Draw', '2': bet.away_team };
+      const newOutcome = outcomeMap[resultPart.toLowerCase()];
+      
+      let newScore = null;
+      if (scorePart) {
+        const scoreObj = parseScore(scorePart);
+        if (!scoreObj) {
+          await msg.reply('❌ פורמט תוצאה לא תקין. דוגמה: 2-1');
+          return;
+        }
+        const validation = validateAndNormalizeScore(scoreObj, newOutcome, bet.home_team, bet.away_team);
+        if (validation.error) {
+          await msg.reply(validation.error);
+          return;
+        }
+        newScore = validation.normalized;
+      }
+
+      // 4. Update the bet
+      await pool.query(
+        `UPDATE bets SET selected_outcome = $1, exact_score = $2, updated_at = NOW() WHERE id = $3`,
+        [newOutcome, newScore, bet.id]
+      );
+
+      await msg.react('👍');
+      return;
+    }
+  }
+
   // Check if this is a registered Kickoff group for other features (betting)
   const groupRes = await pool.query(
     `SELECT league_id FROM wa_groups WHERE wa_group_id = $1 AND is_active = true`,
@@ -100,6 +177,7 @@ async function handleGroupMessage(client, msg, chat) {
   // Only handle replies for betting — ignore all other group messages silently
   if (!msg.hasQuotedMsg) return;
 
+  console.log(`[WA-DEBUG] Processing potential bet message...`);
   const quoted = await msg.getQuotedMessage();
   const quotedId = quoted.id._serialized;
   const senderPhone = extractNumber(msg.from);

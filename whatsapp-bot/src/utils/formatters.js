@@ -8,8 +8,9 @@ function formatDate(date) {
   return date.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-function formatPoints(n) {
-  return Number(n).toLocaleString('he-IL');
+function formatPoints(p) {
+  const num = Number(p);
+  return num % 1 === 0 ? num.toLocaleString('he-IL') : num.toFixed(1);
 }
 
 // Build the morning game message text
@@ -41,7 +42,7 @@ function buildLeaderboardMessage(leagueName, members) {
   let msg = `📊 *טבלת ליגת "${leagueName}"*\n\n`;
   members.forEach((m, i) => {
     const emoji = RANK_EMOJI[i] || `${i + 1}.`;
-    msg += `${emoji} ${m.username} — ${formatPoints(m.points_in_league)} נקודות\n`;
+    msg += `${emoji} ${m.username.toLowerCase()} — ${formatPoints(m.points_in_league)} נקודות\n`;
   });
   return msg;
 }
