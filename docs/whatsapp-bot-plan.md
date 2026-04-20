@@ -1,8 +1,8 @@
 # תוכנית מימוש: WhatsApp Bot לקיקאוף
 
-> **סטטוס:** Backend + Frontend + כל קוד הבוט מומשו במלואם — ממתין לחיבור SIM וסריקת QR  
-> **תאריך עדכון:** אפריל 2026  
-> **ספרייה לבוט:** `whatsapp-web.js` (Puppeteer) — אותה ספרייה שGroupShield בנוי עליה, מוכחת ב-production
+> **סטטוס:** ✅ מיושם ועובד ב-Production (רץ על שרת VPS חיצוני)  
+> **תאריך עדכון:** אפריל 2021 (עודכן לגרסת Production סופית)  
+> **ספרייה לבוט:** `whatsapp-web.js` (Puppeteer)
 
 ---
 
@@ -57,9 +57,11 @@ INTERNAL_API_KEY=<secret>               # אימות קריאות internal
 ### ⏳ נותר — חיבור SIM וDeploy  
 - [x] חבר SIM לטלפון/מכשיר (נמסר מספר 054-4390945)
 - [x] הרץ `node bot.js` — סרוק QR (נסרק בהצלחה)
-- [ ] הגדר Railway service חדש (root: `whatsapp-bot/`)
-- [ ] הוסף Volume לsession + ENV variables
-- [x] הגדר `BOT_INTERNAL_URL` בbackend service (הוגדר בקובץ .env המקומי)
+- [x] חבר SIM לטלפון/מכשיר (נמסר מספר 054-4390945)
+- [x] הרץ `node bot.js` — סרוק QR (נסרק בהצלחה)
+- [x] העבר את הבוט לשרת VPS חיצוני (`ssh shabbat`) בגלל מגבלות דפדפן ב-Railway
+- [x] הגדר PM2 לניהול ה-process בשרת ה-SSH
+- [x] וודא סנכרון DB בין ה-VPS ל-Railway (PostgreSQL רץ ב-Railway)
 
 #### מה צריך לבנות (לפי סדר עדיפות):
 
@@ -98,7 +100,13 @@ INTERNAL_API_KEY=<secret>               # אימות קריאות internal
 
 3. **`wa_reminders_sent` טבלה** — גם היא צריכה migration לפני שלב C.
 
-4. **Railway Deployment** — הבוט אמור לרוץ כ-process נפרד באותו service ב-Railway (PM2 / Procfile). ראה סעיף 18.
+4101. **Deployment Architecture** — הבוט רץ על שרת ה-SSH `shabbat`. הוא אינו חלק מה-deployment האוטומטי של Railway. 
+   - **כתובת הבוט:** ה-Backend פונה לבוט דרך ה-IP של השרת / URL פנימי.
+   - **עדכון קוד:** יש להיכנס לשרת, לבצע `git pull` ואז `pm2 restart kickoff-bot`.
+
+102. **Commands Detail**:
+   - **שלח טבלה גבר**: (קבוצה) שולף טבלה רשמית מה-DB. ללא צורך בתיוג.
+   - **תיקון**: (Reply) מאפשר עדכון הימור קיים לפני תחילת משחק.
 
 5. **`BOT_PHONE` ENV** — חשוב להגדיר אחרי חיבור ה-SIM: המספר שהבוט מחובר אליו (לlinks בהודעות).
 
@@ -164,15 +172,15 @@ INTERNAL_API_KEY=<secret>               # אימות קריאות internal
 - **LocalAuth**: session נשמרת בקבצים — לא צריך QR אחרי login ראשוני
 - **Reply detection**: `msg.hasQuotedMsg` + `msg.getQuotedMessage()` — בדיוק מה שצריך לשיטת ה-reply
 
-### Process נפרד
+### שרת חיצוני (VPS)
+הבוט רץ על שרת SSH חיצוני בשם `shabbat` (IONOS). הוא לא רץ ב-Railway בגלל דרישות הזיכרון והדפדפן (Puppeteer) של וואטסאפ.
+הבוט חולק את אותה PostgreSQL (שיושבת ב-Railway) כדי לשמור על סנכרון מלא של נתונים.
 ```
-Railway
-├── Express Backend (port 4000)   ← קיים
-└── WhatsApp Bot Process          ← חדש
-    ├── whatsapp-bot/bot.js
-    └── PM2 (ecosystem.config.js)
+SSH (shabbat)
+├── WhatsApp Bot Process (PM2)
+└── /root/kickoff-bot/
 ```
-שני ה-processes חולקים PostgreSQL אחת. הבוט חושף internal REST API על port 4001.
+הבוט חושף internal REST API על port 4001 לצורך שליחת הודעות מה-Backend.
 
 ---
 

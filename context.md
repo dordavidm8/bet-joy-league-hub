@@ -47,7 +47,7 @@ bet-joy-league-hub/
 | Auth | Firebase Auth | Google, Facebook, Email+Password |
 | Sports API | **API-Football** (api-football.com) | Free tier for dev, paid for prod |
 | Real-time | Socket.io | Live betting score updates |
-| Hosting | Railway | Backend + PostgreSQL |
+| Hosting | Railway (Backend) / SSH VPS (WhatsApp Bot) | Backend on Railway, Bot on SSH `shabbat` |
 | API style | REST | Simple, compatible with frontend |
 
 ---
@@ -291,4 +291,36 @@ We completely refactored the Daily Mini Games architecture (`/backend/src/jobs/g
 
 ---
 
-*Last updated: 2026-04-07*
+---
+
+## WhatsApp Bot (Phase 2 - Implemented April 2026)
+
+The WhatsApp bot handles league management, betting, and leaderboards directly within group chats.
+
+### 🏠 Hosting & Deployment
+- **Server:** SSH VPS `shabbat` (IONOS/Ubuntu).
+- **Path:** `/root/kickoff-bot/` (Mono-repo synced via GitHub).
+- **Process Manager:** `pm2` (process name: `kickoff-bot`).
+- **Database:** Shares the same PostgreSQL on Railway as the main site.
+- **Independence:** The bot **does not** run on Railway. All code changes must be pushed to GitHub, pulled on the VPS, and restarted via PM2.
+
+### 🤖 Core Commands
+- **`עזרה` / `/help`**: Displays the help menu.
+- **`שלח טבלה גבר`**: (Group only) Fetches the official league leaderboard from the DB.
+  - *Note:* This command is phrase-based and does not require a bot mention (@).
+- **Betting**: Reply to a game notification with `1`, `X`, or `2`.
+- **Bet Correction (`תיקון`)**: To update a bet, the user must reply to the bot's confirmation message (or their bet) with:
+  ```
+  תיקון
+  [1/X/2] [Score]
+  ```
+  Example: `תיקון \n 1 2-1`. The bot acknowledges with a 👍 reaction.
+
+### ⚙️ Technical Details
+- **Library:** `whatsapp-web.js`.
+- **User Identification:** Based on phone number (Israel `972...` format).
+- **Group Association:** Handled via the `wa_groups` table (mapped JID → `league_id`).
+- **Usernames:** Globally enforced to be **lowercase** in both the bot and website for consistency.
+- **Precise Scoring:** Leaderboard points are displayed with decimal precision (e.g., `12.5 נקודות`) instead of being rounded.
+
+*Last updated: 2026-04-21*
