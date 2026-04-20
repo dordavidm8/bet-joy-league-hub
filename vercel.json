@@ -1,7 +1,7 @@
 {
   "build": {
     "env": {
-      "VITE_API_URL": "https://imaginative-surprise-production-4964.up.railway.app"
+      "VITE_API_URL": "https://bet-joy-league-hub-production-6e04.up.railway.app"
     }
   },
   "rewrites": [
