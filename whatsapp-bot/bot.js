@@ -24,16 +24,18 @@ client.on('qr', async (qr) => {
 
   const phone = process.env.BOT_PHONE;
   if (phone) {
-    try {
-      const code = await client.requestPairingCode(phone);
-      console.log('\n===========================================');
-      console.log('[WA] או קשר בעזרת קוד שיוך (Pairing Code) במקום ברקוד!');
-      console.log(`[WA] כנס ל"מכשירים מקושרים" בוואטסאפ במכשיר שלך > "קישור באמצעות מספר טלפון" > הזן את הקוד:`);
-      console.log(`[WA] --->  ${code}  <---`);
-      console.log('===========================================\n');
-    } catch (err) {
-      console.error('[WA] כשלון בקבלת קוד מזהה:', err.message);
-    }
+    setTimeout(async () => {
+      try {
+        const code = await client.requestPairingCode(phone);
+        console.log('\n===========================================');
+        console.log('[WA] או קשר בעזרת קוד שיוך (Pairing Code) במקום ברקוד!');
+        console.log(`[WA] כנס ל"מכשירים מקושרים" בוואטסאפ במכשיר שלך > "קישור באמצעות מספר טלפון" > הזן את הקוד:`);
+        console.log(`[WA] --->  ${code}  <---`);
+        console.log('===========================================\n');
+      } catch (err) {
+        console.error('[WA] כשלון בקבלת קוד מזהה:', err.message);
+      }
+    }, 4000);
   }
 });
 
