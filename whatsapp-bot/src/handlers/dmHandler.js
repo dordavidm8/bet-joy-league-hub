@@ -29,7 +29,7 @@ async function handleDmMessage(client, msg) {
   
   const user = userRes.rows[0];
   if (!user) {
-    await msg.reply(`❌ אני לא מזהה את המשתמש. (מספר מזוהה: ${phone})\nיש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://kickoff-bet.app/profile`);
+    await client.sendMessage(msg.from, `❌ אני לא מזהה את המשתמש.\n\nיש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://kickoff-bet.app/profile`, { linkPreview: false });
     return;
   }
 
