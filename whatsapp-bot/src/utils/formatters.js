@@ -38,8 +38,7 @@ function buildGameMessage(game, leagueSettings) {
 const RANK_EMOJI = ['🥇', '🥈', '🥉'];
 
 function buildLeaderboardMessage(leagueName, members) {
-  let msg = `📊 *טבלת ליגת "${leagueName}"*\n`;
-  msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+  let msg = `📊 *טבלת ליגת "${leagueName}"*\n\n`;
   members.forEach((m, i) => {
     const emoji = RANK_EMOJI[i] || `${i + 1}.`;
     msg += `${emoji} ${m.username} — ${formatPoints(m.points_in_league)} נקודות\n`;
