@@ -67,38 +67,46 @@ function parseBetMessage(body) {
 async function handleGroupMessage(client, msg, chat) {
   const groupJid = chat.id._serialized;
 
-  // Check if this is a registered Kickoff group
+  // ── Command: שלח טבלה גבר ────────────────────────────────────────────────
+  const body = (msg.body || '').toLowerCase();
+  
+  if (body.includes('שלח טבלה גבר')) {
+    const groupRes = await pool.query(
+      `SELECT league_id, is_active FROM wa_groups WHERE wa_group_id = $1`,
+      [groupJid]
+    );
+      
+      const groupFound = groupRes.rows[0];
+      const groupActive = groupFound?.is_active;
+
+      if (!groupFound) {
+        await msg.reply(`⚠️ זיהיתי בקשה לטבלה, אך קבוצה זו אינה רשומה במערכת.\nID: ${groupJid}`);
+        return;
+      }
+      if (!groupActive) {
+        await msg.reply(`⚠️ קבוצה זו רשומה אך אינה מסומנת כפעילה.`);
+        return;
+      }
+
+      const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
+      await sendLeaderboard(client, {
+        league_id: groupFound.league_id,
+        league_name: chat.name,
+        wa_group_id: groupJid
+      }).catch(async e => {
+        console.error('[command] leaderboard error:', e.message);
+        await msg.reply(`❌ שגיאה בשליחת הטבלה: ${e.message}`);
+      });
+      return;
+    }
+  }
+
+  // Check if this is a registered Kickoff group for other features (betting)
   const groupRes = await pool.query(
     `SELECT league_id FROM wa_groups WHERE wa_group_id = $1 AND is_active = true`,
     [groupJid]
   );
   if (!groupRes.rows[0]) return;
-
-  // Log incoming message for debugging
-  await pool.query(
-    `INSERT INTO wa_message_log (direction, phone, group_jid, message, action)
-     VALUES ('in', $1, $2, $3, 'group_message')`,
-    [extractNumber(msg.from), groupJid, msg.body]
-  ).catch(() => {});
-
-  // ── Command: @kickoff טבלה ────────────────────────────────────────────────
-  const body = (msg.body || '').toLowerCase();
-  const botNumber = client.info?.wid?.user;
-  
-  // Strict check for bot mention ONLY (as requested)
-  const isBotMentioned = msg.mentionedIds?.some(id => id.includes(botNumber)) || 
-                         body.includes('@kickoff') || 
-                         (botNumber && body.includes(`@${botNumber}`));
-
-  if (isBotMentioned && body.includes('טבלה')) {
-    const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
-    await sendLeaderboard(client, {
-      league_id: groupRes.rows[0].league_id,
-      league_name: chat.name,
-      wa_group_id: groupJid
-    }).catch(e => console.error('[command] leaderboard error:', e.message));
-    return;
-  }
 
   // Only handle replies for betting — ignore all other group messages silently
   if (!msg.hasQuotedMsg) return;
