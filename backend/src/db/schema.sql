@@ -368,9 +368,9 @@ CREATE TABLE IF NOT EXISTS wa_league_settings (
   exact_score_enabled    BOOLEAN NOT NULL DEFAULT false,
   morning_message_time   TIME NOT NULL DEFAULT '09:00',
   reminder_hours_before  DECIMAL(4,1),
-  leaderboard_frequency  VARCHAR(20) NOT NULL DEFAULT 'after_game',
-  leaderboard_time       TIME,
-  leaderboard_day        INTEGER
+  leaderboard_frequency  VARCHAR(20) NOT NULL DEFAULT 'weekly',
+  leaderboard_time       TIME NOT NULL DEFAULT '10:00',
+  leaderboard_day        INTEGER NOT NULL DEFAULT 0
 );
 
 -- WA groups linked to leagues

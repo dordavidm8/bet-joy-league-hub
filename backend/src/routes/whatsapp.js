@@ -299,7 +299,7 @@ router.put('/leagues/:id/settings', authenticate, async (req, res, next) => {
          leaderboard_day = EXCLUDED.leaderboard_day`,
       [leagueId, bet_mode || 'prediction', stake_amount || 0, exact_score_enabled || false,
        morning_message_time || '09:00', reminder_hours_before || null,
-       leaderboard_frequency || 'after_game', leaderboard_time || null, leaderboard_day ?? null]
+       leaderboard_frequency || 'weekly', leaderboard_time || '10:00', leaderboard_day ?? 0]
     );
 
     res.json({ message: 'הגדרות נשמרו' });
