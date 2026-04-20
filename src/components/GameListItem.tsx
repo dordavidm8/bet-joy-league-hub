@@ -14,7 +14,9 @@ const GameListItem = ({ game }: GameListItemProps) => {
   const dateStr = start.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
   const isLive = game.status === "live";
   const isFinished = game.status === "finished";
-  const canBet = game.status === "scheduled";
+  const tenMinutesBefore = new Date(start.getTime() - 10 * 60 * 1000);
+  const isTooLate = new Date() >= tenMinutesBefore;
+  const canBet = game.status === "scheduled" && !isTooLate;
   const hasScore = game.score_home != null && game.score_away != null;
 
   return (
@@ -69,10 +71,11 @@ const GameListItem = ({ game }: GameListItemProps) => {
       <Button
         variant={canBet ? "cta" : "outline"}
         size="sm"
+        disabled={!canBet && !isLive && !isFinished}
         onClick={(e) => { e.stopPropagation(); navigate(`/game/${game.id}`); }}
         className="shrink-0 text-xs px-3 py-1.5 h-auto"
       >
-        {isLive ? "לייב" : isFinished ? "תוצאה" : "המר"}
+        {isLive ? "לייב" : isFinished ? "תוצאה" : isTooLate ? "התחיל" : "המר"}
       </Button>
     </div>
   );

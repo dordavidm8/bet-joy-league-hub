@@ -40,7 +40,20 @@ const BetSlipPage = () => {
   const potentialPayout = isParlay ? parlayPayout : individualPayout;
 
   const handleConfirm = async () => {
-    if (betSlip.length === 0 || totalStake > userPoints) return;
+    if (betSlip.length === 0) return;
+    
+    // Check for expired bets (10 minutes before kickoff)
+    const isExpired = (startTime: string) => {
+      const tenMinutesBefore = new Date(new Date(startTime).getTime() - 10 * 60 * 1000);
+      return new Date() >= tenMinutesBefore;
+    };
+    
+    if (betSlip.some(b => isExpired(b.start_time))) {
+      setResult({ success: false, message: "הימור אחד או יותר כבר נסגר (10 דקות לפני המשחק). אנא הסר אותם מהתלוש." });
+      return;
+    }
+
+    if (totalStake > userPoints) return;
     setLoading(true);
     setResult(null);
     try {
@@ -169,7 +182,18 @@ const BetSlipPage = () => {
             className="card-kickoff flex items-start justify-between gap-3"
           >
             <div className="flex flex-col gap-1 flex-1">
-              <p className="font-bold text-sm">{bet.gameLabel}</p>
+              <div className="flex items-center justify-between">
+                <p className="font-bold text-sm">{bet.gameLabel}</p>
+                {(() => {
+                  const tenMinutesBefore = new Date(new Date(bet.start_time).getTime() - 10 * 60 * 1000);
+                  const isLate = new Date() >= tenMinutesBefore;
+                  return isLate && (
+                    <span className="text-[10px] font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-lg animate-pulse">
+                      נסגר
+                    </span>
+                  );
+                })()}
+              </div>
               <p className="text-xs text-muted-foreground">{bet.question}</p>
               <p className="text-sm font-bold text-primary">{bet.selectedOption}</p>
               <div className="flex items-center gap-2 flex-wrap">

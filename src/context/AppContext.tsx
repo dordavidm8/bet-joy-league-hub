@@ -15,6 +15,7 @@ export interface BetSlipItem {
   league_name: string | null;
   bet_mode: BetMode;
   exact_score_prediction?: string;
+  start_time: string;
 }
 
 interface AppState {

@@ -78,6 +78,10 @@ const GameDetailPage = () => {
   const { game, bet_questions } = data;
   const isLive = game.status === "live";
   const isFinished = game.status === "finished";
+  const start = new Date(game.start_time);
+  const tenMinutesBefore = new Date(start.getTime() - 10 * 60 * 1000);
+  const isTooLate = new Date() >= tenMinutesBefore;
+  const canBet = game.status === "scheduled" && !isTooLate;
   const gameLabel = `${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}`;
 
   const timeLabel = isLive
@@ -151,6 +155,7 @@ const GameDetailPage = () => {
           league_name: null,
           bet_mode: "global",
           exact_score_prediction: validScore,
+          start_time: game.start_time,
         });
       } else {
         const league = activeLeagues.find((l) => l.id === ctx);
@@ -169,6 +174,7 @@ const GameDetailPage = () => {
           league_name: league.name,
           bet_mode: isInitialBalance ? "initial_balance" : "minimum_stake",
           exact_score_prediction: validScore,
+          start_time: game.start_time,
         });
       }
     }
@@ -404,11 +410,12 @@ const GameDetailPage = () => {
                             className="flex-1"
                             onClick={() => handleAddToSlip(q.id)}
                             disabled={
+                              isTooLate ||
                               contexts.size === 0 ||
                               (needsStakeInput(q.id) && (!stakes[q.id] || parseInt(stakes[q.id]) <= 0))
                             }
                           >
-                            {inSlipItems.length > 0
+                            {isTooLate ? "הימורים נסגרו" : inSlipItems.length > 0
                               ? `עדכן תלוש (${inSlipItems.length})`
                               : "הוסף לתלוש"}
                           </Button>

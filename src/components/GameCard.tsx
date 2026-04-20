@@ -15,10 +15,14 @@ const GameCard = ({ game, index }: GameCardProps) => {
   const isFinished = game.status === "finished";
 
   const startDate = new Date(game.start_time);
+  const tenMinutesBefore = new Date(startDate.getTime() - 10 * 60 * 1000);
+  const isTooLate = new Date() >= tenMinutesBefore;
+  const canBet = game.status === "scheduled" && !isTooLate;
+
   const timeLabel = isLive
     ? game.minute ? `${game.minute}′` : "LIVE"
     : startDate.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
-  const dateLabel = isLive ? null : startDate.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
+  const dateLabel = (isLive || isFinished) ? null : startDate.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
 
   return (
     <motion.div
@@ -71,13 +75,13 @@ const GameCard = ({ game, index }: GameCardProps) => {
 
       {/* CTA */}
       <Button
-        variant="cta"
+        variant={canBet ? "cta" : "outline"}
         size="default"
         onClick={() => navigate(`/game/${game.id}`)}
         className="w-full"
-        disabled={isFinished}
+        disabled={!canBet && !isLive && !isFinished}
       >
-        {isFinished ? "הסתיים" : "המר עכשיו"}
+        {isFinished ? "הסתיים" : isLive ? "לייב" : isTooLate ? "התחיל" : "המר עכשיו"}
       </Button>
     </motion.div>
   );
