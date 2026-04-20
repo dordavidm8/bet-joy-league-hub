@@ -68,6 +68,13 @@ async function handleGroupMessage(client, msg, chat) {
   const groupJid = chat.id._serialized;
   const body = (msg.body || '').toLowerCase();
 
+  // Log incoming message for debugging at the very top
+  await pool.query(
+    `INSERT INTO wa_message_log (direction, phone, group_jid, message, action)
+     VALUES ('in', $1, $2, $3, 'group_message')`,
+    [extractNumber(msg.from), groupJid, msg.body]
+  ).catch(err => console.error('[DEBUG-LOG] Error inserting log:', err.message));
+
   // ── Command: @kickoff טבלה ────────────────────────────────────────────────
   if (body.includes('טבלה')) {
     const botNumber = client.info?.wid?.user;
