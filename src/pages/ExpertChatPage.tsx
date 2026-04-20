@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Sparkles, User, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getGames, askAdvisor, AdvisorMessage, Game } from "@/lib/api";
+import { getGames, askAdvisorStream, AdvisorMessage, Game } from "@/lib/api";
 
 interface ChatMessage extends AdvisorMessage {
   id: string;
@@ -29,6 +29,7 @@ const ExpertChatPage = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [thinkingStep, setThinkingStep] = useState<string>('');
   const [showPicker, setShowPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -64,29 +65,53 @@ const ExpertChatPage = () => {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsLoading(true);
+    setThinkingStep("מתכנן...");
+
+    const assistantId = (Date.now() + 1).toString();
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "", timestamp: new Date() }]);
 
     try {
       const apiMessages: AdvisorMessage[] = nextMessages.map(({ role, content }) => ({ role, content }));
-      const { reply, remaining: rem } = await askAdvisor(selectedGame.id, apiMessages);
-      setRemaining(rem);
-      setMessages((prev) => [
-        ...prev,
-        { id: (Date.now() + 1).toString(), role: "assistant", content: reply, timestamp: new Date() },
-      ]);
-    } catch (err: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: err?.message?.includes("20 הודעות")
+      let reply = "";
+
+      await askAdvisorStream(selectedGame.id, apiMessages, (type, data) => {
+        if (type === "thinking") {
+          const step = data.step as string;
+          setThinkingStep(step === "planning" ? "מתכנן..." : step === "reflecting" ? "מעבד נתונים..." : "מסכם...");
+        } else if (type === "tool_call") {
+          const toolLabels: Record<string, string> = {
+            get_team_form: "מחפש פורמה...",
+            get_head_to_head: "מחפש היסטוריית מפגשים...",
+            get_upcoming_games: "מחפש משחקים קרובים...",
+            get_match_odds: "מחפש הימורים...",
+            get_live_stats: "מחפש נתוני חי...",
+          };
+          setThinkingStep(toolLabels[data.tool as string] ?? "מחפש נתונים...");
+        } else if (type === "token") {
+          reply += data.delta as string;
+          setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: reply } : m));
+        } else if (type === "done") {
+          setRemaining((prev) => (prev !== null ? prev - 1 : null));
+          setThinkingStep("");
+        } else if (type === "error") {
+          setMessages((prev) => prev.map((m) =>
+            m.id === assistantId ? { ...m, content: "אירעה שגיאה. נסה שוב בעוד רגע." } : m
+          ));
+        }
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      setMessages((prev) => prev.map((m) =>
+        m.id === assistantId ? {
+          ...m,
+          content: msg.includes("20 הודעות")
             ? "הגעת למגבלת ה-20 הודעות להיום. נתראה מחר! 👋"
             : "אירעה שגיאה. נסה שוב בעוד רגע.",
-          timestamp: new Date(),
-        },
-      ]);
+        } : m
+      ));
     } finally {
       setIsLoading(false);
+      setThinkingStep("");
     }
   };
 
@@ -195,21 +220,15 @@ const ExpertChatPage = () => {
           ))}
         </AnimatePresence>
 
-        {/* Typing indicator */}
-        {isLoading && (
+        {/* Thinking step indicator */}
+        {isLoading && thinkingStep && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-xs text-muted-foreground px-1"
           >
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles size={13} className="text-primary" />
-            </div>
-            <div className="bg-secondary rounded-2xl rounded-bl-md px-4 py-3 flex gap-1">
-              <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0ms]" />
-              <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:150ms]" />
-              <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:300ms]" />
-            </div>
+            <Sparkles size={12} className="text-primary animate-pulse shrink-0" />
+            {thinkingStep}
           </motion.div>
         )}
 

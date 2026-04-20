@@ -143,6 +143,33 @@ export const askAdvisor = (gameId: string, messages: AdvisorMessage[]) =>
     body: JSON.stringify({ messages }),
   });
 
+export async function askAdvisorStream(
+  gameId: string,
+  messages: AdvisorMessage[],
+  onEvent: (type: string, data: Record<string, unknown>) => void
+): Promise<void> {
+  const user = auth.currentUser;
+  const token = user ? await user.getIdToken() : '';
+  const url = `${API_BASE}/advisor/${gameId}/stream?messages=${encodeURIComponent(JSON.stringify(messages))}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const parts = buf.split('\n\n');
+    buf = parts.pop() ?? '';
+    for (const part of parts) {
+      const ev = part.match(/^event: (\w+)/m);
+      const da = part.match(/^data: (.+)/m);
+      if (ev && da) try { onEvent(ev[1], JSON.parse(da[1])); } catch {}
+    }
+  }
+}
+
 // ── User ──────────────────────────────────────────────────────────────────────
 export const getMyStats = () => request<UserStats>('/users/me/stats');
 export const deleteAccount = () => request<{ message: string }>('/users/me', { method: 'DELETE' });
