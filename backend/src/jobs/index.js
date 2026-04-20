@@ -19,11 +19,14 @@ function startJobs() {
     catch (err) { console.error('[cron:settleBets]', err.message); }
   });
 
-  // Full fixture refresh every day at 04:00
+  // Full fixture refresh + safety settlement every day at 04:00 UTC
   cron.schedule('0 4 * * *', async () => {
     console.log('[cron] Daily fixture refresh');
     try { await syncGames(); }
     catch (err) { console.error('[cron:dailySync]', err.message); }
+    // Safety net: re-run settlement to catch any games missed during the day
+    try { await settleBets(); }
+    catch (err) { console.error('[cron:dailySettle]', err.message); }
   });
 
   // Generate daily mini games at 00:00 (midnight)

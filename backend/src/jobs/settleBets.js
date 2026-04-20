@@ -276,7 +276,7 @@ async function settleParlays(client, gameId, correctOutcomeMap) {
 
   for (const { id: parlayId } of parlayRes.rows) {
     const legsRes = await client.query(
-      `SELECT b.status, b.stake, b.odds, b.penalty_pct FROM bets b WHERE b.parlay_id = $1`,
+      `SELECT b.status, b.stake, b.odds FROM bets b WHERE b.parlay_id = $1`,
       [parlayId]
     );
 
