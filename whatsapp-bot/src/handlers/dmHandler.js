@@ -12,7 +12,7 @@ function getHelpText() {
     `*פקודות זמינות:*\n` +
     `• *יתרה* — הצג את יתרת הנקודות שלך\n` +
     `• *הימורים* — ההימורים האחרונים שלך (פעילים + 24 שעות אחרונות)\n` +
-    `• *עזרה* — תפריט זה\n\n` +
+    `• *עזרה* / *?* — תפריט זה\n\n` +
     `כדי להמר — השב להודעת המשחק שנשלחה אליך 🎯`;
 }
 
@@ -74,7 +74,7 @@ async function handleDmMessage(client, msg) {
 
   // Route commands
   const cmd = content;
-  if (cmd === '/help' || cmd === 'עזרה' || cmd === 'תפריט') {
+  if (cmd === '/help' || cmd === 'עזרה' || cmd === 'תפריט' || cmd === '?') {
     await msg.reply(getHelpText());
   } else if (cmd === '/balance' || cmd === 'יתרה') {
     await sendBalance(msg, user);
