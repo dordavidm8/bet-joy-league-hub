@@ -77,31 +77,41 @@ function startInternalApi(client) {
       let invite_link = null;
       try {
         const chat = await client.getChatById(groupJid);
-        // Allow some time for WhatsApp to settle
-        await new Promise(r => setTimeout(r, 1500));
+        
+        // 1. Get invite link FIRST (Critical for UI)
+        try {
+          const code = await chat.getInviteCode();
+          invite_link = `https://chat.whatsapp.com/${code}`;
+          console.log(`[WA] Generated invite link: ${invite_link}`);
+        } catch (e) {
+          console.error(`[WA] getInviteCode FAIL: ${e.message}`);
+        }
 
-        // Allow all participants to send messages
-        await chat.setMessagesAdminsOnly(false);
-        // Allow all participants to edit group info
-        await chat.setInfoAdminsOnly(false);
-        // Allow all participants to add new members
-        if (chat.setAddMembersAdminsOnly) {
-          await chat.setAddMembersAdminsOnly(false);
+        // 2. Allow some time for WhatsApp to settle before settings
+        await new Promise(r => setTimeout(r, 2000));
+
+        // 3. Set permissions (Best effort)
+        try {
+          await chat.setMessagesAdminsOnly(false);
+          await chat.setInfoAdminsOnly(false);
+          
+          // Try multiple method names for "Add members" setting
+          if (chat.setAddMembersAdminsOnly) await chat.setAddMembersAdminsOnly(false);
+          else if (chat.setAddParticipantsAdminsOnly) await chat.setAddParticipantsAdminsOnly(false);
+          
+          console.log(`[WA] Configured group permissions`);
+        } catch (e) {
+          console.warn(`[WA] Permission sync issue: ${e.message}`);
         }
         
-        // Set description with league link
+        // 4. Set description (Best effort)
         if (inviteCode) {
           const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
           await chat.setDescription(description).catch(e => console.warn(`[WA] Failed to set description: ${e.message}`));
         }
 
-        console.log(`[WA] Configured group permissions and description`);
-
-        const code = await chat.getInviteCode();
-        invite_link = `https://chat.whatsapp.com/${code}`;
-        console.log(`[WA] Generated invite link: ${invite_link}`);
-      } catch (e) {
-        console.warn(`[WA] Could not configure group or get invite link: ${e.message}`);
+      } catch (err) {
+        console.error('[WA] Group config block FAIL:', err.message);
       }
 
       res.json({ wa_group_id: groupJid, invite_link });
