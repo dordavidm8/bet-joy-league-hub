@@ -125,8 +125,15 @@ router.get('/users', async (req, res, next) => {
   const offset = parseInt(req.query.offset) || 0;
   const search = req.query.search;
   const params = [limit, offset];
-  const where = search ? `WHERE username ILIKE $3 OR email ILIKE $3` : '';
-  if (search) params.push(`%${search}%`);
+  
+  // Filter out anonymized users (those starting with deleted_)
+  let where = `WHERE username NOT LIKE 'deleted_%'`;
+  
+  if (search) {
+    where += ` AND (username ILIKE $3 OR email ILIKE $3)`;
+    params.push(`%${search}%`);
+  }
+  
   try {
     const result = await pool.query(
       `SELECT id, firebase_uid, username, display_name, email, points_balance, total_bets, total_wins, created_at,
@@ -165,7 +172,7 @@ router.delete('/users/:id', async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const userRes = await client.query(`SELECT username, email FROM users WHERE id = $1`, [req.params.id]);
+    const userRes = await client.query(`SELECT username, email, firebase_uid FROM users WHERE id = $1`, [req.params.id]);
     if (!userRes.rows[0]) return res.status(404).json({ error: 'User not found' });
     if (ADMIN_EMAILS.includes(userRes.rows[0].email)) {
       return res.status(403).json({ error: 'לא ניתן למחוק חשבון מנהל' });
@@ -174,13 +181,26 @@ router.delete('/users/:id', async (req, res, next) => {
     await client.query(`UPDATE league_members SET is_active = false WHERE user_id = $1`, [req.params.id]);
     // Cancel pending bets
     await client.query(`UPDATE bets SET status = 'cancelled' WHERE user_id = $1 AND status = 'pending'`, [req.params.id]);
-    // Anonymize user (firebase_uid kept as placeholder — column is NOT NULL)
+    // Anonymize user (to release username/email/uid while keeping DB integrity for old bets/stats)
     const anonSuffix = req.params.id.slice(0, 8);
+    const firebaseUid = userRes.rows[0].firebase_uid;
+    
     await client.query(
       `UPDATE users SET username = $1, email = $2, display_name = NULL, firebase_uid = $1, phone_number = NULL
        WHERE id = $3`,
       [`deleted_${anonSuffix}`, `deleted_${anonSuffix}@deleted.invalid`, req.params.id]
     );
+
+    // Try to delete from Firebase so they can't log in anymore
+    try {
+      const firebaseAdmin = require('../config/firebase');
+      if (firebaseUid && !firebaseUid.startsWith('deleted_')) {
+        await firebaseAdmin.auth().deleteUser(firebaseUid);
+      }
+    } catch (fbErr) {
+      console.warn(`Could not delete user ${req.params.id} from Firebase:`, fbErr.message);
+    }
+
     await client.query('COMMIT');
     await logAdminAction(req.user.email, 'delete_user', 'user', req.params.id, { username: userRes.rows[0].username });
     res.json({ message: 'User deleted' });
