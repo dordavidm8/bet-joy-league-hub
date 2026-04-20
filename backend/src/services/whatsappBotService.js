@@ -107,11 +107,6 @@ async function buildResultMessage(gameId, leagueId) {
   if (lost.length > 0) {
     msg += `\n😔 לא הצלחנו: ${lost.map(b => b.username).join(', ')}\n`;
   }
-
-  msg += `\n📊 דירוג ליגה:\n`;
-  membersRes.rows.forEach((m, i) => {
-    msg += `${i + 1}. ${m.username} — ${m.points_in_league} ⭐\n`;
-  });
   msg += `━━━━━━━━━━━━━━━━━━━━━━`;
   return msg;
 }

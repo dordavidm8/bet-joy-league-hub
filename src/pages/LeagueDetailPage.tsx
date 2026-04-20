@@ -30,6 +30,18 @@ const LeagueDetailPage = () => {
   const [matchTab, setMatchTab] = useState<"upcoming" | "finished">("upcoming");
   const [inviteSearch, setInviteSearch] = useState("");
   const [inviteSearchQuery, setInviteSearchQuery] = useState("");
+  const [showWaSettings, setShowWaSettings] = useState(false);
+  const [editWaSettings, setEditWaSettings] = useState<{
+    morning_message_time: string;
+    leaderboard_frequency: 'never' | 'after_game' | 'daily' | 'weekly';
+    leaderboard_time: string;
+    leaderboard_day: number;
+  }>({
+    morning_message_time: '09:00',
+    leaderboard_frequency: 'after_game',
+    leaderboard_time: '10:00',
+    leaderboard_day: 0,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["league", leagueId],
@@ -98,6 +110,16 @@ const LeagueDetailPage = () => {
   const waRefreshLinkMutation = useMutation({
     mutationFn: () => refreshWaInviteLink(leagueId!),
     onSuccess: (d) => { setWaMsg({ ok: true, text: 'לינק עודכן ✅' }); refetchWaSettings(); },
+    onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
+  });
+
+  const waSaveSettingsMutation = useMutation({
+    mutationFn: (vals: typeof editWaSettings) => updateWaLeagueSettings(leagueId!, vals),
+    onSuccess: () => {
+      setWaMsg({ ok: true, text: 'הגדרות נשמרו ✅' });
+      setShowWaSettings(false);
+      refetchWaSettings();
+    },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });
 
@@ -600,6 +622,76 @@ const LeagueDetailPage = () => {
                     >
                       {waUnlinkGroupMutation.isPending ? "מנתק..." : "נתק קבוצה"}
                     </button>
+
+                    <button
+                      onClick={() => {
+                        if (waSettingsData?.settings) {
+                          setEditWaSettings({
+                            morning_message_time: waSettingsData.settings.morning_message_time || '09:00',
+                            leaderboard_frequency: waSettingsData.settings.leaderboard_frequency || 'after_game',
+                            leaderboard_time: waSettingsData.settings.leaderboard_time || '10:00',
+                            leaderboard_day: waSettingsData.settings.leaderboard_day || 0,
+                          });
+                        }
+                        setShowWaSettings(!showWaSettings);
+                      }}
+                      className="text-xs text-primary hover:underline self-start flex items-center gap-1"
+                    >
+                      ⚙️ הגדרות עדכונים
+                    </button>
+
+                    {showWaSettings && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="flex flex-col gap-3 bg-secondary/30 p-3 rounded-xl overflow-hidden">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold text-muted-foreground mr-1">שידור הודעת בוקר (שעה)</label>
+                          <input type="time" value={editWaSettings.morning_message_time}
+                            onChange={e => setEditWaSettings(prev => ({ ...prev, morning_message_time: e.target.value }))}
+                            className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold text-muted-foreground mr-1">תדירות שליחת טבלה</label>
+                          <select value={editWaSettings.leaderboard_frequency}
+                            onChange={e => setEditWaSettings(prev => ({ ...prev, leaderboard_frequency: e.target.value as any }))}
+                            className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50">
+                            <option value="after_game">אחרי כל משחק</option>
+                            <option value="daily">פעם ביום (בשעה קבועה)</option>
+                            <option value="weekly">פעם בשבוע (ביום ושעה קבועים)</option>
+                            <option value="never">לעולם לא</option>
+                          </select>
+                        </div>
+
+                        {(editWaSettings.leaderboard_frequency === 'daily' || editWaSettings.leaderboard_frequency === 'weekly') && (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-muted-foreground mr-1">שעת שליחת טבלה</label>
+                            <input type="time" value={editWaSettings.leaderboard_time}
+                              onChange={e => setEditWaSettings(prev => ({ ...prev, leaderboard_time: e.target.value }))}
+                              className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50" />
+                          </div>
+                        )}
+
+                        {editWaSettings.leaderboard_frequency === 'weekly' && (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-muted-foreground mr-1">יום בשבוע</label>
+                            <select value={editWaSettings.leaderboard_day}
+                              onChange={e => setEditWaSettings(prev => ({ ...prev, leaderboard_day: parseInt(e.target.value) }))}
+                              className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50">
+                              <option value={0}>ראשון</option>
+                              <option value={1}>שני</option>
+                              <option value={2}>שלישי</option>
+                              <option value={3}>רביעי</option>
+                              <option value={4}>חמישי</option>
+                              <option value={5}>שישי</option>
+                              <option value={6}>שבת</option>
+                            </select>
+                          </div>
+                        )}
+
+                        <Button size="sm" onClick={() => waSaveSettingsMutation.mutate(editWaSettings)} disabled={waSaveSettingsMutation.isPending}>
+                          {waSaveSettingsMutation.isPending ? "שומר..." : "שמור הגדרות"}
+                        </Button>
+                      </motion.div>
+                    )}
                   </>
                 )}
               </>
