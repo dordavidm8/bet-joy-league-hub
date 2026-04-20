@@ -7,6 +7,11 @@ const { pool } = require('../config/database');
 router.post('/register', async (req, res, next) => {
   const { username, display_name, referral_code: referralCode, avatar_url } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
+  
+  // Strict username validation: only English letters, numbers, and basic symbols, no spaces.
+  if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+    return res.status(400).json({ error: 'שם המשתמש יכול להכיל רק אותיות באנגלית, מספרים וסימנים (._-) ללא רווחים' });
+  }
 
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing token' });

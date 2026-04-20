@@ -107,7 +107,7 @@ export default function LoginPage() {
                   type="text"
                   placeholder="שם משתמש"
                   value={username}
-                  onChange={e => setUsername(e.target.value.replace(/[@\s]+/g, ''))}
+                  onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9._-]/g, ''))}
                   required
                   className="w-full bg-gray-800 text-white rounded-lg pl-7 pr-4 py-2.5 text-sm border border-gray-600 focus:border-green-500 outline-none"
                 />

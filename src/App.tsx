@@ -23,6 +23,7 @@ import FinishedGamesPage from "@/pages/FinishedGamesPage";
 import MiniGamesHubPage from "@/pages/MiniGamesHubPage";
 import MiniGamePlayPage from "@/pages/MiniGamePlayPage";
 import AdminDashboard, { ADMIN_EMAILS } from "@/pages/AdminDashboard";
+import ScrollToTop from "@/components/ScrollToTop";
 import PublicProfilePage from "@/pages/PublicProfilePage";
 import BetHistoryPage from "@/pages/BetHistoryPage";
 import StatsPage from "@/pages/StatsPage";
@@ -143,6 +144,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <DynamicTranslationsLoader />
             <ErrorBoundary>
               <AuthGate />

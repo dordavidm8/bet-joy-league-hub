@@ -41,7 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setBackendUser(data.user);
         } catch (err: any) {
           // User exists in Firebase but not in backend — try auto-registration
-          const baseName = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
+          const baseName = (fbUser.displayName || fbUser.email?.split('@')[0] || 'User')
+            .replace(/[^a-zA-Z0-9._-]/g, ''); // Remove non-English/symbols
+            
           const tryRegister = async (username: string): Promise<void> => {
             try {
               const params = new URLSearchParams(window.location.search);
@@ -49,20 +51,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const regData = await registerUser(username, referralCode, fbUser.photoURL || undefined);
               setBackendUser(regData.user);
             } catch (regErr: any) {
-              if (regErr?.message?.includes('already exists')) {
+              if (regErr?.message?.includes('already exists') || regErr?.status === 400) {
                 // Could be same Firebase UID already registered — try getMe first
                 try {
                   const data = await getMe();
                   setBackendUser(data.user);
                 } catch {
-                  // Username or email conflict with a different account — retry with unique suffix
-                  if (username === baseName) {
-                    const suffix = Math.random().toString(36).slice(-4);
-                    await tryRegister(`${baseName.replace(/\s+/g, '')}_${suffix}`);
-                  } else {
-                    console.error('Auto-registration failed after retry:', regErr);
-                    setBackendUser(null);
-                  }
+                  // Username or email conflict or validation error — retry with unique suffix
+                  const suffix = Math.random().toString(36).slice(-4);
+                  await tryRegister(`${username}_${suffix}`);
                 }
               } else {
                 console.error('Auto-registration failed:', regErr);
@@ -70,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             }
           };
-          await tryRegister(baseName);
+          await tryRegister(baseName || 'User');
         }
       } else {
         setBackendUser(null);
