@@ -68,29 +68,22 @@ async function handleGroupMessage(client, msg, chat) {
   const groupJid = chat.id._serialized;
   const body = (msg.body || '').toLowerCase();
 
-  // ── Command: @kickoff טבלה ────────────────────────────────────────────────
-  if (body.includes('טבלה')) {
-    const botNumber = client.info?.wid?.user;
-    const isBotMentioned = msg.mentionedIds?.some(id => id.includes(botNumber)) || 
-                           body.includes('kickoff') || 
-                           (botNumber && body.includes(botNumber));
-
-    if (isBotMentioned) {
-      const groupRes = await pool.query(
-        `SELECT league_id, is_active FROM wa_groups WHERE wa_group_id = $1`,
-        [groupJid]
-      );
-      
-      const groupFound = groupRes.rows[0];
-      if (groupFound && groupFound.is_active) {
-        const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
-        await sendLeaderboard(client, {
-          league_id: groupFound.league_id,
-          league_name: chat.name,
-          wa_group_id: groupJid
-        }).catch(e => console.error('[command] leaderboard error:', e.message));
-        return;
-      }
+  // ── Command: שלח טבלה גבר ────────────────────────────────────────────────
+  if (body.includes('שלח טבלה גבר')) {
+    const groupRes = await pool.query(
+      `SELECT league_id, is_active FROM wa_groups WHERE wa_group_id = $1`,
+      [groupJid]
+    );
+    
+    const groupFound = groupRes.rows[0];
+    if (groupFound && groupFound.is_active) {
+      const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
+      await sendLeaderboard(client, {
+        league_id: groupFound.league_id,
+        league_name: chat.name,
+        wa_group_id: groupJid
+      }).catch(e => console.error('[command] leaderboard error:', e.message));
+      return;
     }
   }
 
