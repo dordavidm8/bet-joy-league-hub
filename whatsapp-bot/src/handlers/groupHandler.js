@@ -67,15 +67,21 @@ function parseBetMessage(body) {
 async function handleGroupMessage(client, msg, chat) {
   const groupJid = chat.id._serialized;
 
+  // Check if this is a registered Kickoff group
+  const groupRes = await pool.query(
+    `SELECT league_id FROM wa_groups WHERE wa_group_id = $1 AND is_active = true`,
+    [groupJid]
+  );
+  if (!groupRes.rows[0]) return;
+
   // ── Command: @kickoff טבלה ────────────────────────────────────────────────
   const mentions = await msg.getMentions();
   const isBotMentioned = mentions.some(m => m.id._serialized === client.info.wid._serialized);
   if (isBotMentioned && msg.body.includes('טבלה')) {
     const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
-    // sendLeaderboard expects league object with { league_id, league_name, wa_group_id }
     await sendLeaderboard(client, {
       league_id: groupRes.rows[0].league_id,
-      league_name: chat.name, // or we could fetch from DB, but chat name is usually fine
+      league_name: chat.name,
       wa_group_id: groupJid
     }).catch(e => console.error('[command] leaderboard error:', e.message));
     return;
@@ -83,13 +89,6 @@ async function handleGroupMessage(client, msg, chat) {
 
   // Only handle replies for betting — ignore all other group messages silently
   if (!msg.hasQuotedMsg) return;
-
-  // Check if this is a registered Kickoff group
-  const groupRes = await pool.query(
-    `SELECT league_id FROM wa_groups WHERE wa_group_id = $1 AND is_active = true`,
-    [groupJid]
-  );
-  if (!groupRes.rows[0]) return;
 
   const quoted = await msg.getQuotedMessage();
   const quotedId = quoted.id._serialized;
