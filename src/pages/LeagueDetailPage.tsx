@@ -591,30 +591,6 @@ const LeagueDetailPage = () => {
 
                 {isCreator && (
                   <>
-                    <p className="text-[11px] text-muted-foreground">
-                      לקישור קבוצה קיימת — הוסף את הבוט לקבוצה ושלח: <span className="font-mono">/kickoff setup {league.invite_code}</span>
-                    </p>
-                    {showWaLinkEdit ? (
-                      <div className="flex flex-col gap-2">
-                        <input
-                          value={waInviteLinkInput}
-                          onChange={e => setWaInviteLinkInput(e.target.value)}
-                          placeholder="לינק הזמנה לקבוצת WA"
-                          className="bg-secondary rounded-xl px-3 py-2 text-xs outline-none"
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => waUpdateLinkMutation.mutate()} disabled={waUpdateLinkMutation.isPending}>
-                            {waUpdateLinkMutation.isPending ? "שומר..." : "שמור לינק"}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setShowWaLinkEdit(false)}>ביטול</Button>
-                        </div>
-                      </div>
-                    ) : waSettingsData.settings.invite_link ? (
-                      <button onClick={() => { setWaInviteLinkInput(waSettingsData?.settings?.invite_link ?? ""); setShowWaLinkEdit(true); }}
-                        className="text-xs text-primary hover:underline self-start">
-                        עדכן לינק הזמנה
-                      </button>
-                    ) : null}
                     <button
                       onClick={() => waUnlinkGroupMutation.mutate()}
                       disabled={waUnlinkGroupMutation.isPending}

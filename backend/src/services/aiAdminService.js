@@ -118,10 +118,14 @@ async function generateWhoAreYaContext(recentPlayers = []) {
 החזר אך ורק תשובת JSON חוקית בפורמט הבא:
 {
   "name": "שם השחקן באנגלית בלבד (לדוגמה Kylian Mbappé)",
+  "name_he": "שם השחקן בעברית מלאה ותקנית (לדוגמה קיליאן אמבפה)",
   "wikiSlug": "שם השחקן כפי שהוא מופיע בנתיב ה-URL בויקיפדיה האנגלית",
   "club": "הקבוצה הנוכחית או האחרונה שבה שיחק בוודאות באנגלית",
+  "club_he": "שם הקבוצה הנוכחית בעברית",
   "nat": "מולדת/לאום השחקן באנגלית",
-  "pos": "עמדה על המגרש באנגלית (לדוגמה Forward, Midfielder, Defender, Goalkeeper)"
+  "nat_he": "מולדת/לאום השחקן בעברית",
+  "pos": "עמדה על המגרש באנגלית (לדוגמה Forward, Midfielder, Defender, Goalkeeper)",
+  "pos_he": "עמדה על המגרש בעברית (לדוגמה חלוץ, קשר, מגן, שוער)"
 }
 `;
   return await fetchJsonResponse(prompt);
@@ -136,8 +140,10 @@ async function generateCareerPathContext(recentPlayers = []) {
 החזר אך ורק תשובת JSON חוקית בפורמט הבא:
 {
   "name": "שם השחקן באנגלית",
+  "name_he": "שם השחקן בעברית",
   "wikiSlug": "שם השחקן כפי שמופיע בנתיב הויקיפדיה האנגלית שלו",
-  "clubs": ["Club 1", "Club 2", "Club 3", "Club 4"] // רשימה כרונולוגית של קבוצות באנגלית
+  "clubs": ["Club 1", "Club 2", "Club 3", "Club 4"], // רשימה כרונולוגית של קבוצות באנגלית
+  "clubs_he": ["קבוצה 1", "קבוצה 2", "קבוצה 3", "קבוצה 4"] // אותה רשימה בדיוק בעברית
 }
 `;
   return await fetchJsonResponse(prompt);
@@ -152,8 +158,11 @@ async function generateBox2BoxContext(recentPlayers = []) {
 החזר אך ורק תשובת JSON חוקית בפורמט הבא:
 {
   "secret_player": "שם השחקן המקשר באנגלית",
-  "team1": "הקבוצה הראשונה בה שיחק",
-  "team2": "הקבוצה השנייה בה שיחק"
+  "secret_player_he": "שם השחקן המקשר בעברית",
+  "team1": "הקבוצה הראשונה בה שיחק באנגלית",
+  "team1_he": "הקבוצה הראשונה בעברית",
+  "team2": "הקבוצה השנייה בה שיחק באנגלית",
+  "team2_he": "הקבוצה השנייה בעברית"
 }
 `;
   return await fetchJsonResponse(prompt);

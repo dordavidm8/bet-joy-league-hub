@@ -109,13 +109,14 @@ const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, onSolve }) => {
 
       <div className="px-4 pb-8 max-w-sm mx-auto w-full">
          <div className="relative">
-            <input 
-              value={guess}
-              onChange={e => setGuess(e.target.value)}
-              className="w-full bg-card rounded-full py-4 px-6 text-center shadow-sm border border-border focus:ring-2 focus:ring-primary outline-none" 
-              placeholder="מי השחקן החסר?" 
-            />
-         </div>
+             <input 
+               value={guess}
+               onChange={e => setGuess(e.target.value)}
+               className="w-full bg-card rounded-full py-4 px-6 text-center shadow-sm border border-border focus:ring-2 focus:ring-primary outline-none" 
+               placeholder="מי השחקן החסר?" 
+             />
+             <p className="text-[10px] text-center mt-2 text-primary/70 font-medium">✨ ניתן לענות בעברית או באנגלית</p>
+          </div>
 
          <button 
            onClick={handleSubmit}

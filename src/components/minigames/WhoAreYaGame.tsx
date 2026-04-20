@@ -82,14 +82,15 @@ const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, onSolve }) => {
         {/* Input Section */}
         <section className="flex flex-col gap-4 mt-4">
            <div className="relative">
-              <input 
-                value={guess}
-                onChange={e => setGuess(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                className="w-full bg-card border-none rounded-full py-4 px-6 text-center focus:ring-2 focus:ring-primary text-foreground font-medium shadow-sm outline-none" 
-                placeholder="הקלד את השם כאן..." 
-              />
-           </div>
+               <input 
+                 value={guess}
+                 onChange={e => setGuess(e.target.value)}
+                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                 className="w-full bg-card border-none rounded-full py-4 px-6 text-center focus:ring-2 focus:ring-primary text-foreground font-medium shadow-sm outline-none" 
+                 placeholder="הקלד את השם כאן..." 
+               />
+               <p className="text-[10px] text-center mt-2 text-primary/70 font-medium">✨ ניתן לענות בעברית או באנגלית</p>
+            </div>
            <button 
              onClick={handleSubmit}
              className="w-full bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground py-4 rounded-full font-bold text-lg shadow-lg active:scale-95 transition-transform"

@@ -59,8 +59,9 @@ const Box2BoxGame: React.FC<Box2BoxGameProps> = ({ data, onSolve }) => {
         </section>
 
         {/* Info Card */}
-        <section className="bg-primary/5 p-4 rounded-xl border border-primary/10 text-center">
+        <section className="bg-primary/5 p-4 rounded-xl border border-primary/10 text-center flex flex-col gap-1">
            <p className="text-xs text-primary font-medium">מי השחקן שעבר בין {data.team1} לבין {data.team2}?</p>
+           <p className="text-[10px] text-primary/60">✨ ניתן לענות בעברית או באנגלית</p>
         </section>
 
         {/* Input Section */}

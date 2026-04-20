@@ -37,6 +37,27 @@ const axiosConfig = (url) => {
   };
 };
 
+// ── Translation helper ────────────────────────────────────────────────────────
+async function translateName(name) {
+  if (!name) return '';
+  const { getGroq } = require('../services/aiAdminService');
+  try {
+    const completion = await getGroq().chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [{ 
+        role: 'user', 
+        content: `Translate the football player/team name "${name}" to Hebrew. Return only the Hebrew name, no other text.` 
+      }],
+      temperature: 0.1,
+      max_tokens: 30,
+    });
+    return completion.choices[0].message.content.trim().replace(/[".]/g, '');
+  } catch (e) {
+    console.warn(`[translateName] Failed for ${name}:`, e.message);
+    return name;
+  }
+}
+
 // ── ESPN API helpers ───────────────────────────────────────────────────────────
 
 /**
@@ -177,7 +198,7 @@ async function generateMissingXI() {
   return {
     game_type: 'missing_xi',
     puzzle_data: { teamName, teamLogo, matchContext, formation, players: puzzlePlayers, hidden_idx: hiddenIdx },
-    solution: { secret: hiddenPlayerName }
+    solution: { secret: hiddenPlayerName, secret_he: await translateName(hiddenPlayerName) }
   };
 }
 
@@ -245,7 +266,7 @@ async function generateWhoAreYa() {
       position: player.pos,
       age: null
     },
-    solution: { secret: player.name }
+    solution: { secret: player.name, secret_he: player.name_he }
   };
 }
 
@@ -306,7 +327,7 @@ async function generateCareerPath() {
   return {
     game_type: 'career_path',
     puzzle_data: { transfers },
-    solution: { secret: player.name }
+    solution: { secret: player.name, secret_he: player.name_he }
   };
 }
 
@@ -341,7 +362,7 @@ async function generateBox2Box() {
   return {
     game_type: 'box2box',
     puzzle_data: { team1: pair.team1, team2: pair.team2 },
-    solution: { secret: pair.secret_player }
+    solution: { secret: pair.secret_player, secret_he: pair.secret_player_he }
   };
 }
 
@@ -386,7 +407,7 @@ async function generateGuessClub() {
         return {
           game_type: 'guess_club',
           puzzle_data: { logo_data: base64 },
-          solution: { secret: club_name }
+          solution: { secret: club_name, secret_he: await translateName(club_name) }
         };
       }
     } catch (e) {
@@ -403,7 +424,7 @@ async function generateGuessClub() {
     return {
       game_type: 'guess_club',
       puzzle_data: { logo_data: `data:image/png;base64,${blurredBuffer.toString('base64')}` },
-      solution: { secret: 'Barcelona' }
+      solution: { secret: 'Barcelona', secret_he: 'ברצלונה' }
     };
   } catch (e2) {
     return {
@@ -435,15 +456,17 @@ async function saveMiniGame(game) {
     }
 
     const query = `
-      INSERT INTO daily_mini_games (game_type, play_date, puzzle_data, solution)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO daily_mini_games (game_type, play_date, puzzle_data, solution, answer_he)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (game_type, play_date) DO UPDATE SET
         puzzle_data = EXCLUDED.puzzle_data,
-        solution = EXCLUDED.solution
+        solution = EXCLUDED.solution,
+        answer_he = EXCLUDED.answer_he
     `;
     const formattedDate = nextDate.toISOString().split('T')[0];
-    await pool.query(query, [game.game_type, formattedDate, game.puzzle_data, game.solution]);
-    console.log(`[generateMiniGames] Saved ${game.game_type} queued for ${formattedDate}.`);
+    const answerHe = game.solution.secret_he || '';
+    await pool.query(query, [game.game_type, formattedDate, game.puzzle_data, game.solution, answerHe]);
+    console.log(`[generateMiniGames] Saved ${game.game_type} queued for ${formattedDate}. Hebrew info: ${answerHe}`);
   } catch (err) {
     console.error(`[generateMiniGames] Error saving ${game.game_type}:`, err.message);
     throw err;

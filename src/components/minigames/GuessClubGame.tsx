@@ -50,10 +50,11 @@ const GuessClubGame: React.FC<GuessClubGameProps> = ({ data, onSolve }) => {
         </section>
 
         {/* Info Card */}
-        <section className="bg-card p-5 rounded-2xl shadow-sm border border-border text-center flex flex-col gap-2">
-           <h3 className="font-bold text-sm">איזו קבוצה זאת?</h3>
-           <p className="text-[11px] text-muted-foreground">הסמל עבר טשטוש כבד כדי להקשות עליכם. רמז: מדובר בקבוצה מאחת הליגות הבכירות באירופה.</p>
-        </section>
+         <section className="bg-card p-5 rounded-2xl shadow-sm border border-border text-center flex flex-col gap-2">
+            <h3 className="font-bold text-sm">איזו קבוצה זאת?</h3>
+            <p className="text-[11px] text-muted-foreground">הסמל עבר טשטוש כבד כדי להקשות עליכם. רמז: מדובר בקבוצה מאחת הליגות הבכירות באירופה.</p>
+            <p className="text-[10px] text-primary/70 font-medium">✨ ניתן לענות בעברית או באנגלית</p>
+         </section>
 
         {/* Input Section */}
         <section className="flex flex-col gap-4 mt-2">

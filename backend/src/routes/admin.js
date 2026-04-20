@@ -558,7 +558,7 @@ router.post('/minigames/save-drafts', async (req, res, next) => {
 router.get('/minigames/queue', async (req, res, next) => {
   try {
     const result = await pool.query(
-      `SELECT id, game_type, play_date, puzzle_data, solution 
+      `SELECT id, game_type, play_date, puzzle_data, solution, answer_he 
        FROM daily_mini_games 
        ORDER BY play_date ASC, game_type ASC`
     );

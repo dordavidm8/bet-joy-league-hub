@@ -143,7 +143,8 @@ router.post('/submit', authenticate, async (req, res, next) => {
       return res.status(404).json({ error: 'Puzzle not found' });
     }
     const { game_type, puzzle_data, solution } = puzzleResult.rows[0];
-    const correct_answer = solution.secret;
+    const correct_en = solution.secret;
+    const correct_he = solution.secret_he;
 
     // 2. Check existing attempt record
     const existing = await pool.query(
@@ -156,29 +157,37 @@ router.post('/submit', authenticate, async (req, res, next) => {
       return res.json({ success: true, is_correct: true, points_added: 0, attempt_count: existingRow.attempt_count, show_answer: true });
     }
     if (existingRow && existingRow.attempt_count >= MAX_ATTEMPTS) {
-      return res.json({ success: false, is_correct: false, points_added: 0, attempt_count: existingRow.attempt_count, show_answer: true, correct_answer });
+      return res.json({ 
+        success: false, 
+        is_correct: false, 
+        points_added: 0, 
+        attempt_count: existingRow.attempt_count, 
+        show_answer: true, 
+        correct_answer: correct_he ? `${correct_en} (${correct_he})` : correct_en 
+      });
     }
 
-    // 3. Validate guess server-side
+    // 3. Validate guess server-side (Check both EN and HE)
     let is_correct = false;
     if (game_type === 'trivia') {
-      is_correct = String(guess).startsWith(correct_answer);
+      is_correct = String(guess).startsWith(correct_en) || (correct_he && String(guess).startsWith(correct_he));
     } else if (game_type === 'box2box') {
-      if (matchesName(guess, correct_answer)) {
+      if (matchesName(guess, correct_en) || (correct_he && matchesName(guess, correct_he))) {
         is_correct = true;
       } else {
         const { verifyBox2Box } = require('../services/aiAdminService');
         is_correct = await verifyBox2Box(puzzle_data.team1, puzzle_data.team2, String(guess));
       }
     } else if (game_type === 'guess_club') {
-      is_correct = matchesClub(guess, correct_answer);
+      is_correct = matchesClub(guess, correct_en) || (correct_he && matchesClub(guess, correct_he));
     } else {
-      is_correct = matchesName(guess, correct_answer);
+      is_correct = matchesName(guess, correct_en) || (correct_he && matchesName(guess, correct_he));
     }
 
     const pointsToAward = is_correct ? 500 : 0;
     const newAttemptCount = (existingRow?.attempt_count ?? 0) + 1;
     const showAnswer = is_correct || newAttemptCount >= MAX_ATTEMPTS;
+    const displayAnswer = correct_he ? `${correct_en} (${correct_he})` : correct_en;
 
     // 4. Upsert attempt with incremented count
     await pool.query(
@@ -209,7 +218,7 @@ router.post('/submit', authenticate, async (req, res, next) => {
       points_added: pointsToAward,
       attempt_count: newAttemptCount,
       show_answer: showAnswer,
-      correct_answer: showAnswer ? correct_answer : undefined,
+      correct_answer: showAnswer ? displayAnswer : undefined,
     });
   } catch (error) {
     console.error('[MiniGameSubmit] Error:', error);
