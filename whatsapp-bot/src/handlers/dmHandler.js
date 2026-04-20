@@ -17,7 +17,9 @@ function getHelpText() {
 }
 
 async function handleDmMessage(client, msg) {
-  const phone = extractNumber(msg.from);
+  const rawPhone = extractNumber(msg.from);
+  const { normalizePhone } = require('../utils/phoneUtils');
+  const phone = normalizePhone(rawPhone);
   
   // Check if they are linked AT ALL
   const userRes = await pool.query(
@@ -27,7 +29,7 @@ async function handleDmMessage(client, msg) {
   
   const user = userRes.rows[0];
   if (!user) {
-    await msg.reply('❌ אני לא מזהה את המשתמש. יש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://kickoff-bet.app/profile');
+    await msg.reply(`❌ אני לא מזהה את המשתמש. (מספר מזוהה: ${phone})\nיש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://kickoff-bet.app/profile`);
     return;
   }
 
