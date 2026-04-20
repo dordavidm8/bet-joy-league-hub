@@ -55,11 +55,11 @@ INTERNAL_API_KEY=<secret>               # אימות קריאות internal
 כל הקוד נכתב ומוכן. **ממתין לחיבור SIM וסריקת QR בלבד.**
 
 ### ⏳ נותר — חיבור SIM וDeploy  
-1. חבר SIM לטלפון/מכשיר
-2. הרץ `node bot.js` — סרוק QR
-3. הגדר Railway service חדש (root: `whatsapp-bot/`)
-4. הוסף Volume לsession + ENV variables
-5. הגדר `BOT_INTERNAL_URL` בbackend service
+- [x] חבר SIM לטלפון/מכשיר (נמסר מספר 054-4390945)
+- [x] הרץ `node bot.js` — סרוק QR (נסרק בהצלחה)
+- [ ] הגדר Railway service חדש (root: `whatsapp-bot/`)
+- [ ] הוסף Volume לsession + ENV variables
+- [x] הגדר `BOT_INTERNAL_URL` בbackend service (הוגדר בקובץ .env המקומי)
 
 #### מה צריך לבנות (לפי סדר עדיפות):
 

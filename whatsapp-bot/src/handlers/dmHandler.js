@@ -6,8 +6,31 @@ const { processBetReply } = require('./groupHandler');
 const { getState, setState, clearState } = require('./stateRouter');
 const { formatPoints } = require('../utils/formatters');
 
+function getHelpText() {
+  return `👋 *שלום! אני הבוט של Kickoff* ⚽\n\n` +
+    `*פקודות זמינות:*\n` +
+    `• *יתרה* — הצג את יתרת הנקודות שלך\n` +
+    `• *משחקים* — משחקים פתוחים להימורים\n` +
+    `• *הימורים* — ההימורים האחרונים שלך\n` +
+    `• *עזרה* — תפריט זה\n\n` +
+    `כדי להמר — השב להודעת המשחק שנשלחה אליך 🎯`;
+}
+
 async function handleDmMessage(client, msg) {
   const phone = extractNumber(msg.from);
+  
+  // Check if they are linked AT ALL
+  const userRes = await pool.query(
+    `SELECT id, username, points_balance FROM users WHERE phone_number = $1 AND phone_verified = true`,
+    [phone]
+  );
+  
+  const user = userRes.rows[0];
+  if (!user) {
+    await msg.reply('❌ אני לא מזהה את המשתמש. יש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://kickoff-bet.app/profile');
+    return;
+  }
+
   const content = msg.body.trim();
 
   // Check if this is a reply to a game message (DM bet)
@@ -41,55 +64,26 @@ async function handleDmMessage(client, msg) {
   // Route commands
   const cmd = content.toLowerCase();
   if (cmd === '/help' || cmd === 'עזרה' || cmd === 'תפריט') {
-    await sendHelp(client, msg);
+    await msg.reply(getHelpText());
   } else if (cmd === '/balance' || cmd === 'יתרה') {
-    await sendBalance(client, msg, phone);
+    await sendBalance(msg, user);
   } else if (cmd === '/games' || cmd === 'משחקים') {
-    await sendUpcomingGames(client, msg, phone);
+    await sendUpcomingGames(msg, user);
   } else if (cmd === '/mybets' || cmd === 'הימורים') {
-    await sendMyBets(client, msg, phone);
+    await sendMyBets(msg, user);
   } else if (cmd === 'ביטול' || cmd === 'cancel') {
     await clearState(phone);
     await msg.reply('✅ הפעולה בוטלה');
   } else {
-    await sendHelp(client, msg);
+    await msg.reply(`❌ לא זיהיתי את הפקודה שלך.\n\n${getHelpText()}`);
   }
 }
 
-async function sendHelp(client, msg) {
-  const text =
-    `👋 *שלום! אני הבוט של Kickoff* ⚽\n\n` +
-    `*פקודות זמינות:*\n` +
-    `• *יתרה* — הצג את יתרת הנקודות שלך\n` +
-    `• *משחקים* — משחקים פתוחים להימורים\n` +
-    `• *הימורים* — ההימורים האחרונים שלך\n` +
-    `• *עזרה* — תפריט זה\n\n` +
-    `כדי להמר — השב להודעת המשחק שנשלחה אליך 🎯`;
-  await msg.reply(text);
+async function sendBalance(msg, user) {
+  await msg.reply(`💰 *${user.username}*, יתרתך: *${formatPoints(user.points_balance)} נקודות*`);
 }
 
-async function sendBalance(client, msg, phone) {
-  const userRes = await pool.query(
-    `SELECT username, points_balance FROM users WHERE phone_number = $1 AND phone_verified = true`,
-    [phone]
-  );
-  if (!userRes.rows[0]) {
-    await msg.reply('❌ המספר שלך לא מקושר לחשבון Kickoff. היכנס לאפליקציה וקשר את המספר.');
-    return;
-  }
-  const u = userRes.rows[0];
-  await msg.reply(`💰 *${u.username}*, יתרתך: *${formatPoints(u.points_balance)} נקודות*`);
-}
-
-async function sendUpcomingGames(client, msg, phone) {
-  const userRes = await pool.query(
-    `SELECT id FROM users WHERE phone_number = $1 AND phone_verified = true`, [phone]
-  );
-  if (!userRes.rows[0]) {
-    await msg.reply('❌ המספר שלך לא מקושר לחשבון Kickoff.');
-    return;
-  }
-
+async function sendUpcomingGames(msg, user) {
   const gamesRes = await pool.query(
     `SELECT home_team, away_team, commence_time FROM games
      WHERE status = 'scheduled' AND commence_time > NOW()
@@ -113,22 +107,14 @@ async function sendUpcomingGames(client, msg, phone) {
   await msg.reply(text);
 }
 
-async function sendMyBets(client, msg, phone) {
-  const userRes = await pool.query(
-    `SELECT id, username FROM users WHERE phone_number = $1 AND phone_verified = true`, [phone]
-  );
-  if (!userRes.rows[0]) {
-    await msg.reply('❌ המספר שלך לא מקושר לחשבון Kickoff.');
-    return;
-  }
-
+async function sendMyBets(msg, user) {
   const betsRes = await pool.query(
     `SELECT b.selected_outcome, b.status, b.stake, b.actual_payout, b.potential_payout,
             g.home_team, g.away_team
      FROM bets b JOIN games g ON g.id = b.game_id
      WHERE b.user_id = $1
      ORDER BY b.created_at DESC LIMIT 5`,
-    [userRes.rows[0].id]
+    [user.id]
   );
 
   if (betsRes.rows.length === 0) {
@@ -136,7 +122,7 @@ async function sendMyBets(client, msg, phone) {
     return;
   }
 
-  let text = `🎯 *הימורים אחרונים של ${userRes.rows[0].username}:*\n\n`;
+  let text = `🎯 *הימורים אחרונים של ${user.username}:*\n\n`;
   betsRes.rows.forEach(b => {
     const statusIcon = b.status === 'won' ? '✅' : b.status === 'lost' ? '❌' : '⏳';
     const pts = b.status === 'won' ? `+${b.actual_payout}` : b.status === 'lost' ? `-${b.stake}` : `(${b.potential_payout} אפשרי)`;
