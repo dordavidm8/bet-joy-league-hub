@@ -55,7 +55,36 @@ function startInternalApi(client) {
     }
   });
 
-  // POST /internal/create-group — create new WA group
+  async function setupGroup(chat, inviteCode) {
+    let invite_link = null;
+    try {
+      const code = await chat.getInviteCode();
+      invite_link = `https://chat.whatsapp.com/${code}`;
+      console.log(`[WA] Generated invite link: ${invite_link}`);
+    } catch (e) {
+      console.error(`[WA] getInviteCode FAIL: ${e.message}`);
+    }
+
+    await new Promise(r => setTimeout(r, 4000));
+
+    try {
+      await chat.setMessagesAdminsOnly(false).catch(() => {});
+      await chat.setInfoAdminsOnly(false).catch(() => {});
+      if (chat.setAddMembersAdminsOnly) await chat.setAddMembersAdminsOnly(false).catch(() => {});
+      else if (chat.setAddParticipantsAdminsOnly) await chat.setAddParticipantsAdminsOnly(false).catch(() => {});
+      console.log(`[WA] Configured group permissions`);
+    } catch (e) {
+      console.warn(`[WA] Permission sync issue: ${e.message}`);
+    }
+    
+    if (inviteCode) {
+      const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
+      await chat.setDescription(description).catch(e => console.warn(`[WA] Failed to set description: ${e.message}`));
+    }
+    return invite_link;
+  }
+
+  // POST /internal/create-group — create a new WA group
   app.post('/internal/create-group', auth, async (req, res) => {
     const { name, phones, leagueId, inviteCode } = req.body;
     if (!name || !phones?.length) return res.status(400).json({ error: 'name and phones required' });
@@ -73,47 +102,7 @@ function startInternalApi(client) {
         });
       }
 
-      // Try to get invite link and configure group
-      let invite_link = null;
-      try {
-        const chat = await client.getChatById(groupJid);
-        
-        // 1. Get invite link FIRST (Critical for UI)
-        try {
-          const code = await chat.getInviteCode();
-          invite_link = `https://chat.whatsapp.com/${code}`;
-          console.log(`[WA] Generated invite link: ${invite_link}`);
-        } catch (e) {
-          console.error(`[WA] getInviteCode FAIL: ${e.message}`);
-        }
-
-        // 2. Allow some time for WhatsApp to settle before settings
-        await new Promise(r => setTimeout(r, 2000));
-
-        // 3. Set permissions (Best effort)
-        try {
-          await chat.setMessagesAdminsOnly(false);
-          await chat.setInfoAdminsOnly(false);
-          
-          // Try multiple method names for "Add members" setting
-          if (chat.setAddMembersAdminsOnly) await chat.setAddMembersAdminsOnly(false);
-          else if (chat.setAddParticipantsAdminsOnly) await chat.setAddParticipantsAdminsOnly(false);
-          
-          console.log(`[WA] Configured group permissions`);
-        } catch (e) {
-          console.warn(`[WA] Permission sync issue: ${e.message}`);
-        }
-        
-        // 4. Set description (Best effort)
-        if (inviteCode) {
-          const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
-          await chat.setDescription(description).catch(e => console.warn(`[WA] Failed to set description: ${e.message}`));
-        }
-
-      } catch (err) {
-        console.error('[WA] Group config block FAIL:', err.message);
-      }
-
+      const invite_link = await setupGroup(await client.getChatById(groupJid), inviteCode);
       res.json({ wa_group_id: groupJid, invite_link });
     } catch (err) {
       console.error('[WA] create-group FAIL:', err.message);
@@ -123,12 +112,12 @@ function startInternalApi(client) {
 
   // POST /internal/get-invite-link — get invite link for existing group
   app.post('/internal/get-invite-link', auth, async (req, res) => {
-    const { groupJid } = req.body;
+    const { groupJid, inviteCode } = req.body;
     if (!groupJid) return res.status(400).json({ error: 'groupJid required' });
     try {
       const chat = await client.getChatById(groupJid);
-      const code = await chat.getInviteCode();
-      res.json({ invite_link: `https://chat.whatsapp.com/${code}` });
+      const invite_link = await setupGroup(chat, inviteCode);
+      res.json({ invite_link });
     } catch (err) {
       console.error('[internal/get-invite-link]', err.message);
       res.status(500).json({ error: err.message });
