@@ -9,7 +9,7 @@ const { handleGroupMessage } = require('./src/handlers/groupHandler');
 const { handleDmMessage } = require('./src/handlers/dmHandler');
 
 const fs = require('fs');
-if (!fs.existsSync('.wwebjs_auth') && fs.existsSync('.wwebjs_auth_seed')) {
+if (!fs.existsSync('.wwebjs_auth/session') && fs.existsSync('.wwebjs_auth_seed/session')) {
   console.log('[WA] מעתיק קובץ הזדהות ראשוני אל השרת...');
   fs.cpSync('.wwebjs_auth_seed', '.wwebjs_auth', { recursive: true });
 }
