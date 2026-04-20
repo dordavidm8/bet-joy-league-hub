@@ -6,26 +6,50 @@ const { checkAndAwardAchievements } = require('../services/achievementService');
 const { translateTeam } = require('../lib/teamNames');
 
 // ── Resolve a bet_question's correct_outcome based on final score ─────────────
-// Returns the winning outcome label, or null if we can't determine yet.
+// Returns the winning outcome label (matching the stored label in question.outcomes),
+// or null if we can't determine yet.
+// Outcomes may be stored in Hebrew (translated) or English — we match whichever is present.
 function resolveQuestion(question, game) {
   if (game.status !== 'finished') return null;
 
   const h = game.score_home;
   const a = game.score_away;
   const type = question.type;
+  const outcomes = Array.isArray(question.outcomes) ? question.outcomes : [];
 
   if (type === 'match_winner') {
-    if (h > a) return game.home_team;
-    if (a > h) return game.away_team;
-    return 'Draw';
+    // outcomes order from buildBetQuestions: [home(0), draw(1), away(2)]
+    if (h > a) {
+      const heHome = translateTeam(game.home_team);
+      const found = outcomes.find(o => o.label === game.home_team || o.label === heHome);
+      return found?.label ?? outcomes[0]?.label ?? heHome;
+    }
+    if (a > h) {
+      const heAway = translateTeam(game.away_team);
+      const found = outcomes.find(o => o.label === game.away_team || o.label === heAway);
+      return found?.label ?? outcomes[2]?.label ?? heAway;
+    }
+    // Draw
+    const drawFound = outcomes.find(o => ['תיקו', 'Draw'].includes(o.label));
+    return drawFound?.label ?? outcomes[1]?.label ?? 'תיקו';
   }
 
   if (type === 'both_teams_score') {
-    return h > 0 && a > 0 ? 'Yes' : 'No';
+    const yes = h > 0 && a > 0;
+    const found = outcomes.find(o =>
+      yes ? ['כן', 'Yes'].includes(o.label) : ['לא', 'No'].includes(o.label)
+    );
+    return found?.label ?? (yes ? 'כן' : 'לא');
   }
 
   if (type === 'over_under') {
-    return (h + a) > 2.5 ? 'Over 2.5' : 'Under 2.5';
+    const over = (h + a) > 2.5;
+    const found = outcomes.find(o =>
+      over
+        ? (o.label.includes('מעל') || o.label.toLowerCase().includes('over'))
+        : (o.label.includes('מתחת') || o.label.toLowerCase().includes('under'))
+    );
+    return found?.label ?? (over ? 'מעל 2.5' : 'מתחת 2.5');
   }
 
   return null; // unknown question type

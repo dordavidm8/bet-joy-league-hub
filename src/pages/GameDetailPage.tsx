@@ -304,7 +304,7 @@ const GameDetailPage = () => {
                             <div className="flex flex-col gap-1">
                               <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
                                 🎯 תוצאה מדויקת
-                                <span className="text-amber-500 font-bold">· בונוס ×3</span>
+                                <span className="text-amber-500 font-bold">· תוצאה נכונה = סה״כ ×3</span>
                                 <span className="text-muted-foreground font-normal">(אופציונלי)</span>
                               </p>
                               <div className="flex items-center gap-2">

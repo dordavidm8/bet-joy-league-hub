@@ -190,7 +190,7 @@ const BetSlipPage = () => {
                 </span>
                 {bet.exact_score_prediction && (
                   <span className="text-[11px] font-bold text-amber-500">
-                    🎯 {bet.exact_score_prediction} · בונוס ×3
+                    🎯 {bet.exact_score_prediction} · תוצאה נכונה = סה״כ ×3
                   </span>
                 )}
               </div>

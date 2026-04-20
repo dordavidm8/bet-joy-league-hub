@@ -63,11 +63,12 @@ async function processBetReply(client, msg, phone, user, gameMsgRecord, content,
   const question = questionRes.rows[0];
   if (!question) { await msg.reply('❌ הימור לא זמין למשחק זה כרגע'); return; }
 
-  const outcomeMap = { '1': game.home_team, 'X': 'תיקו', '2': game.away_team };
-  const outcomeLabel = outcomeMap[resultLine];
-  const outcome = (question.outcomes || []).find(o =>
-    o.label === outcomeLabel || o.label === resultLine
-  ) || (question.outcomes || [])[0];
+  // outcomes order from buildBetQuestions: [home(0), draw(1), away(2)]
+  const outcomeIndex = { '1': 0, 'X': 1, '2': 2 }[resultLine];
+  const outcome = (question.outcomes || [])[outcomeIndex];
+  // Use the actual label stored in the DB (may be Hebrew or English) so that
+  // selected_outcome matches what resolveQuestion returns during settlement.
+  const outcomeLabel = outcome?.label ?? { '1': game.home_team, 'X': 'תיקו', '2': game.away_team }[resultLine];
 
   if (!outcome) { await msg.reply('❌ אפשרות הימור לא נמצאה'); return; }
 
@@ -128,7 +129,7 @@ async function processBetReply(client, msg, phone, user, gameMsgRecord, content,
 
   await msg.react('👍');
   if (exactScorePrediction) {
-    await msg.reply(`🎯 תוצאה מדויקת נרשמה: ${exactScorePrediction} — בונוס ×3 אם תפגע בול!`);
+    await msg.reply(`🎯 תוצאה מדויקת נרשמה: ${exactScorePrediction} — תוצאה נכונה = תשלום מלא ×3 (זהות מנצחת + בונוס ×2 נוסף)`);
   }
 }
 
