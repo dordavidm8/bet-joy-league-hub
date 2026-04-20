@@ -23,6 +23,12 @@ function startInternalApi(client) {
   const app = express();
   app.use(express.json());
 
+  // Global logger
+  app.use((req, res, next) => {
+    console.log(`[WA] Incoming ${req.method} ${req.path}`);
+    next();
+  });
+
   // POST /internal/send — DM to phone number
   app.post('/internal/send', auth, async (req, res) => {
     const { phone, text } = req.body;
@@ -67,15 +73,20 @@ function startInternalApi(client) {
         });
       }
 
-      // Try to get invite link
+      // Try to get invite link and configure group
       let invite_link = null;
       try {
         const chat = await client.getChatById(groupJid);
+        
+        // Allow all participants to send messages
+        await chat.setMessagesAdminsOnly(false);
+        console.log(`[WA] Set group to allow messages from all members`);
+
         const code = await chat.getInviteCode();
         invite_link = `https://chat.whatsapp.com/${code}`;
         console.log(`[WA] Generated invite link: ${invite_link}`);
       } catch (e) {
-        console.warn(`[WA] Could not get invite link: ${e.message}`);
+        console.warn(`[WA] Could not configure group or get invite link: ${e.message}`);
       }
 
       res.json({ wa_group_id: groupJid, invite_link });
