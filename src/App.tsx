@@ -110,9 +110,6 @@ function AuthGate() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">טוען...</div>;
   if (!firebaseUser) return <LoginPage />;
 
-  // Block non-admins from the entire app
-  if (!ADMIN_EMAILS.includes(firebaseUser.email ?? "")) return <BlockedScreen />;
-
   if (!onboardingDone) return <OnboardingPage onDone={() => setOnboardingDone(true)} />;
 
   return (
