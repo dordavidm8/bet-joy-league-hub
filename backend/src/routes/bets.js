@@ -260,7 +260,8 @@ router.post('/parlay', authenticate, async (req, res, next) => {
       betData.push({ ...sel, odds, questionText: question.question_text });
     }
 
-    const potentialPayout = Math.floor(stake * combinedOdds);
+    const bonus = betData.length >= 4 ? 1.20 : betData.length >= 3 ? 1.15 : 1.10;
+    const potentialPayout = Math.floor(stake * combinedOdds * bonus);
 
     const balRes = await client.query(
       `UPDATE users SET points_balance = points_balance - $1, total_bets = total_bets + 1

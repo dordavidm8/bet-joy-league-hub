@@ -324,8 +324,21 @@ async function settleParlays(client, gameId, correctOutcomeMap) {
          VALUES ($1,$2,'bet_won',$3,'Parlay won')`,
         [parlay.user_id, payout, parlayId]
       );
-      // Award parlay achievement (best-effort, outside transaction)
+      // Award achievement + notification (best-effort, outside transaction)
       checkAndAwardAchievements(parlay.user_id, 'parlay_won').catch(() => {});
+      createNotification(parlay.user_id, {
+        type: 'bet_won',
+        title: '🎉 פרליי ניצח!',
+        body: `ניצחת ${payout.toLocaleString()} נק׳ — כל ${legsRes.rows.length} הבחירות הצליחו`,
+        data: { parlay_id: parlayId },
+      }).catch(() => {});
+    } else {
+      createNotification(parlay.user_id, {
+        type: 'bet_lost',
+        title: '❌ פרליי לא הצליח',
+        body: `לפחות אחת מהבחירות שלך לא הצליחה`,
+        data: { parlay_id: parlayId },
+      }).catch(() => {});
     }
   }
 }

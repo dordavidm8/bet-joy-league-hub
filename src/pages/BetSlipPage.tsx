@@ -142,7 +142,7 @@ const BetSlipPage = () => {
           <div>
             <p className="font-bold text-sm">שילוב הימורים (פרליי)</p>
             <p className="text-xs text-muted-foreground">
-              בונוס ×{parlayBonus(realBets.length).toFixed(2)} על {realBets.length} הימורים
+              בונוס ×{parlayBonus(realBets.length).toFixed(2)} · כל הבחירות חייבות לנצח
             </p>
           </div>
           <button
