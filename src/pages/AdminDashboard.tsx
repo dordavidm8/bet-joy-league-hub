@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   BarChart2, Users, Target, Trophy, Bell, HelpCircle, Settings,
   Search, Plus, Trash2, Send, Star, StarOff, ChevronDown, ChevronUp,
-  LogOut, XCircle, ToggleLeft, ToggleRight, Activity,
+  LogOut, XCircle, ToggleLeft, ToggleRight, Activity, X, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -209,7 +209,12 @@ const UsersTab = () => {
                   <td className="px-3 py-2 text-muted-foreground">{u.display_name || "—"}</td>
                   <td className="px-3 py-2">
                     {u.phone_number ? (
-                      <span className="text-[11px] font-mono text-green-700">{u.phone_number} {u.phone_verified ? '✅' : '⚠️'}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[11px] font-mono text-green-700">{u.phone_number} {u.phone_verified ? '✅' : '⚠️'}</span>
+                        <span className={`text-[9px] font-bold ${u.wa_opt_in ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          {u.wa_opt_in ? 'WhatsApp: ✅' : 'WhatsApp: 🔕'}
+                        </span>
+                      </div>
                     ) : <span className="text-[11px] text-muted-foreground">—</span>}
                   </td>
                   <td className="px-3 py-2 font-bold text-primary">{fmt(u.points_balance)}</td>
@@ -1147,7 +1152,7 @@ const NotificationsTab = () => {
   const [type, setType] = useState<"special_offer" | "admin_message">("admin_message");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [target, setTarget] = useState("all");
+  const [target, setTarget] = useState<string | string[]>("all");
   const [userSearch, setUserSearch] = useState("");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -1161,9 +1166,29 @@ const NotificationsTab = () => {
 
   const sendMutation = useMutation({
     mutationFn: () => adminSendNotification({ type, title, body, target }),
-    onSuccess: (res) => { setResult({ ok: true, text: `✅ נשלח ל-${res.sent_to} משתמשים` }); setTitle(""); setBody(""); setTarget("all"); setUserSearch(""); },
+    onSuccess: (res) => { 
+      setResult({ ok: true, text: `✅ נשלח ל-${res.sent_to} משתמשים` }); 
+      setTitle(""); 
+      setBody(""); 
+      setTarget("all"); 
+      setUserSearch(""); 
+    },
     onError: (e: any) => setResult({ ok: false, text: `❌ ${e.message}` }),
   });
+
+  const toggleUserSelection = (username: string) => {
+    setTarget(prev => {
+      if (prev === "all") return [username];
+      const list = [...prev];
+      if (list.includes(username)) {
+        const filtered = list.filter(u => u !== username);
+        return filtered.length === 0 ? "all" : filtered;
+      }
+      return [...list, username];
+    });
+    setUserSearch("");
+    setUserSearchQuery("");
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -1179,26 +1204,47 @@ const NotificationsTab = () => {
         </div>
 
         {/* Target selector with user search */}
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2 items-center">
-            <button onClick={() => { setTarget("all"); setUserSearch(""); setUserSearchQuery(""); }}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold border shrink-0 transition-colors ${target === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-bold text-muted-foreground mr-1">יעד:</p>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button 
+              onClick={() => { setTarget("all"); setUserSearch(""); setUserSearchQuery(""); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${target === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}
+            >
               כולם
             </button>
-            <div className="flex-1 relative">
+            
+            {Array.isArray(target) && target.map(u => (
+              <div key={u} className="flex items-center gap-1 bg-primary/10 text-primary px-2.5 py-1.5 rounded-xl text-xs font-bold border border-primary/20">
+                @{u}
+                <button onClick={() => toggleUserSelection(u)} className="hover:text-destructive transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+
+            <div className="flex-1 min-w-[150px] relative">
               <input
                 value={userSearch}
-                onChange={e => { setUserSearch(e.target.value); setUserSearchQuery(e.target.value); if (!e.target.value) setTarget("all"); }}
-                placeholder="חפש משתמש ספציפי..."
-                className="w-full bg-secondary rounded-xl px-3 py-1.5 text-sm outline-none"
+                onChange={e => { setUserSearch(e.target.value); setUserSearchQuery(e.target.value); }}
+                placeholder="הוסף משתמש..."
+                className="w-full bg-secondary rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary/30 transition-all font-medium"
               />
-              {userSearchData?.users && userSearchQuery.length >= 2 && target === "all" && (
+              {userSearchData?.users && userSearchQuery.length >= 2 && (
                 <div className="absolute top-full mt-1 left-0 right-0 bg-background border rounded-xl shadow-lg z-20 max-h-40 overflow-y-auto">
                   {userSearchData.users.slice(0, 8).map((u: AdminUser) => (
-                    <button key={u.id} onClick={() => { setTarget(u.username); setUserSearch(`@${u.username}`); setUserSearchQuery(""); }}
-                      className="w-full text-right px-3 py-2 text-xs hover:bg-secondary flex items-center gap-2">
-                      <span className="font-bold">@{u.username}</span>
-                      <span className="text-muted-foreground">{u.display_name}</span>
+                    <button 
+                      key={u.id} 
+                      onClick={() => toggleUserSelection(u.username)}
+                      className="w-full text-right px-3 py-2 text-xs hover:bg-secondary flex items-center justify-between gap-2"
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-bold text-foreground">@{u.username}</span>
+                        <span className="text-[10px] text-muted-foreground">{u.display_name}</span>
+                      </div>
+                      {Array.isArray(target) && target.includes(u.username) && (
+                        <Check size={14} className="text-primary" />
+                      )}
                     </button>
                   ))}
                   {userSearchData.users.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">לא נמצאו משתמשים</p>}
@@ -1206,9 +1252,6 @@ const NotificationsTab = () => {
               )}
             </div>
           </div>
-          {target !== "all" && (
-            <p className="text-xs text-primary font-bold">שולח ל: @{target}</p>
-          )}
         </div>
 
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="כותרת"
@@ -1218,7 +1261,7 @@ const NotificationsTab = () => {
         {result && <p className={`text-sm ${result.ok ? "text-green-600" : "text-destructive"}`}>{result.text}</p>}
         <Button onClick={() => { setResult(null); sendMutation.mutate(); }} disabled={!title || sendMutation.isPending}>
           <Send size={15} className="ml-2" />
-          {sendMutation.isPending ? "שולח..." : `שלח${target === "all" ? " לכולם" : ` ל-@${target}`}`}
+          {sendMutation.isPending ? "שולח..." : `שלח ${target === "all" ? "לכולם" : `ל-${Array.isArray(target) ? target.length : 1} משתמשים`}`}
         </Button>
       </div>
       <div className="bg-muted/30 rounded-xl p-3 text-xs text-muted-foreground">

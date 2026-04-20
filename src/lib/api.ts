@@ -203,7 +203,7 @@ export const adminAdjustPoints = (userId: string, amount: number, reason: string
   request<{ message: string; user: { username: string; points_balance: number } }>(
     `/admin/users/${userId}/adjust-points`, { method: 'POST', body: JSON.stringify({ amount, reason }) }
   );
-export const adminSendNotification = (data: { type: string; title: string; body?: string; target: string }) =>
+export const adminSendNotification = (data: { type: string; title: string; body?: string; target: string | string[] }) =>
   request<{ message: string; sent_to: number }>('/admin/notify', {
     method: 'POST', body: JSON.stringify(data),
   });
@@ -563,7 +563,9 @@ export interface AdminUser {
   total_bets: number;
   total_wins: number;
   created_at: string;
-  referral_code: string;
+  phone_number?: string;
+  phone_verified?: boolean;
+  wa_opt_in?: boolean;
 }
 
 export interface AdminBet {

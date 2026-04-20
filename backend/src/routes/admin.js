@@ -130,7 +130,7 @@ router.get('/users', async (req, res, next) => {
   try {
     const result = await pool.query(
       `SELECT id, firebase_uid, username, display_name, email, points_balance, total_bets, total_wins, created_at,
-              phone_number, phone_verified
+              phone_number, phone_verified, wa_opt_in
        FROM users ${where} ORDER BY created_at DESC LIMIT $1 OFFSET $2`, params
     );
     res.json({ users: result.rows });
@@ -431,9 +431,13 @@ router.post('/notify', async (req, res, next) => {
       const result = await pool.query(`SELECT id, phone_number, phone_verified, wa_opt_in FROM users`);
       users = result.rows;
     } else {
-      const result = await pool.query(`SELECT id, phone_number, phone_verified, wa_opt_in FROM users WHERE username ILIKE $1`, [target]);
-      if (!result.rows[0]) return res.status(404).json({ error: 'משתמש לא נמצא' });
-      users = [result.rows[0]];
+      const targetList = Array.isArray(target) ? target : [target];
+      const result = await pool.query(
+        `SELECT id, phone_number, phone_verified, wa_opt_in FROM users WHERE username = ANY($1)`,
+        [targetList]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: 'לא נמצאו משתמשים' });
+      users = result.rows;
     }
 
     for (const u of users) {
@@ -445,7 +449,7 @@ router.post('/notify', async (req, res, next) => {
       // WhatsApp notification
       if (u.phone_number && u.phone_verified && u.wa_opt_in) {
         console.log(`[AdminNotify] Sending WA to ${u.phone_number}`);
-        const waText = `הודעה מצוות KickOff:\n\n*${title}*\n${body || ''}`;
+        const waText = `הודעה מצוות KickOff 📣:\n\n*${title}*\n${body || ''}`;
         sendDM(u.phone_number, waText).catch(e => console.error(`[AdminNotify] WA error for ${u.id}:`, e.message));
       } else {
         console.log(`[AdminNotify] Skipping WA for user ${u.id}: missing phone, verified, or opt-in`);
