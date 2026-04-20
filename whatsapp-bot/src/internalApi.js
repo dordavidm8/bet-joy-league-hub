@@ -77,19 +77,25 @@ function startInternalApi(client) {
       let invite_link = null;
       try {
         const chat = await client.getChatById(groupJid);
-        
+        // Allow some time for WhatsApp to settle
+        await new Promise(r => setTimeout(r, 1500));
+
         // Allow all participants to send messages
         await chat.setMessagesAdminsOnly(false);
-        // Allow all participants to edit group info (which includes sharing invite links and adding members)
+        // Allow all participants to edit group info
         await chat.setInfoAdminsOnly(false);
+        // Allow all participants to add new members
+        if (chat.setAddMembersAdminsOnly) {
+          await chat.setAddMembersAdminsOnly(false);
+        }
         
         // Set description with league link
         if (inviteCode) {
           const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
-          await chat.setDescription(description);
+          await chat.setDescription(description).catch(e => console.warn(`[WA] Failed to set description: ${e.message}`));
         }
 
-        console.log(`[WA] Set group to allow messages, info edits, and set description`);
+        console.log(`[WA] Configured group permissions and description`);
 
         const code = await chat.getInviteCode();
         invite_link = `https://chat.whatsapp.com/${code}`;

@@ -159,7 +159,7 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
 
     await pool.query(
       `INSERT INTO wa_groups (wa_group_id, league_id, invite_link)
-       VALUES ($1,$2,$3) ON CONFLICT (wa_group_id) DO UPDATE SET league_id=$2, is_active=true`,
+       VALUES ($1,$2,$3) ON CONFLICT (wa_group_id) DO UPDATE SET league_id=$2, is_active=true, invite_link=EXCLUDED.invite_link`,
       [result.wa_group_id, leagueId, result.invite_link || null]
     );
     await pool.query(`UPDATE leagues SET wa_enabled = true WHERE id = $1`, [leagueId]);
