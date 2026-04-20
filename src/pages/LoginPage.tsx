@@ -65,7 +65,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await signInWithGoogle(username || undefined);
+      await signInWithGoogle(username || undefined, referralCode || undefined);
     } catch (err: any) {
       setError(friendlyError(err));
     } finally {

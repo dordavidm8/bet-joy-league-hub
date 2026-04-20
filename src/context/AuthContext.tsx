@@ -18,7 +18,7 @@ interface AuthState {
   loading: boolean;
   signIn: (emailOrUsername: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string, referralCode?: string, displayName?: string) => Promise<void>;
-  signInWithGoogle: (username?: string) => Promise<void>;
+  signInWithGoogle: (username?: string, referralCode?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   sendPasswordReset: (emailOrUsername: string) => Promise<void>;
@@ -44,7 +44,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const baseName = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
           const tryRegister = async (username: string): Promise<void> => {
             try {
-              const regData = await registerUser(username, undefined, fbUser.photoURL || undefined);
+              const params = new URLSearchParams(window.location.search);
+              const referralCode = params.get('ref') || undefined;
+              const regData = await registerUser(username, referralCode, fbUser.photoURL || undefined);
               setBackendUser(regData.user);
             } catch (regErr: any) {
               if (regErr?.message?.includes('already exists')) {
@@ -122,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInWithGoogle = async (username?: string) => {
+  const signInWithGoogle = async (username?: string, referralCode?: string) => {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
     const photoURL = result.user.photoURL ?? undefined;
@@ -132,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBackendUser(data.user);
     } catch {
       const name = username || result.user.displayName || 'User';
-      const data = await registerUser(name, undefined, photoURL);
+      const data = await registerUser(name, referralCode, photoURL);
       setBackendUser(data.user);
     }
   };
