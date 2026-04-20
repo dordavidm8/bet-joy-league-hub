@@ -18,11 +18,25 @@ router.post('/register', async (req, res, next) => {
     const decoded = await admin.auth().verifyIdToken(header.split(' ')[1]);
 
     const existing = await pool.query(
-      'SELECT id, firebase_uid FROM users WHERE username = $1 OR firebase_uid = $2 OR (email = $3 AND email != \'\')',
+      'SELECT username, firebase_uid, email FROM users WHERE username = $1 OR firebase_uid = $2 OR (email = $3 AND email != \'\')',
       [username, decoded.uid, decoded.email || '']
     );
-    if (existing.rows.length > 0) {
-      return res.status(409).json({ error: 'Username or account already exists' });
+
+    if (existing.rows.some(r => r.firebase_uid === decoded.uid || (r.email === decoded.email && r.email !== ''))) {
+      return res.status(409).json({ error: 'Account already exists' });
+    }
+
+    let finalUsername = username;
+    if (existing.rows.some(r => r.username === username)) {
+      // Username conflict — find a unique one
+      let isTaken = true;
+      let attempts = 0;
+      while (isTaken && attempts < 5) {
+        finalUsername = `${username}${Math.floor(100 + Math.random() * 899)}`;
+        const check = await pool.query('SELECT id FROM users WHERE username = $1', [finalUsername]);
+        if (check.rows.length === 0) isTaken = false;
+        attempts++;
+      }
     }
 
     // Resolve referrer
@@ -39,7 +53,7 @@ router.post('/register', async (req, res, next) => {
     const userRes = await pool.query(
       `INSERT INTO users (firebase_uid, username, display_name, email, avatar_url, points_balance, referred_by)
        VALUES ($1, $2, $3, $4, $5, 5000, $6) RETURNING *`,
-      [decoded.uid, username, resolvedDisplayName, decoded.email || '', resolvedAvatar, referrerId]
+      [decoded.uid, finalUsername, resolvedDisplayName, decoded.email || '', resolvedAvatar, referrerId]
     );
     const user = userRes.rows[0];
 
