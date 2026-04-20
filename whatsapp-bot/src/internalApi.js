@@ -80,7 +80,9 @@ function startInternalApi(client) {
         
         // Allow all participants to send messages
         await chat.setMessagesAdminsOnly(false);
-        console.log(`[WA] Set group to allow messages from all members`);
+        // Allow all participants to edit group info (which includes sharing invite links and adding members)
+        await chat.setInfoAdminsOnly(false);
+        console.log(`[WA] Set group to allow messages and info edits from all members`);
 
         const code = await chat.getInviteCode();
         invite_link = `https://chat.whatsapp.com/${code}`;
