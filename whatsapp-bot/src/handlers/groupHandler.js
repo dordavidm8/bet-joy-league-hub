@@ -74,10 +74,20 @@ async function handleGroupMessage(client, msg, chat) {
   );
   if (!groupRes.rows[0]) return;
 
+  // Log incoming message for debugging
+  await pool.query(
+    `INSERT INTO wa_message_log (direction, phone, group_jid, message, action)
+     VALUES ('in', $1, $2, $3, 'group_message')`,
+    [extractNumber(msg.from), groupJid, msg.body]
+  ).catch(() => {});
+
   // ── Command: @kickoff טבלה ────────────────────────────────────────────────
   const body = (msg.body || '').toLowerCase();
+  const botNumber = client.info?.wid?.user;
+  
   const isBotMentioned = msg.mentionedIds?.some(id => id === client.info.wid._serialized) || 
-                         body.includes('@kickoff');
+                         body.includes('@kickoff') ||
+                         (botNumber && body.includes(`@${botNumber}`));
 
   if (isBotMentioned && body.includes('טבלה')) {
     const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
