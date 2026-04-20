@@ -306,4 +306,12 @@ router.put('/leagues/:id/settings', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/whatsapp/debug-logs
+router.get('/debug-logs', async (req, res, next) => {
+  try {
+    const r = await pool.query('SELECT * FROM wa_message_log ORDER BY created_at DESC LIMIT 50');
+    res.json(r.rows);
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
