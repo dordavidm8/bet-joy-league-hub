@@ -177,7 +177,7 @@ const ProfilePage = () => {
 
   const shareWhatsApp = () => {
     if (!referralLink) return;
-    const text = `הצטרף אליי ל-Kickoff 🎯⚽ — פלטפורמת הימורי כדורגל! הירשם דרך הלינק וקבל 1,000 נקודות בונוס: ${referralLink}`;
+    const text = "⚽ הצטרף אליי ל-Kickoff 🎯 — פלטפורמת הימורי כדורגל! הירשם דרך הלינק וקבל 1,000 נקודות בונוס: " + referralLink;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 

@@ -203,7 +203,10 @@ const LeagueDetailPage = () => {
               </button>
             </div>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`הצטרף לליגה שלי ב-Kickoff! 🏆\nשם: ${league.name}\nקוד: ${league.invite_code}\nפתח את האפליקציה → ליגות → הצטרף לליגה`)}`}
+              href={`https://wa.me/?text=${encodeURIComponent(`⚽️ הצטרף לליגה שלי ב-Kickoff! 🏆
+שם: ${league.name}
+קוד הזמנה: ${league.invite_code}
+🔗 הצטרף ישירות: https://kickoff-bet.app/leagues?join=${league.invite_code}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors"

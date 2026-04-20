@@ -79,10 +79,10 @@ const BetSlipPage = () => {
       }
 
       const text = isParlay && realBets.length >= 2
-        ? `פרלאי של ${realBets.length} הימורים עם מכפיל x${combinedOdds.toFixed(2)} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff`
+        ? `⚽️ פרלאי של ${realBets.length} הימורים עם מכפיל x${combinedOdds.toFixed(2)} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`
         : betSlip.length === 1
-          ? `המרתי על ${betSlip[0].selectedOption} (x${betSlip[0].odds}) ב-${betSlip[0].gameLabel} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff`
-          : `שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-Kickoff`;
+          ? `⚽️ הימרתי על ${betSlip[0].selectedOption} (x${betSlip[0].odds}) ב-${betSlip[0].gameLabel} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`
+          : `⚽️ שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`;
       setShareText(text);
       clearBetSlip();
       await refreshUser();
