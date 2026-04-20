@@ -46,14 +46,22 @@ router.post('/register', async (req, res, next) => {
     );
 
     if (referrerId) {
+      // Bonus for referrer
       await pool.query('UPDATE users SET points_balance = points_balance + 1000 WHERE id = $1', [referrerId]);
       await pool.query(
-        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description) VALUES ($1, 1000, 'referral', $2, 'Referral bonus')`,
+        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description) VALUES ($1, 1000, 'referral_earned', $2, 'Referral bonus (new user joined)')`,
         [referrerId, user.id]
       );
       await pool.query(
         `INSERT INTO referrals (referrer_id, referred_id, points_awarded) VALUES ($1, $2, 1000)`,
         [referrerId, user.id]
+      );
+
+      // Bonus for referred user (the new user)
+      await pool.query('UPDATE users SET points_balance = points_balance + 1000 WHERE id = $1', [user.id]);
+      await pool.query(
+        `INSERT INTO point_transactions (user_id, amount, type, description) VALUES ($1, 1000, 'referral_bonus', 'Referral sign-up bonus')`,
+        [user.id]
       );
     }
 
