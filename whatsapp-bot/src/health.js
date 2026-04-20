@@ -10,29 +10,29 @@ function getMemoryUsage() {
 }
 
 async function getHealthStatus() {
-  let dbStatus = '✅';
-  let faults = [];
-  try { await pool.query('SELECT 1'); } catch (e) { 
-    dbStatus = '❌'; 
-    faults.push(`DB Error: ${e.message}`);
-  }
+  const mem = process.memoryUsage();
+  const totalRamMB = Math.round(os.totalmem() / 1024 / 1024);
+  const usedRamMB = Math.round((os.totalmem() - os.freemem()) / 1024 / 1024);
+  const ramPct = ((usedRamMB / totalRamMB) * 100).toFixed(1);
+  const heapUsedMB = Math.round(mem.heapUsed / 1024 / 1024);
+  const heapTotalMB = Math.round(mem.heapTotal / 1024 / 1024);
+  const heapPct = ((heapUsedMB / heapTotalMB) * 100).toFixed(1);
+  const rssMB = Math.round(mem.rss / 1024 / 1024);
+  const rssPct = ((rssMB / totalRamMB) * 100).toFixed(1);
 
-  // Check for stuck pending messages (> 1 hour)
-  try {
-    const stuckRes = await pool.query(`SELECT COUNT(*) FROM wa_pending_messages WHERE sent = false AND created_at < NOW() - INTERVAL '1 hour'`);
-    const stuckCount = parseInt(stuckRes.rows[0].count);
-    if (stuckCount > 0) {
-      faults.push(`${stuckCount} pending messages stuck for >1 hour`);
-    }
-  } catch (e) {}
+  const now = new Date().toLocaleString('he-IL', { 
+    timeZone: 'Asia/Jerusalem', 
+    day: '2-digit', month: '2-digit', year: 'numeric', 
+    hour: '2-digit', minute: '2-digit', second: '2-digit' 
+  }).replace(/\//g, '.');
 
-  return `📊 *KickOff Bot Status Report*
-Memory: ${getMemoryUsage()}
-DB: ${dbStatus}
-Uptime: ${Math.round(process.uptime() / 60)} mins
-OS: ${os.platform()} (${os.release()})
-Load: ${os.loadavg().map(l => l.toFixed(1)).join(', ')}
-Detected Faults: ${faults.length > 0 ? faults.join(', ') : 'None ✅'}`;
+  return `📊 *סטטוס בוט (KickOff)*
+🟢 פעיל
+📅 *תאריך ושעה:* ${now}
+
+🖥️ זיכרון מערכת: ${usedRamMB}MB / ${totalRamMB}MB (${ramPct}%)
+🧠 זיכרון תהליך (Heap): ${heapUsedMB}MB / ${heapTotalMB}MB (${heapPct}%)
+📦 RSS (זיכרון פיזי): ${rssMB}MB / ${totalRamMB}MB (${rssPct}%)`;
 }
 
 function startHealthChecks(client) {
