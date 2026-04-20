@@ -5,7 +5,7 @@ import AvatarUploader from "@/components/AvatarUploader";
 import { motion } from "framer-motion";
 import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X, Smartphone, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 const ProfilePage = () => {
