@@ -31,8 +31,14 @@ router.post('/register', async (req, res, next) => {
       // Username conflict — find a unique one
       let isTaken = true;
       let attempts = 0;
-      while (isTaken && attempts < 5) {
-        finalUsername = `${username}${Math.floor(100 + Math.random() * 899)}`;
+      while (isTaken && attempts < 15) {
+        // Randomly pick 1, 2, or 3 digits for the suffix
+        const digitCount = Math.floor(Math.random() * 3) + 1;
+        const min = Math.pow(10, digitCount - 1);
+        const max = Math.pow(10, digitCount) - 1;
+        const suffix = Math.floor(Math.random() * (max - min + 1)) + min;
+        
+        finalUsername = `${username}${suffix}`;
         const check = await pool.query('SELECT id FROM users WHERE username = $1', [finalUsername]);
         if (check.rows.length === 0) isTaken = false;
         attempts++;
