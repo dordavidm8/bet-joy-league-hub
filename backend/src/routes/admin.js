@@ -424,21 +424,38 @@ router.post('/notify', async (req, res, next) => {
     return res.status(400).json({ error: 'type must be special_offer or admin_message' });
   }
   const { createNotification } = require('../services/notificationService');
+  const { sendDM } = require('../services/whatsappBotService');
   try {
-    let userIds = [];
+    let users = [];
     if (!target || target === 'all') {
-      const result = await pool.query(`SELECT id FROM users`);
-      userIds = result.rows.map(r => r.id);
+      const result = await pool.query(`SELECT id, phone_number, phone_verified, wa_opt_in FROM users`);
+      users = result.rows;
     } else {
-      const result = await pool.query(`SELECT id FROM users WHERE username ILIKE $1`, [target]);
+      const result = await pool.query(`SELECT id, phone_number, phone_verified, wa_opt_in FROM users WHERE username ILIKE $1`, [target]);
       if (!result.rows[0]) return res.status(404).json({ error: 'משתמש לא נמצא' });
-      userIds = [result.rows[0].id];
+      users = [result.rows[0]];
     }
-    for (const userId of userIds) {
-      await createNotification(userId, { type, title, body });
+
+    for (const u of users) {
+      console.log(`[AdminNotify] Processing user ${u.id} (${u.phone_number}), verified: ${u.phone_verified}, opt-in: ${u.wa_opt_in}`);
+      
+      // Internal site notification
+      await createNotification(u.id, { type, title, body });
+
+      // WhatsApp notification
+      if (u.phone_number && u.phone_verified && u.wa_opt_in) {
+        console.log(`[AdminNotify] Sending WA to ${u.phone_number}`);
+        const waText = `הודעה מצוות KickOff:\n*${title}*\n${body || ''}`;
+        sendDM(u.phone_number, waText).catch(e => console.error(`[AdminNotify] WA error for ${u.id}:`, e.message));
+      } else {
+        console.log(`[AdminNotify] Skipping WA for user ${u.id}: missing phone, verified, or opt-in`);
+      }
     }
-    res.json({ message: 'Notifications sent', sent_to: userIds.length });
-  } catch (err) { next(err); }
+    res.json({ message: 'Notifications sent', sent_to: users.length });
+  } catch (err) { 
+    console.error(`[AdminNotify] Global error:`, err.message);
+    next(err); 
+  }
 });
 
 // GET /api/admin/quiz — list all quiz questions
