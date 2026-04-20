@@ -52,7 +52,7 @@ router.post('/link-phone', authenticate, async (req, res, next) => {
     );
 
     const sent = await sendDM(normalized,
-      `👋 קוד האימות לקיקאוף: *${code}*\nקוד זה תקף ל-10 דקות.`
+      `👋 קוד האימות ל-KickOff: *${code}*\nקוד זה תקף ל-10 דקות.`
     );
 
     // In stub mode, return the code directly so dev can test
