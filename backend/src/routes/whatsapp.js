@@ -77,10 +77,11 @@ router.post('/verify', authenticate, async (req, res, next) => {
     if (!record) return res.status(400).json({ error: 'קוד שגוי או פג תוקף' });
 
     await pool.query(`UPDATE wa_verification_codes SET used = true WHERE id = $1`, [record.id]);
-    await pool.query(
-      `UPDATE users SET phone_number = $1, phone_verified = true WHERE id = $2`,
+    const userRes = await pool.query(
+      `UPDATE users SET phone_number = $1, phone_verified = true WHERE id = $2 RETURNING username`,
       [record.phone, req.user.id]
     );
+    const username = userRes.rows[0]?.username || 'שלך';
 
     // Upsert session
     await pool.query(
@@ -88,6 +89,9 @@ router.post('/verify', authenticate, async (req, res, next) => {
        ON CONFLICT (phone) DO UPDATE SET user_id = $2, last_msg_at = NOW()`,
       [record.phone, req.user.id]
     );
+
+    // Send the confirmation welcome message
+    await sendDM(record.phone, `המשתמש ${username} חובר בהצלחה לטלפון זה!`);
 
     res.json({ message: 'מספר אומת בהצלחה', phone: record.phone });
   } catch (err) { next(err); }
