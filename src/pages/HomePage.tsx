@@ -194,7 +194,7 @@ const HomePage = () => {
                       <span className="font-bold cursor-pointer hover:text-primary" onClick={() => navigate(`/profile/${item.user.username}`)}>
                         {item.user.username}
                       </span>
-                      {" "}ניצח{" "}
+                      {" "}זכה ב-{" "}
                       <span className="font-bold text-primary">+{item.amount?.toLocaleString()} נק׳</span>
                       {item.description?.includes(" vs ") && (
                         <span className="text-muted-foreground text-xs"> · {item.description.replace("Bet won: ", "").replace("League payout: ", "")}</span>

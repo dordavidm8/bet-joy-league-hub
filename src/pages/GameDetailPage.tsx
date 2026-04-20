@@ -17,7 +17,7 @@ function useBettingCountdown(startTime: string) {
     const update = () => {
       const now = Date.now();
       const start = new Date(startTime).getTime();
-      const closesAt = start - 60 * 60 * 1000;
+      const closesAt = start - 10 * 60 * 1000;
       const diff = closesAt - now;
       if (diff <= 0) { setLabel(null); return; }
       const h = Math.floor(diff / 3_600_000);
@@ -343,7 +343,7 @@ const GameDetailPage = () => {
                                     : "bg-secondary border-border"
                                 }`}
                               >
-                                גלובלי
+                                הימור חופשי
                               </button>
 
                               {/* League chips */}
@@ -422,7 +422,7 @@ const GameDetailPage = () => {
                                 key={item.id}
                                 className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full"
                               >
-                                {item.league_name ?? "גלובלי"}
+                                {item.league_name ?? "הימור חופשי"}
                                 {item.bet_mode === "initial_balance" ? " · ניקוד" : ` · ${item.points} נק׳`}
                               </span>
                             ))}

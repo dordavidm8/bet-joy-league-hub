@@ -170,7 +170,7 @@ async function sendMyBets(msg, user) {
         betDetail += ` (תוצאה: ${b.exact_score_prediction})`;
       }
       
-      const leagueLabel = b.league_name ? `🏆 ליגת ${b.league_name}` : `🌍 גלובלי`;
+      const leagueLabel = b.league_name ? `🏆 ליגת ${b.league_name}` : `✉️ הימור חופשי`;
       const payoutInfo = b.status === 'won' ? ` | זכייה: *${b.actual_payout}*` : 
                          b.status === 'pending' ? ` | זכייה אפשרית: *${b.potential_payout}*` : '';
 

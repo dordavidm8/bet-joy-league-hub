@@ -15,10 +15,10 @@ function validateGameWindow(game) {
     const now = new Date();
     const start = new Date(game.start_time);
     const oneMonthBefore = new Date(start.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const oneHourBefore = new Date(start.getTime() - 60 * 60 * 1000);
-    if (now < oneMonthBefore || now > oneHourBefore) {
+    const tenMinutesBefore = new Date(start.getTime() - 10 * 60 * 1000);
+    if (now < oneMonthBefore || now > tenMinutesBefore) {
       throw Object.assign(
-        new Error('Betting is only available from 1 month to 1 hour before the game'),
+        new Error('Betting is only available from 1 month to 10 minutes before the game'),
         { status: 400 }
       );
     }
@@ -142,7 +142,7 @@ router.post('/', authenticate, async (req, res, next) => {
         [req.user.id, bet_question_id, lid]
       );
       if (dupCheck.rows[0]) {
-        const ctx = lid ? leagueData[lid]?.name : 'גלובלי';
+        const ctx = lid ? leagueData[lid]?.name : 'הימור חופשי';
         throw Object.assign(new Error(`כבר המרת על שאלה זו (${ctx})`), { status: 409 });
       }
     }

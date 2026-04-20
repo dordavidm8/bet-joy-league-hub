@@ -181,7 +181,7 @@ const BetSlipPage = () => {
                       ? "bg-blue-500/10 text-blue-600"
                       : "bg-secondary text-muted-foreground"
                 }`}>
-                  {bet.league_name ?? "גלובלי"}
+                  {bet.league_name ?? "הימור חופשי"}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {bet.bet_mode === "initial_balance"
