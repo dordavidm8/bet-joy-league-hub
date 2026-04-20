@@ -42,7 +42,7 @@ async function sendFeaturedMatchNotifications() {
         // WhatsApp notification
         if (u.phone_number && u.phone_verified && u.wa_opt_in) {
           const waText = 
-            `🔥 *משחק מומלץ: ${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}*\n` +
+            `🔥 משחק מומלץ: ${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}\n` +
             `בונוס של +${game.featured_bonus_pct}% על הסיכויים! ✨\n` +
             `המשחק מתחיל ב-${kickoffTime}\n\n` +
             `להימור מהיר: https://kickoff-bet.app/game/${game.id}`;
