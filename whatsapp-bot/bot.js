@@ -40,8 +40,12 @@ client.on('ready', async () => {
   
   // Notify developer of startup
   try {
+    const { getHealthStatus } = require('./src/health');
+    const status = await getHealthStatus();
     await client.sendMessage(DEVELOPER_NUMBER, `✅ *Bot Started/Reconnected*
-Time: ${new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}`);
+Time: ${new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}
+
+${status}`);
   } catch (e) {}
 });
 

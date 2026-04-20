@@ -18,20 +18,19 @@ function getHelpText() {
 
 async function handleDmMessage(client, msg) {
   const content = msg.body.trim().toLowerCase();
-  
-  // Developer Commands - Check BEFORE anything else
+  const contact = await msg.getContact();
+  const rawPhone = contact.number;
+  const { normalizePhone } = require('../utils/phoneUtils');
+  const phone = normalizePhone(rawPhone);
+
+  // Developer Commands
   if (content === '/status' || content === 'status' || content === 'סטטוס') {
-    if (msg.from === DEVELOPER_NUMBER) {
+    if (phone === '972526980000') {
       const status = await getHealthStatus();
       await msg.reply(status);
       return;
     }
   }
-
-  const contact = await msg.getContact();
-  const rawPhone = contact.number;
-  const { normalizePhone } = require('../utils/phoneUtils');
-  const phone = normalizePhone(rawPhone);
   
   // Check if they are linked AT ALL
   const userRes = await pool.query(
