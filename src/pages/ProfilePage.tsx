@@ -207,10 +207,10 @@ const ProfilePage = () => {
         )}
 
         <h2 className="text-xl font-black">
-          {firebaseUser?.displayName || backendUser?.username || firebaseUser?.email?.split("@")[0] || "משתמש"}
+          {firebaseUser?.displayName || backendUser?.username?.toLowerCase() || firebaseUser?.email?.split("@")[0] || "משתמש"}
         </h2>
         {backendUser?.username && firebaseUser?.displayName && firebaseUser.displayName !== backendUser.username && (
-          <p className="text-xs text-muted-foreground">@{backendUser.username}</p>
+          <p className="text-xs text-muted-foreground">@{backendUser.username.toLowerCase()}</p>
         )}
         <p className="text-xs font-mono bg-secondary px-2.5 py-1 rounded-full text-muted-foreground">
           #{(backendUser?.id ?? firebaseUser?.uid ?? "").replace(/-/g, "").substring(0, 8).toUpperCase()}

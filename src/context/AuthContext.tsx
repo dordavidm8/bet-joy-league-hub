@@ -33,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper to ensure username contains only English letters, numbers, and basic symbols
   const sanitizeUsername = (name: string): string => {
-    return name.replace(/[^a-zA-Z0-9._-]/g, '') || 'User';
+    return name.replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase() || 'user';
   };
 
   // Sync backend user after Firebase auth state changes

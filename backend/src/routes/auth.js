@@ -8,8 +8,8 @@ router.post('/register', async (req, res, next) => {
   const { username: rawUsername, display_name, referral_code: referralCode, avatar_url } = req.body;
   if (!rawUsername) return res.status(400).json({ error: 'username required' });
   
-  // Auto-sanitize username: ensure only English letters, numbers, and basic symbols, no spaces.
-  const username = rawUsername.replace(/[^a-zA-Z0-9._-]/g, '') || `User_${Math.random().toString(36).slice(-4)}`;
+  // Auto-sanitize username: ensure only English letters, numbers, and basic symbols, no spaces, all lowercase.
+  const username = rawUsername.replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase() || `user_${Math.random().toString(36).slice(-4)}`;
 
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing token' });

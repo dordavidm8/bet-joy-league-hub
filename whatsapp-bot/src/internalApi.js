@@ -57,30 +57,45 @@ function startInternalApi(client) {
 
   async function setupGroup(chat, inviteCode) {
     let invite_link = null;
+    // 1. Get invite link immediately so the UI can update
     try {
       const code = await chat.getInviteCode();
       invite_link = `https://chat.whatsapp.com/${code}`;
-      console.log(`[WA] Generated invite link: ${invite_link}`);
+      console.log(`[WA] Initial link fetch: ${invite_link}`);
     } catch (e) {
-      console.error(`[WA] getInviteCode FAIL: ${e.message}`);
+      console.error(`[WA] Initial link fetch FAIL: ${e.message}`);
     }
 
-    await new Promise(r => setTimeout(r, 4000));
+    // 2. Perform everything else in background to avoid blocking the API
+    (async () => {
+      try {
+        console.log(`[WA] Starting background setup for group ${chat.id._serialized}`);
+        
+        // Wait 10s for initial sync before permissions
+        await new Promise(r => setTimeout(r, 10000));
+        
+        await chat.setMessagesAdminsOnly(false).catch(() => {});
+        await chat.setInfoAdminsOnly(false).catch(() => {});
+        if (chat.setAddMembersAdminsOnly) await chat.setAddMembersAdminsOnly(false).catch(() => {});
+        else if (chat.setAddParticipantsAdminsOnly) await chat.setAddParticipantsAdminsOnly(false).catch(() => {});
+        
+        console.log(`[WA] Background: Sync and permissions set`);
 
-    try {
-      await chat.setMessagesAdminsOnly(false).catch(() => {});
-      await chat.setInfoAdminsOnly(false).catch(() => {});
-      if (chat.setAddMembersAdminsOnly) await chat.setAddMembersAdminsOnly(false).catch(() => {});
-      else if (chat.setAddParticipantsAdminsOnly) await chat.setAddParticipantsAdminsOnly(false).catch(() => {});
-      console.log(`[WA] Configured group permissions`);
-    } catch (e) {
-      console.warn(`[WA] Permission sync issue: ${e.message}`);
-    }
-    
-    if (inviteCode) {
-      const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
-      await chat.setDescription(description).catch(e => console.warn(`[WA] Failed to set description: ${e.message}`));
-    }
+        // Wait another 50s (total 60s) before description
+        await new Promise(r => setTimeout(r, 50000));
+        
+        if (inviteCode) {
+          const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
+          await chat.setDescription(description).catch(e => {
+            console.warn(`[WA] Description background update FAIL: ${e.message}`);
+          });
+          console.log(`[WA] Background: Description set`);
+        }
+      } catch (err) {
+        console.error('[WA] Background setup block CRASH:', err.message);
+      }
+    })();
+
     return invite_link;
   }
 

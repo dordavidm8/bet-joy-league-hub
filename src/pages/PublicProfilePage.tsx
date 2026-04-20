@@ -62,7 +62,7 @@ const PublicProfilePage = () => {
         </div>
 
         <div className="flex flex-col items-center gap-1">
-          <h2 className="text-xl font-black">@{user.username}</h2>
+          <h2 className="text-xl font-black">@{user.username.toLowerCase()}</h2>
           <p className="text-xs text-muted-foreground">הצטרף {memberSince}</p>
           <div className="flex items-center gap-3 mt-1">
             <div className="flex items-center gap-1">

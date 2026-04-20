@@ -205,7 +205,7 @@ const UsersTab = () => {
             <tbody>
               {users.map(u => (
                 <tr key={u.id} className="border-t border-border/50 hover:bg-muted/30">
-                  <td className="px-3 py-2"><p className="font-bold">@{u.username}</p><p className="text-muted-foreground text-[10px]">{u.email}</p></td>
+                  <td className="px-3 py-2"><p className="font-bold">@{u.username.toLowerCase()}</p><p className="text-muted-foreground text-[10px]">{u.email}</p></td>
                   <td className="px-3 py-2 text-muted-foreground">{u.display_name || "—"}</td>
                   <td className="px-3 py-2">
                     {u.phone_number ? (

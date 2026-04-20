@@ -159,7 +159,10 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
 
     await pool.query(
       `INSERT INTO wa_groups (wa_group_id, league_id, invite_link)
-       VALUES ($1,$2,$3) ON CONFLICT (wa_group_id) DO UPDATE SET league_id=$2, is_active=true, invite_link=EXCLUDED.invite_link`,
+       VALUES ($1,$2,$3) ON CONFLICT (wa_group_id) DO UPDATE SET 
+         league_id=$2, 
+         is_active=true, 
+         invite_link = COALESCE(EXCLUDED.invite_link, wa_groups.invite_link)`,
       [result.wa_group_id, leagueId, result.invite_link || null]
     );
     await pool.query(`UPDATE leagues SET wa_enabled = true WHERE id = $1`, [leagueId]);
@@ -196,7 +199,7 @@ router.post('/leagues/:id/link-group', authenticate, async (req, res, next) => {
 router.post('/leagues/:id/refresh-invite-link', authenticate, async (req, res, next) => {
   const { id: leagueId } = req.params;
   try {
-    const leagueRes = await pool.query(`SELECT creator_id FROM leagues WHERE id = $1`, [leagueId]);
+    const leagueRes = await pool.query(`SELECT creator_id, invite_code FROM leagues WHERE id = $1`, [leagueId]);
     if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not found' });
     if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
 
@@ -205,7 +208,10 @@ router.post('/leagues/:id/refresh-invite-link', authenticate, async (req, res, n
     );
     if (!groupRes.rows[0]) return res.status(404).json({ error: 'No active WA group' });
 
-    const result = await callBot('/internal/get-invite-link', { groupJid: groupRes.rows[0].wa_group_id });
+    const result = await callBot('/internal/get-invite-link', { 
+      groupJid: groupRes.rows[0].wa_group_id,
+      inviteCode: leagueRes.rows[0].invite_code
+    });
     if (!result?.invite_link) return res.status(503).json({ error: 'הבוט לא הצליח לקבל לינק. הוסף את הבוט כמנהל בקבוצה ונסה שוב.' });
 
     await pool.query(

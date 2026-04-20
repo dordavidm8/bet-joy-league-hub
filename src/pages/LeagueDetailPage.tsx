@@ -327,13 +327,13 @@ const LeagueDetailPage = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold truncate flex items-center gap-1">
                       {isMe ? (
-                        <span>{member.display_name || member.username}</span>
+                        <span>{member.display_name || member.username.toLowerCase()}</span>
                       ) : (
                         <button
-                          onClick={() => navigate(`/profile/${member.username}`)}
+                          onClick={() => navigate(`/profile/${member.username.toLowerCase()}`)}
                           className="hover:text-primary transition-colors truncate"
                         >
-                          {member.display_name || member.username}
+                          {member.display_name || member.username.toLowerCase()}
                         </button>
                       )}
                       {member.id === league.creator_id && <Crown size={11} className="text-amber-500 shrink-0" />}
