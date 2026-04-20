@@ -17,11 +17,21 @@ function getHelpText() {
 }
 
 async function handleDmMessage(client, msg) {
+  const content = msg.body.trim().toLowerCase();
+  
+  // Developer Commands - Check BEFORE anything else
+  if (content === '/status' || content === 'status' || content === 'סטטוס') {
+    if (msg.from === DEVELOPER_NUMBER) {
+      const status = await getHealthStatus();
+      await msg.reply(status);
+      return;
+    }
+  }
+
   const contact = await msg.getContact();
-  const rawPhone = contact.number; // get the actual phone number
+  const rawPhone = contact.number;
   const { normalizePhone } = require('../utils/phoneUtils');
   const phone = normalizePhone(rawPhone);
-  console.log(`[WA] DM from ${msg.from} | Contact: ${contact.number} | normalized: ${phone}`);
   
   // Check if they are linked AT ALL
   const userRes = await pool.query(
@@ -34,8 +44,6 @@ async function handleDmMessage(client, msg) {
     await client.sendMessage(msg.from, `❌ אני לא מזהה את המשתמש.\n\nיש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://kickoff-bet.app/profile`, { linkPreview: false });
     return;
   }
-
-  const content = msg.body.trim();
 
   // Check if this is a reply to a game message (DM bet)
   if (msg.hasQuotedMsg) {
@@ -66,7 +74,7 @@ async function handleDmMessage(client, msg) {
   }
 
   // Route commands
-  const cmd = content.toLowerCase();
+  const cmd = content;
   if (cmd === '/help' || cmd === 'עזרה' || cmd === 'תפריט') {
     await msg.reply(getHelpText());
   } else if (cmd === '/balance' || cmd === 'יתרה') {
@@ -76,13 +84,6 @@ async function handleDmMessage(client, msg) {
   } else if (cmd === 'ביטול' || cmd === 'cancel') {
     await clearState(phone);
     await msg.reply('✅ הפעולה בוטלה');
-  } else if (cmd === '/status' || cmd === 'status') {
-    if (msg.from === DEVELOPER_NUMBER) {
-      const status = await getHealthStatus();
-      await msg.reply(status);
-    } else {
-      await msg.reply(`❌ אין לך הרשאה לפעולה זו.`);
-    }
   } else {
     await msg.reply(`❌ לא זיהיתי את הפקודה שלך.\n\n${getHelpText()}`);
   }
