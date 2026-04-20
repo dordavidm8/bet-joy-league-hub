@@ -46,10 +46,7 @@ client.on('ready', async () => {
   try {
     const { getHealthStatus } = require('./src/health');
     const status = await getHealthStatus();
-    await client.sendMessage(DEVELOPER_NUMBER, `✅ *Bot Started/Reconnected*
-Time: ${new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}
-
-${status}`);
+    await client.sendMessage(DEVELOPER_NUMBER, `✅ *הבוט הופעל/אותחל מחדש*\n\n${status}`);
   } catch (e) {}
 });
 
