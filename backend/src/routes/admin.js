@@ -445,7 +445,7 @@ router.post('/notify', async (req, res, next) => {
       // WhatsApp notification
       if (u.phone_number && u.phone_verified && u.wa_opt_in) {
         console.log(`[AdminNotify] Sending WA to ${u.phone_number}`);
-        const waText = `הודעה מצוות KickOff:\n*${title}*\n${body || ''}`;
+        const waText = `הודעה מצוות KickOff:\n\n*${title}*\n${body || ''}`;
         sendDM(u.phone_number, waText).catch(e => console.error(`[AdminNotify] WA error for ${u.id}:`, e.message));
       } else {
         console.log(`[AdminNotify] Skipping WA for user ${u.id}: missing phone, verified, or opt-in`);
