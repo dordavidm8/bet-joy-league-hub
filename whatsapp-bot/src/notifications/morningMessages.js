@@ -12,11 +12,11 @@ async function sendMorningMessages(client, league) {
   // Fetch games for tomorrow that belong to leagues this league cares about
   // (all games — league filtering happens through league_members / bets context)
   const gamesRes = await pool.query(
-    `SELECT g.id, g.home_team, g.away_team, g.commence_time
+    `SELECT g.id, g.home_team, g.away_team, g.start_time
      FROM games g
      WHERE g.status = 'scheduled'
-       AND g.commence_time BETWEEN $1 AND $2
-     ORDER BY g.commence_time`,
+       AND g.start_time BETWEEN $1 AND $2
+     ORDER BY g.start_time`,
     [tomorrowStart, tomorrowEnd]
   );
 

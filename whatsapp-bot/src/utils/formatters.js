@@ -16,7 +16,7 @@ function formatPoints(n) {
 function buildGameMessage(game, leagueSettings) {
   const homeName = game.home_team_he || game.home_team;
   const awayName = game.away_team_he || game.away_team;
-  const kickoff = new Date(game.commence_time);
+  const kickoff = new Date(game.start_time);
   const timeStr = kickoff.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
   const dateStr = kickoff.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric', timeZone: 'Asia/Jerusalem' });
 

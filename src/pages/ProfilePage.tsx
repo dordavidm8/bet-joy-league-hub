@@ -39,6 +39,28 @@ const ProfilePage = () => {
   const [waCode, setWaCode] = useState("");
   const [waStep, setWaStep] = useState<"idle" | "awaiting_code">("idle");
   const [waMsg, setWaMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [waTimer, setWaTimer] = useState(0);
+  const [canResend, setCanResend] = useState(false);
+
+  // New timer effect
+  useEffect(() => {
+    let interval: any;
+    if (waTimer > 0) {
+      interval = setInterval(() => {
+        setWaTimer((t) => t - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [waTimer]);
+
+  useEffect(() => {
+    if (waTimer === 240) { // enabled after 60 seconds (300 - 60)
+      setCanResend(true);
+    }
+    if (waTimer === 0) {
+      setCanResend(true);
+    }
+  }, [waTimer]);
 
   const { data: waData, refetch: refetchWa } = useQuery({
     queryKey: ["wa-status"],
@@ -50,6 +72,8 @@ const ProfilePage = () => {
     mutationFn: () => linkPhone(waPhone),
     onSuccess: (d) => {
       setWaStep("awaiting_code");
+      setWaTimer(300); // 5 minutes
+      setCanResend(false);
       setWaMsg({ ok: true, text: d.debug_code ? `[STUB] קוד: ${d.debug_code}` : 'קוד נשלח לוואטסאפ שלך' });
     },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
@@ -444,14 +468,33 @@ const ProfilePage = () => {
                 </>
               ) : waStep === "awaiting_code" ? (
                 <>
-                  <p className="text-xs text-muted-foreground">הזן את הקוד שנשלח אליך</p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs text-muted-foreground">הזן את הקוד שנשלח אליך</p>
+                    {waTimer > 0 && (
+                      <p className="text-[10px] text-primary/80 font-bold">
+                        הקוד יפוג בעוד {Math.floor(waTimer / 60)}:{String(waTimer % 60).padStart(2, '0')}
+                      </p>
+                    )}
+                  </div>
                   <input type="text" placeholder="קוד 6 ספרות" value={waCode} onChange={e => setWaCode(e.target.value)}
                     maxLength={6} className="bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary tracking-widest text-center" />
-                  <button onClick={() => waVerifyMutation.mutate()} disabled={waCode.length < 6 || waVerifyMutation.isPending}
-                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
-                    {waVerifyMutation.isPending ? "מאמת..." : "אמת קוד"}
-                  </button>
-                  <button onClick={() => { setWaStep("idle"); setWaMsg(null); }} className="text-xs text-muted-foreground text-center">← חזרה</button>
+                  
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => waVerifyMutation.mutate()} disabled={waCode.length < 6 || waVerifyMutation.isPending}
+                      className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
+                      {waVerifyMutation.isPending ? "מאמת..." : "אמת קוד"}
+                    </button>
+                    
+                    <button 
+                      onClick={() => waLinkMutation.mutate()} 
+                      disabled={!canResend || waLinkMutation.isPending}
+                      className={`text-xs font-bold transition-colors ${canResend ? 'text-primary hover:underline' : 'text-muted-foreground'}`}
+                    >
+                      {waLinkMutation.isPending ? "שולח שוב..." : "לא קיבלתי קוד? שלח שוב"}
+                    </button>
+                  </div>
+                  
+                  <button onClick={() => { setWaStep("idle"); setWaMsg(null); setWaTimer(0); }} className="text-xs text-muted-foreground text-center">← חזרה</button>
                 </>
               ) : (
                 <>
@@ -462,6 +505,14 @@ const ProfilePage = () => {
                     className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
                     {waLinkMutation.isPending ? "שולח..." : "שלח קוד אימות"}
                   </button>
+                  <a 
+                    href="https://wa.me/972544390945" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="text-[10px] text-center text-muted-foreground hover:text-primary transition-colors mt-1"
+                  >
+                    לא מוצא את הבוט? לחץ כאן לפתיחת צ'אט
+                  </a>
                 </>
               )}
               {waMsg && <p className={`text-xs text-center ${waMsg.ok ? 'text-green-600' : 'text-destructive'}`}>{waMsg.text}</p>}

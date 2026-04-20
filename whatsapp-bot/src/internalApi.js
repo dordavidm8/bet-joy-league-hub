@@ -55,21 +55,32 @@ function startInternalApi(client) {
     if (!name || !phones?.length) return res.status(400).json({ error: 'name and phones required' });
     try {
       const participants = phones.map(toJid);
+      console.log(`[WA] Attempting to create group "${name}" with participants:`, participants);
+
       const result = await client.createGroup(name, participants);
-      // result: { gid: { _serialized: 'JID@g.us' }, ... }
       const groupJid = result.gid?._serialized || result.gid;
+      console.log(`[WA] Group created: ${groupJid}`);
+      
+      if (result.participants) {
+        Object.entries(result.participants).forEach(([jid, status]) => {
+          console.log(`[WA] Participant ${jid} status: ${status.code}`);
+        });
+      }
 
       // Try to get invite link
       let invite_link = null;
       try {
         const chat = await client.getChatById(groupJid);
-        invite_link = await chat.getInviteCode();
-        invite_link = `https://chat.whatsapp.com/${invite_link}`;
-      } catch {}
+        const code = await chat.getInviteCode();
+        invite_link = `https://chat.whatsapp.com/${code}`;
+        console.log(`[WA] Generated invite link: ${invite_link}`);
+      } catch (e) {
+        console.warn(`[WA] Could not get invite link: ${e.message}`);
+      }
 
       res.json({ wa_group_id: groupJid, invite_link });
     } catch (err) {
-      console.error('[internal/create-group]', err.message);
+      console.error('[WA] create-group FAIL:', err.message);
       res.status(500).json({ error: err.message });
     }
   });

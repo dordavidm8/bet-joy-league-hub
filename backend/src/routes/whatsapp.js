@@ -44,7 +44,7 @@ router.post('/link-phone', authenticate, async (req, res, next) => {
     if (taken.rows[0]) return res.status(409).json({ error: 'מספר זה כבר מקושר לחשבון אחר' });
 
     const code = generateOTP();
-    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
     await pool.query(
       `INSERT INTO wa_verification_codes (user_id, phone, code, expires_at) VALUES ($1,$2,$3,$4)`,
@@ -132,13 +132,22 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
     if (league.access_type === 'public') return res.status(403).json({ error: 'ליגות ציבוריות אינן יכולות להתחבר לקבוצת ווטסאפ' });
     if (league.creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator can manage WA' });
 
-    const userRes = await pool.query(`SELECT phone_number, phone_verified FROM users WHERE id = $1`, [req.user.id]);
-    const user = userRes.rows[0];
-    if (!user.phone_verified) return res.status(400).json({ error: 'יש לאמת מספר טלפון תחילה' });
+    const membersRes = await pool.query(
+      `SELECT u.phone_number FROM league_members lm
+       JOIN users u ON u.id = lm.user_id
+       WHERE lm.league_id = $1 AND u.phone_verified = true AND lm.is_active = true`,
+      [leagueId]
+    );
+
+    if (membersRes.rows.length === 0) {
+      return res.status(400).json({ error: 'אין משתתפים מאומתים בליגה ליצירת קבוצה' });
+    }
+
+    const participantPhones = membersRes.rows.map(r => r.phone_number);
 
     const result = await callBot('/internal/create-group', {
-      name: `kickoff - ${league.name} ⚽`,
-      phones: [user.phone_number],
+      name: `Kickoff - ${league.name} ⚽`,
+      phones: participantPhones,
     });
 
     if (!result?.wa_group_id) {

@@ -32,6 +32,7 @@ client.on('qr', (qr) => {
 // ── Ready ────────────────────────────────────────────────────────────────────
 client.on('ready', () => {
   console.log('[WA] הבוט מחובר ✅');
+  console.log('[WA] My Number: ' + client.info.wid.user);
   startInternalApi(client);
   startScheduledJobs(client);
 });

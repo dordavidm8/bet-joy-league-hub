@@ -10,16 +10,17 @@ function getHelpText() {
   return `👋 *שלום! אני הבוט של Kickoff* ⚽\n\n` +
     `*פקודות זמינות:*\n` +
     `• *יתרה* — הצג את יתרת הנקודות שלך\n` +
-    `• *משחקים* — משחקים פתוחים להימורים\n` +
-    `• *הימורים* — ההימורים האחרונים שלך\n` +
+    `• *הימורים* — ההימורים האחרונים שלך (פעילים + 24 שעות אחרונות)\n` +
     `• *עזרה* — תפריט זה\n\n` +
     `כדי להמר — השב להודעת המשחק שנשלחה אליך 🎯`;
 }
 
 async function handleDmMessage(client, msg) {
-  const rawPhone = extractNumber(msg.from);
+  const contact = await msg.getContact();
+  const rawPhone = contact.number; // get the actual phone number
   const { normalizePhone } = require('../utils/phoneUtils');
   const phone = normalizePhone(rawPhone);
+  console.log(`[WA] DM from ${msg.from} | Contact: ${contact.number} | normalized: ${phone}`);
   
   // Check if they are linked AT ALL
   const userRes = await pool.query(
@@ -69,8 +70,6 @@ async function handleDmMessage(client, msg) {
     await msg.reply(getHelpText());
   } else if (cmd === '/balance' || cmd === 'יתרה') {
     await sendBalance(msg, user);
-  } else if (cmd === '/games' || cmd === 'משחקים') {
-    await sendUpcomingGames(msg, user);
   } else if (cmd === '/mybets' || cmd === 'הימורים') {
     await sendMyBets(msg, user);
   } else if (cmd === 'ביטול' || cmd === 'cancel') {
@@ -85,52 +84,94 @@ async function sendBalance(msg, user) {
   await msg.reply(`💰 *${user.username}*, יתרתך: *${formatPoints(user.points_balance)} נקודות*`);
 }
 
-async function sendUpcomingGames(msg, user) {
-  const gamesRes = await pool.query(
-    `SELECT home_team, away_team, commence_time FROM games
-     WHERE status = 'scheduled' AND commence_time > NOW()
-     ORDER BY commence_time LIMIT 5`
-  );
-
-  if (gamesRes.rows.length === 0) {
-    await msg.reply('אין משחקים פתוחים כרגע 🤷');
-    return;
-  }
-
-  let text = `⚽ *משחקים פתוחים להימורים:*\n\n`;
-  gamesRes.rows.forEach((g, i) => {
-    const t = new Date(g.commence_time).toLocaleString('he-IL', {
-      weekday: 'short', day: 'numeric', month: 'numeric',
-      hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem'
-    });
-    text += `${i + 1}. ${g.home_team} נגד ${g.away_team}\n   🗓 ${t}\n\n`;
-  });
-  text += `כדי להמר — השב להודעת המשחק שנשלחה אליך בבוקר 🎯`;
-  await msg.reply(text);
-}
 
 async function sendMyBets(msg, user) {
+  const { translateTeam } = require('../utils/teamNames');
   const betsRes = await pool.query(
-    `SELECT b.selected_outcome, b.status, b.stake, b.actual_payout, b.potential_payout,
-            g.home_team, g.away_team
-     FROM bets b JOIN games g ON g.id = b.game_id
+    `SELECT b.*, g.home_team, g.away_team, g.score_home, g.score_away, g.status AS game_status, bq.type AS bet_type, bq.question_text,
+            l.name AS league_name
+     FROM bets b
+     JOIN games g ON g.id = b.game_id
+     JOIN bet_questions bq ON bq.id = b.bet_question_id
+     LEFT JOIN leagues l ON l.id = b.league_id
      WHERE b.user_id = $1
-     ORDER BY b.created_at DESC LIMIT 5`,
+       AND (b.status = 'pending' OR (b.status != 'pending' AND g.start_time > NOW() - INTERVAL '36 hours'))
+     ORDER BY (b.status = 'pending') ASC, g.start_time DESC, g.id, b.placed_at ASC`,
     [user.id]
   );
 
   if (betsRes.rows.length === 0) {
-    await msg.reply('עדיין אין הימורים 🤷');
+    await msg.reply('אין הימורים פעילים או מה-24 שעות האחרונות 🤷');
     return;
   }
 
-  let text = `🎯 *הימורים אחרונים של ${user.username}:*\n\n`;
+  const typeLabels = {
+    'match_winner': 'זהות המנצחת',
+    'exact_score': 'תוצאה מדויקת',
+    'over_under': 'מעל/מתחת 2.5',
+    'both_teams_score': 'שתי הקבוצות יבקיעו',
+    'btts': 'שתי הקבוצות יבקיעו'
+  };
+
+  const groups = {}; // Use gameId as key to keep order from SQL
+  const groupOrder = []; 
+
   betsRes.rows.forEach(b => {
-    const statusIcon = b.status === 'won' ? '✅' : b.status === 'lost' ? '❌' : '⏳';
-    const pts = b.status === 'won' ? `+${b.actual_payout}` : b.status === 'lost' ? `-${b.stake}` : `(${b.potential_payout} אפשרי)`;
-    text += `${statusIcon} ${b.home_team} נגד ${b.away_team}\n   ${b.selected_outcome} | ${pts} נקודות\n\n`;
+    if (!groups[b.game_id]) {
+      const home = translateTeam(b.home_team);
+      const away = translateTeam(b.away_team);
+      
+      let teamsDisplay;
+      if (b.game_status === 'finished' && b.score_home !== null) {
+        teamsDisplay = `⚽ *${home} (${b.score_home}) - (${b.score_away}) ${away}*`;
+      } else {
+        teamsDisplay = `⚽ *${home} - ${away}*`;
+      }
+      
+      groups[b.game_id] = {
+        teams: teamsDisplay,
+        bets: []
+      };
+      groupOrder.push(b.game_id);
+    }
+    groups[b.game_id].bets.push(b);
   });
-  await msg.reply(text);
+
+  let text = `🎯 *ההימורים שלי:*\n\n`;
+  
+  for (const gameId of groupOrder) {
+    const g = groups[gameId];
+    text += `${g.teams}\n`;
+    
+    g.bets.forEach(b => {
+      const statusIcon = b.status === 'won' ? '✅' : b.status === 'lost' ? '❌' : '⏳';
+      const label = typeLabels[b.bet_type] || 'הימור';
+      
+      // Translate outcome
+      let outcome = b.selected_outcome;
+      if (outcome === 'Draw') outcome = 'תיקו';
+      else if (outcome === b.home_team) outcome = translateTeam(b.home_team);
+      else if (outcome === b.away_team) outcome = translateTeam(b.away_team);
+      else if (outcome === 'Yes') outcome = 'כן';
+      else if (outcome === 'No') outcome = 'לא';
+      else if (outcome === 'Over 2.5') outcome = 'מעל 2.5';
+      else if (outcome === 'Under 2.5') outcome = 'מתחת 2.5';
+      
+      let betDetail = `${label}: *${outcome}*`;
+      if (b.exact_score_prediction) {
+        betDetail += ` (תוצאה: ${b.exact_score_prediction})`;
+      }
+      
+      const leagueLabel = b.league_name ? `🏆 ליגת ${b.league_name}` : `🌍 גלובלי`;
+      const payoutInfo = b.status === 'won' ? ` | זכייה: *${b.actual_payout}*` : 
+                         b.status === 'pending' ? ` | זכייה אפשרית: *${b.potential_payout}*` : '';
+
+      text += `${statusIcon} ${betDetail} | ${leagueLabel} | ${b.stake} נק'${payoutInfo}\n`;
+    });
+    text += `\n`;
+  }
+
+  await msg.reply(text.trim());
 }
 
 module.exports = { handleDmMessage };

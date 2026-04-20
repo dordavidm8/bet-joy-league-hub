@@ -4,19 +4,30 @@ const { pool } = require('../config/database');
 const { translateTeam } = require('../lib/teamNames');
 
 const BOT_INTERNAL_URL = process.env.BOT_INTERNAL_URL || 'http://localhost:4001';
-const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || '';
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || process.env.OPS_SECRET || '';
 
 async function callBot(path, body) {
-  if (!INTERNAL_API_KEY) return null;
+  if (!INTERNAL_API_KEY) {
+    console.error('[WA] callBot: Missing INTERNAL_API_KEY');
+    return null;
+  }
   try {
-    const res = await fetch(`${BOT_INTERNAL_URL}${path}`, {
+    const url = `${BOT_INTERNAL_URL}${path}`;
+    console.log('[WA] callBot calling:', url);
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-internal-key': INTERNAL_API_KEY },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(8000), // Increased to 8s
     });
-    return res.ok ? res.json() : null;
-  } catch {
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[WA] callBot failed: ${url} status=${res.status} body=${errorText}`);
+      return null;
+    }
+    return res.json();
+  } catch (err) {
+    console.error(`[WA] callBot error (${path}):`, err.message);
     return null;
   }
 }

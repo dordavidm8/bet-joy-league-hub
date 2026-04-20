@@ -21,7 +21,7 @@ async function sendReminders(client) {
       `SELECT g.id, g.home_team, g.away_team
        FROM games g
        WHERE g.status = 'scheduled'
-         AND g.commence_time BETWEEN $1 AND $2`,
+         AND g.start_time BETWEEN $1 AND $2`,
       [windowStart.toISOString(), windowEnd.toISOString()]
     );
 
