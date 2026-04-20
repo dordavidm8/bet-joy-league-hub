@@ -237,9 +237,9 @@ router.patch('/me/profile', authenticate, async (req, res, next) => {
     const params = [];
 
     if (username) {
-      const trimmed = username.trim();
-      if (!/^[a-zA-Z0-9_\u0590-\u05FF]{2,20}$/.test(trimmed)) {
-        return res.status(400).json({ error: 'שם משתמש חייב להיות 2-20 תווים (אותיות, מספרים, קו תחתון בלבד)' });
+      const trimmed = username.trim().toLowerCase();
+      if (!/^[a-z0-9_\u0590-\u05FF]{2,20}$/.test(trimmed)) {
+        return res.status(400).json({ error: 'שם משתמש חייב להיות 2-20 תווים (אותיות אנגליות קטנות, מספרים, קו תחתון בלבד)' });
       }
       const existing = await pool.query('SELECT id FROM users WHERE username = $1 AND id != $2', [trimmed, req.user.id]);
       if (existing.rows.length > 0) return res.status(409).json({ error: 'שם המשתמש כבר תפוס' });
