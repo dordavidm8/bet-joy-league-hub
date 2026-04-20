@@ -373,11 +373,11 @@ const LeagueDetailPage = () => {
               <div className="flex gap-2 mb-3">
                 <div className="flex-1 bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-center">
                   <p className="text-lg font-black text-green-600">{bet.length}</p>
-                  <p className="text-[10px] text-green-600">הומר</p>
+                  <p className="text-[10px] text-green-600">הימרתי</p>
                 </div>
                 <div className="flex-1 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-center">
                   <p className="text-lg font-black text-red-500">{missed.length}</p>
-                  <p className="text-[10px] text-red-500">פוספס</p>
+                  <p className="text-[10px] text-red-500">פספסתי</p>
                 </div>
                 <div className="flex-1 bg-secondary rounded-xl px-3 py-2 text-center">
                   <p className="text-lg font-black">{matchesData.matches.filter(m => m.status === 'scheduled').length}</p>

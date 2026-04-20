@@ -7,6 +7,7 @@ const { startInternalApi } = require('./src/internalApi');
 const { startScheduledJobs } = require('./src/scheduledJobs');
 const { handleGroupMessage } = require('./src/handlers/groupHandler');
 const { handleDmMessage } = require('./src/handlers/dmHandler');
+const { startHealthChecks, DEVELOPER_NUMBER } = require('./src/health');
 
 const fs = require('fs');
 if (!fs.existsSync('.wwebjs_auth/session') && fs.existsSync('.wwebjs_auth_seed/session')) {
@@ -30,11 +31,18 @@ client.on('qr', (qr) => {
 });
 
 // ── Ready ────────────────────────────────────────────────────────────────────
-client.on('ready', () => {
+client.on('ready', async () => {
   console.log('[WA] הבוט מחובר ✅');
   console.log('[WA] My Number: ' + client.info.wid.user);
   startInternalApi(client);
   startScheduledJobs(client);
+  startHealthChecks(client);
+  
+  // Notify developer of startup
+  try {
+    await client.sendMessage(DEVELOPER_NUMBER, `✅ *Bot Started/Reconnected*
+Time: ${new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}`);
+  } catch (e) {}
 });
 
 // ── Auth failure ─────────────────────────────────────────────────────────────

@@ -102,6 +102,66 @@ function startScheduledJobs(client) {
     }
   });
 
+  // ── Daily at 04:00: Leave groups of finished leagues or orphaned groups ──────
+  cron.schedule('0 4 * * *', async () => {
+    console.log('[jobs] Starting group cleanup check...');
+    try {
+      // 1. Groups connected to finished leagues
+      const finishedRes = await pool.query(
+        `SELECT wg.wa_group_id, l.name FROM wa_groups wg
+         JOIN leagues l ON l.id = wg.league_id
+         WHERE l.status IN ('finished', 'stopped') AND wg.is_active = true`
+      );
+      for (const row of finishedRes.rows) {
+        try {
+          const chat = await client.getChatById(row.wa_group_id);
+          await chat.sendMessage(`⚠️ הליגה הסתיימה/הופסקה. הבוט יוצא מהקבוצה. להתראות! 👋`);
+          await chat.leave();
+          await pool.query(`UPDATE wa_groups SET is_active = false WHERE wa_group_id = $1`, [row.wa_group_id]);
+          console.log(`[jobs] Left group for finished league: ${row.name}`);
+        } catch (e) { console.warn(`[jobs] Failed to leave group ${row.wa_group_id}:`, e.message); }
+      }
+
+      // 2. Orphaned groups (bot is in group but it's not connected to any league in DB)
+      const chats = await client.getChats();
+      const groups = chats.filter(c => c.isGroup);
+      
+      const activeGroupsRes = await pool.query(`SELECT wa_group_id FROM wa_groups WHERE is_active = true`);
+      const activeIds = new Set(activeGroupsRes.rows.map(r => r.wa_group_id));
+
+      for (const group of groups) {
+        if (!activeIds.has(group.id._serialized)) {
+          // If bot is admin, it can leave safely. If not, also leave. 
+          // User asked to leave groups not connected to leagues.
+          console.log(`[jobs] Leaving orphaned group: ${group.name}`);
+          try {
+            await group.sendMessage(`⚠️ קבוצה זו אינה מחוברת לליגה פעילה ב-Kickoff. הבוט יוצא מהקבוצה. 👋`);
+            await group.leave();
+          } catch (e) { console.warn(`[jobs] Failed to leave orphaned group ${group.name}:`, e.message); }
+        }
+      }
+    } catch (err) { console.error('[jobs] group cleanup error:', err.message); }
+  });
+
+  // ── Daily at 05:00: Alert developer if finished games have pending bets ──────
+  cron.schedule('0 5 * * *', async () => {
+    try {
+      const pendingRes = await pool.query(
+        `SELECT COUNT(*) FROM bets b
+         JOIN games g ON g.id = b.game_id
+         WHERE g.status = 'finished' AND b.status = 'pending'
+           AND g.start_time < NOW() - INTERVAL '12 hours'`
+      );
+      const count = parseInt(pendingRes.rows[0].count);
+      if (count > 0) {
+        const { DEVELOPER_NUMBER } = require('./health');
+        await client.sendMessage(DEVELOPER_NUMBER, `⚠️ *Alert: Unprocessed Bets*
+There are ${count} pending bets for games that finished > 12 hours ago.
+Please run settlement manually or check logs.`);
+      }
+    } catch (err) { console.error('[jobs] settlement check error:', err.message); }
+  });
+
   console.log('[WA] Scheduled jobs פעילים ✅');
 }
 

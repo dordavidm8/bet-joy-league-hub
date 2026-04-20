@@ -57,7 +57,7 @@ function startInternalApi(client) {
 
   // POST /internal/create-group — create new WA group
   app.post('/internal/create-group', auth, async (req, res) => {
-    const { name, phones } = req.body;
+    const { name, phones, leagueId, inviteCode } = req.body;
     if (!name || !phones?.length) return res.status(400).json({ error: 'name and phones required' });
     try {
       const participants = phones.map(toJid);
@@ -82,7 +82,14 @@ function startInternalApi(client) {
         await chat.setMessagesAdminsOnly(false);
         // Allow all participants to edit group info (which includes sharing invite links and adding members)
         await chat.setInfoAdminsOnly(false);
-        console.log(`[WA] Set group to allow messages and info edits from all members`);
+        
+        // Set description with league link
+        if (inviteCode) {
+          const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
+          await chat.setDescription(description);
+        }
+
+        console.log(`[WA] Set group to allow messages, info edits, and set description`);
 
         const code = await chat.getInviteCode();
         invite_link = `https://chat.whatsapp.com/${code}`;

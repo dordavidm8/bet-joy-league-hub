@@ -13,7 +13,7 @@ import {
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
   adminLockGame, adminUnlockGame, adminPauseLeague, adminStopLeague, adminUpdateGameOdds, adminUpdateUser, adminDeleteUser,
-  adminRemoveWaGroup, adminSetWaInviteLink,
+  adminRemoveWaGroup, adminSetWaInviteLink, adminUnlinkPhone,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
   adminGetAdmins, adminAddAdmin, adminRemoveAdmin,
@@ -178,6 +178,11 @@ const UsersTab = () => {
     onError: (e: any) => setDeleteUserMsg(`❌ ${e.message}`),
   });
 
+  const unlinkPhoneMutation = useMutation({
+    mutationFn: (userId: string) => adminUnlinkPhone(userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+  });
+
   const users = data?.users ?? [];
 
   return (
@@ -193,7 +198,7 @@ const UsersTab = () => {
         <div className="border rounded-xl overflow-auto">
           <table className="w-full text-xs min-w-[650px]">
             <thead className="bg-muted/50"><tr>
-              {["משתמש", "שם מלא", "נקודות", "הימורים", "ניצחון%", "הצטרף", "פעולות"].map(h => (
+              {["משתמש", "שם מלא", "טלפון", "נקודות", "הימורים", "ניצחון%", "הצטרף", "פעולות"].map(h => (
                 <th key={h} className="text-right px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
               ))}
             </tr></thead>
@@ -202,6 +207,11 @@ const UsersTab = () => {
                 <tr key={u.id} className="border-t border-border/50 hover:bg-muted/30">
                   <td className="px-3 py-2"><p className="font-bold">@{u.username}</p><p className="text-muted-foreground text-[10px]">{u.email}</p></td>
                   <td className="px-3 py-2 text-muted-foreground">{u.display_name || "—"}</td>
+                  <td className="px-3 py-2">
+                    {u.phone_number ? (
+                      <span className="text-[11px] font-mono text-green-700">{u.phone_number} {u.phone_verified ? '✅' : '⚠️'}</span>
+                    ) : <span className="text-[11px] text-muted-foreground">—</span>}
+                  </td>
                   <td className="px-3 py-2 font-bold text-primary">{fmt(u.points_balance)}</td>
                   <td className="px-3 py-2">{u.total_bets}</td>
                   <td className="px-3 py-2">{u.total_bets ? `${Math.round(u.total_wins / u.total_bets * 100)}%` : "—"}</td>
@@ -215,6 +225,10 @@ const UsersTab = () => {
                       className="text-[11px] text-muted-foreground underline whitespace-nowrap">הימורים</button>
                     <button onClick={() => { setDeleteUserConfirm(u); setDeleteUserMsg(""); }}
                       className="text-[11px] text-destructive underline whitespace-nowrap">מחק</button>
+                    {u.phone_number && (
+                      <button onClick={() => { if (confirm(`לנתק טלפון של ${u.username}?`)) unlinkPhoneMutation.mutate(u.id); }}
+                        className="text-[11px] text-orange-600 underline whitespace-nowrap">נתק טלפון</button>
+                    )}
                   </td>
                 </tr>
               ))}

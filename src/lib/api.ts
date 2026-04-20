@@ -259,6 +259,8 @@ export const adminUpdateUser = (id: string, data: { username?: string; display_n
   request<{ user: { id: string; username: string; display_name: string | null; email: string } }>(
     `/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }
   );
+export const adminUnlinkPhone = (id: string) =>
+  request<{ ok: boolean }>(`/admin/users/${id}/phone`, { method: 'DELETE' });
 export const adminGetGameAnalytics = (id: string) =>
   request<{ game: Game; questions: AdminGameAnalyticsQuestion[] }>(`/admin/games/${id}/analytics`);
 export const adminGetUserBets = (userId: string) =>

@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: #0f172a;
+      font-family: "Barlow Condensed", sans-serif;
+    }
+
+    /* ── Root ── */
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+    }
+
+    /* ── Scenes ── */
+    .scene {
+      position: absolute;
+      top: 0; left: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: #0f172a;
+    }
+    #scene1 { z-index: 1; }
+    #scene2 { z-index: 2; opacity: 0; }
+    #scene3 { z-index: 3; opacity: 0; }
+    #scene4 { z-index: 4; opacity: 0; }
+    #scene5 { z-index: 5; opacity: 0; }
+
+    /* ══════════════════════════════
+       SCENE 1 — Hero
+    ══════════════════════════════ */
+    #s1-glow {
+      position: absolute;
+      width: 900px; height: 900px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(34,197,94,0.16) 0%, rgba(34,197,94,0) 70%);
+      top: 90px; left: 510px;
+      pointer-events: none;
+    }
+    #s1-ghost {
+      position: absolute;
+      font-size: 700px;
+      opacity: 0.04;
+      top: 150px; left: 1080px;
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+    .s1-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      gap: 24px;
+    }
+    #s1-eyebrow {
+      font-family: "DM Mono", monospace;
+      font-size: 22px;
+      font-weight: 400;
+      color: #22c55e;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+    }
+    #s1-logo {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 240px;
+      font-weight: 900;
+      color: #f8fafc;
+      line-height: 0.88;
+      letter-spacing: -0.03em;
+      text-align: center;
+    }
+    #s1-rule {
+      width: 0;
+      height: 5px;
+      background: #22c55e;
+      border-radius: 3px;
+    }
+    #s1-tagline {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 58px;
+      font-weight: 300;
+      color: #94a3b8;
+      letter-spacing: 0.02em;
+      direction: rtl;
+    }
+
+    /* ══════════════════════════════
+       SCENE 2 — Live Match
+    ══════════════════════════════ */
+    #s2-pitch-vline {
+      position: absolute;
+      width: 2px; height: 1080px;
+      left: 960px; top: 0;
+      background: rgba(34,197,94,0.05);
+    }
+    #s2-pitch-circle {
+      position: absolute;
+      width: 420px; height: 420px;
+      border: 2px solid rgba(34,197,94,0.05);
+      border-radius: 50%;
+      top: 330px; left: 750px;
+    }
+    .s2-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      gap: 36px;
+    }
+    #s2-label {
+      font-family: "DM Mono", monospace;
+      font-size: 22px;
+      font-weight: 400;
+      color: #22c55e;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    #s2-live-dot {
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      background: #ef4444;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    #s2-card {
+      width: 980px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 24px;
+      padding: 44px 60px 40px;
+      direction: rtl;
+    }
+    #s2-badge-row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+    #s2-live-badge {
+      background: #ef4444;
+      color: #f8fafc;
+      font-family: "DM Mono", monospace;
+      font-size: 20px;
+      font-weight: 700;
+      padding: 8px 22px;
+      border-radius: 8px;
+      letter-spacing: 0.12em;
+    }
+    #s2-match-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+    }
+    .s2-team-name {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 52px;
+      font-weight: 700;
+      color: #f8fafc;
+      text-align: center;
+      flex: 1;
+    }
+    #s2-score {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 28px;
+    }
+    .s2-score-n {
+      font-family: "DM Mono", monospace;
+      font-size: 104px;
+      font-weight: 700;
+      color: #f8fafc;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    #s2-score-sep {
+      font-family: "DM Mono", monospace;
+      font-size: 72px;
+      color: #475569;
+      line-height: 1;
+    }
+    #s2-bets {
+      display: flex;
+      gap: 16px;
+      direction: rtl;
+    }
+    .s2-bet {
+      flex: 1;
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.28);
+      border-radius: 14px;
+      padding: 18px 20px;
+      text-align: center;
+    }
+    .s2-bet-label {
+      display: block;
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: #f8fafc;
+      margin-bottom: 6px;
+      direction: rtl;
+    }
+    .s2-bet-odds {
+      font-family: "DM Mono", monospace;
+      font-size: 22px;
+      font-weight: 700;
+      color: #22c55e;
+    }
+
+    /* ══════════════════════════════
+       SCENE 3 — AI + Quiz
+    ══════════════════════════════ */
+    .s3-inner {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+    #s3-left, #s3-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 72px;
+      gap: 24px;
+    }
+    #s3-sep {
+      width: 2px;
+      background: #334155;
+      align-self: stretch;
+      margin: 80px 0;
+    }
+    .s3-panel-label {
+      font-family: "DM Mono", monospace;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      direction: rtl;
+    }
+    .s3-panel-label.green { color: #22c55e; }
+    .s3-panel-label.blue  { color: #60a5fa; }
+    .s3-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 32px 36px;
+      direction: rtl;
+    }
+    #s3-bubble {
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.22);
+      border-radius: 16px 16px 4px 16px;
+      padding: 22px 26px;
+      margin-bottom: 18px;
+      direction: rtl;
+    }
+    #s3-bubble-text {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 30px;
+      font-weight: 500;
+      color: #f8fafc;
+      line-height: 1.45;
+      direction: rtl;
+    }
+    #s3-usage {
+      font-family: "DM Mono", monospace;
+      font-size: 18px;
+      color: #22c55e;
+      direction: rtl;
+      margin-bottom: 16px;
+    }
+    #s3-input-mock {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 26px;
+      color: #475569;
+      direction: rtl;
+    }
+    #s3-question {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 32px;
+      font-weight: 600;
+      color: #f8fafc;
+      line-height: 1.4;
+      margin-bottom: 22px;
+      direction: rtl;
+    }
+    .s3-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      direction: rtl;
+    }
+    .s3-opt {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 13px 18px;
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 24px;
+      font-weight: 500;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      direction: rtl;
+    }
+    .s3-opt.correct {
+      border-color: #22c55e;
+      color: #f8fafc;
+    }
+    .s3-opt-key {
+      font-family: "DM Mono", monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: #22c55e;
+      background: rgba(34,197,94,0.12);
+      border-radius: 4px;
+      padding: 2px 7px;
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════
+       SCENE 4 — Leagues + Leaderboard
+    ══════════════════════════════ */
+    #s4-glow {
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(34,197,94,0.10) 0%, rgba(34,197,94,0) 70%);
+      top: 240px; left: 660px;
+      pointer-events: none;
+    }
+    .s4-inner {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      direction: rtl;
+    }
+    #s4-left, #s4-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 80px;
+      gap: 28px;
+    }
+    .s4-zone-label {
+      font-family: "DM Mono", monospace;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      direction: rtl;
+    }
+    #s4-left-label { color: #22c55e; }
+    #s4-right-label { color: #64748b; }
+    #s4-league-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 24px;
+      padding: 40px 48px;
+      direction: rtl;
+    }
+    #s4-league-name {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 56px;
+      font-weight: 900;
+      color: #f8fafc;
+      margin-bottom: 6px;
+      direction: rtl;
+    }
+    #s4-league-meta {
+      font-family: "DM Mono", monospace;
+      font-size: 18px;
+      color: #64748b;
+      margin-bottom: 28px;
+      direction: rtl;
+    }
+    #s4-avatars {
+      display: flex;
+      direction: ltr;
+      margin-bottom: 28px;
+    }
+    .s4-av {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      border: 3px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-right: -10px;
+    }
+    .av-a { background: #14532d; }
+    .av-b { background: #1e3a5f; }
+    .av-c { background: #44275c; }
+    .av-d { background: #5c2b0e; }
+    #s4-invite {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 14px 20px;
+      direction: rtl;
+    }
+    #s4-invite-lbl {
+      font-family: "DM Mono", monospace;
+      font-size: 16px;
+      color: #64748b;
+    }
+    #s4-invite-code {
+      font-family: "DM Mono", monospace;
+      font-size: 26px;
+      font-weight: 700;
+      color: #22c55e;
+      letter-spacing: 0.18em;
+    }
+    #s4-lb {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      direction: rtl;
+    }
+    .s4-lb-row {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 18px 26px;
+      direction: rtl;
+    }
+    .s4-lb-row.gold {
+      border-color: rgba(202,138,4,0.7);
+      background: rgba(202,138,4,0.08);
+    }
+    .s4-rank {
+      font-family: "DM Mono", monospace;
+      font-size: 24px;
+      font-weight: 700;
+      color: #475569;
+      font-variant-numeric: tabular-nums;
+      min-width: 32px;
+      text-align: center;
+    }
+    .s4-rank.gold-c { color: #eab308; }
+    .s4-lb-name {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 34px;
+      font-weight: 600;
+      color: #f8fafc;
+      flex: 1;
+      direction: rtl;
+    }
+    .s4-pts {
+      font-family: "DM Mono", monospace;
+      font-size: 30px;
+      font-weight: 700;
+      color: #22c55e;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ══════════════════════════════
+       SCENE 5 — CTA
+    ══════════════════════════════ */
+    #s5-glow {
+      position: absolute;
+      width: 1100px; height: 1100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(34,197,94,0.13) 0%, rgba(34,197,94,0) 68%);
+      top: -10px; left: 410px;
+      pointer-events: none;
+    }
+    .s5-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      gap: 24px;
+    }
+    #s5-eyebrow {
+      font-family: "DM Mono", monospace;
+      font-size: 22px;
+      font-weight: 400;
+      color: #22c55e;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+    }
+    #s5-ball {
+      font-size: 110px;
+      line-height: 1;
+      user-select: none;
+    }
+    #s5-cta {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 190px;
+      font-weight: 900;
+      color: #f8fafc;
+      line-height: 0.88;
+      letter-spacing: -0.03em;
+      direction: rtl;
+    }
+    #s5-rule {
+      width: 0;
+      height: 5px;
+      background: #22c55e;
+      border-radius: 3px;
+    }
+    #s5-tagline {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 34px;
+      font-weight: 300;
+      color: #64748b;
+      letter-spacing: 0.1em;
+      direction: rtl;
+    }
+  </style>
+</head>
+<body>
+<div id="root"
+     data-composition-id="main"
+     data-width="1920"
+     data-height="1080"
+     data-start="0"
+     data-duration="25">
+
+  <!-- ════════════════════════
+       SCENE 1 — Hero
+  ════════════════════════ -->
+  <div id="scene1" class="scene">
+    <div id="s1-glow"></div>
+    <div id="s1-ghost">⚽</div>
+    <div class="s1-inner">
+      <div id="s1-eyebrow">⚽ &nbsp; Social Sports Betting</div>
+      <div id="s1-logo">Kickoff</div>
+      <div id="s1-rule"></div>
+      <div id="s1-tagline">הבטינג החברתי של הכדורגל</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════
+       SCENE 2 — Live Match
+  ════════════════════════ -->
+  <div id="scene2" class="scene">
+    <div id="s2-pitch-vline"></div>
+    <div id="s2-pitch-circle"></div>
+    <div class="s2-inner">
+      <div id="s2-label">
+        <span id="s2-live-dot"></span>
+        משחקים חיים עכשיו
+      </div>
+      <div id="s2-card">
+        <div id="s2-badge-row">
+          <div id="s2-live-badge">🔴&nbsp; LIVE &nbsp;·&nbsp; 67'</div>
+        </div>
+        <div id="s2-match-row">
+          <div class="s2-team-name">ברצלונה</div>
+          <div id="s2-score">
+            <span class="s2-score-n">2</span>
+            <span id="s2-score-sep">:</span>
+            <span class="s2-score-n">1</span>
+          </div>
+          <div class="s2-team-name">ריאל מדריד</div>
+        </div>
+        <div id="s2-bets">
+          <div class="s2-bet">
+            <span class="s2-bet-label">מנצח ביתי</span>
+            <span class="s2-bet-odds">× 1.85</span>
+          </div>
+          <div class="s2-bet">
+            <span class="s2-bet-label">תיקו</span>
+            <span class="s2-bet-odds">× 3.40</span>
+          </div>
+          <div class="s2-bet">
+            <span class="s2-bet-label">מנצח אורח</span>
+            <span class="s2-bet-odds">× 4.20</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════
+       SCENE 3 — AI + Quiz
+  ════════════════════════ -->
+  <div id="scene3" class="scene">
+    <div class="s3-inner">
+      <div id="s3-left">
+        <div class="s3-panel-label green">🤖 &nbsp; יועץ AI</div>
+        <div class="s3-card">
+          <div id="s3-bubble">
+            <div id="s3-bubble-text">ברצלונה בעדיפות ביתית — יחס ניצחון 65% בבית. מנצח ביתי הוא ההמלצה שלי.</div>
+          </div>
+          <div id="s3-usage">🟢 &nbsp;יתרת שאלות: 17 / 20</div>
+          <div id="s3-input-mock">שאל את היועץ...</div>
+        </div>
+      </div>
+      <div id="s3-sep"></div>
+      <div id="s3-right">
+        <div class="s3-panel-label blue">📚 &nbsp; שאלון יומי</div>
+        <div class="s3-card">
+          <div id="s3-question">כמה שחקנים יש בקבוצת כדורגל רגילה במגרש?</div>
+          <div class="s3-options">
+            <div class="s3-opt"><span class="s3-opt-key">א</span>9</div>
+            <div class="s3-opt correct"><span class="s3-opt-key">ב</span>11 ✓</div>
+            <div class="s3-opt"><span class="s3-opt-key">ג</span>10</div>
+            <div class="s3-opt"><span class="s3-opt-key">ד</span>12</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════
+       SCENE 4 — Leagues
+  ════════════════════════ -->
+  <div id="scene4" class="scene">
+    <div id="s4-glow"></div>
+    <div class="s4-inner">
+      <div id="s4-left">
+        <div id="s4-left-label" class="s4-zone-label">🏆 &nbsp; ליגות חברתיות</div>
+        <div id="s4-league-card">
+          <div id="s4-league-name">ליגת הצוות שלי</div>
+          <div id="s4-league-meta">8 משתתפים &nbsp;·&nbsp; שבוע 12</div>
+          <div id="s4-avatars">
+            <div class="s4-av av-a">👤</div>
+            <div class="s4-av av-b">👤</div>
+            <div class="s4-av av-c">👤</div>
+            <div class="s4-av av-d">👤</div>
+          </div>
+          <div id="s4-invite">
+            <span id="s4-invite-lbl">קוד הזמנה</span>
+            <span id="s4-invite-code">KCK-4A9B</span>
+          </div>
+        </div>
+      </div>
+      <div id="s4-right">
+        <div id="s4-right-label" class="s4-zone-label">🥇 &nbsp; טבלת הדירוג</div>
+        <div id="s4-lb">
+          <div class="s4-lb-row gold">
+            <span class="s4-rank gold-c">1</span>
+            <span class="s4-lb-name">ניר דהן</span>
+            <span class="s4-pts">4,820</span>
+          </div>
+          <div class="s4-lb-row">
+            <span class="s4-rank">2</span>
+            <span class="s4-lb-name">שחר כהן</span>
+            <span class="s4-pts">3,940</span>
+          </div>
+          <div class="s4-lb-row">
+            <span class="s4-rank">3</span>
+            <span class="s4-lb-name">יואב לוי</span>
+            <span class="s4-pts">3,210</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════
+       SCENE 5 — CTA
+  ════════════════════════ -->
+  <div id="scene5" class="scene">
+    <div id="s5-glow"></div>
+    <div class="s5-inner">
+      <div id="s5-eyebrow">הצטרף בחינם</div>
+      <div id="s5-ball">⚽</div>
+      <div id="s5-cta">הצטרף עכשיו</div>
+      <div id="s5-rule"></div>
+      <div id="s5-tagline">נקודות בלבד · ללא כסף אמיתי · Kickoff</div>
+    </div>
+  </div>
+
+</div><!-- #root -->
+
+<script>
+  window.__timelines = window.__timelines || {};
+  var tl = gsap.timeline({ paused: true });
+
+  /* ════════════════════════════════════════
+     SCENE 1 — Hero  (0 → 5s, transition @4.6)
+  ════════════════════════════════════════ */
+  // Ghost ball ambient drift (no repeat — single slow drift)
+  tl.from("#s1-ghost", { opacity: 0, scale: 0.85, duration: 1.4, ease: "power1.out" }, 0.1);
+  tl.to("#s1-ghost",   { rotation: 18, duration: 4.5, ease: "sine.inOut" }, 0.1);
+
+  // Entrance stagger: eyebrow → logo → rule → tagline
+  tl.from("#s1-eyebrow", { opacity: 0, letterSpacing: "0.55em", duration: 0.55, ease: "power3.out" }, 0.25);
+  tl.from("#s1-logo",    { y: 90, opacity: 0, duration: 0.65, ease: "expo.out" }, 0.55);
+  tl.to("#s1-rule",      { width: 340, duration: 0.55, ease: "power4.out" }, 1.05);
+  tl.from("#s1-tagline", { y: 28, opacity: 0, duration: 0.45, ease: "power2.out" }, 1.45);
+
+  // Breathe: single glow pulse (1.8 → 4.3s, no repeat)
+  tl.to("#s1-glow", { scale: 1.18, opacity: 0.75, duration: 2.5, ease: "sine.inOut" }, 1.8);
+
+  /* ── Transition 1→2  blur-crossfade high-energy @4.6s ── */
+  var T1 = 4.6;
+  tl.to("#scene1",   { filter: "blur(5px)", scale: 1.02, opacity: 0, duration: 0.32, ease: "power3.inOut" }, T1);
+  tl.fromTo("#scene2",
+    { filter: "blur(5px)", scale: 0.98, opacity: 0 },
+    { filter: "blur(0px)", scale: 1,    opacity: 1, duration: 0.32, ease: "power3.inOut" }, T1 + 0.06);
+
+  /* ════════════════════════════════════════
+     SCENE 2 — Live Match  (5 → 10s, transition @9.6)
+  ════════════════════════════════════════ */
+  tl.from("#s2-label",     { x: 36, opacity: 0, duration: 0.42, ease: "expo.out" }, 5.1);
+  tl.from("#s2-card",      { y: 55, opacity: 0, duration: 0.52, ease: "power3.out" }, 5.35);
+  tl.from("#s2-live-badge",{ scale: 0.55, opacity: 0, duration: 0.32, ease: "back.out(2.2)" }, 5.75);
+  tl.from(".s2-team-name", { opacity: 0, duration: 0.38, ease: "power2.out", stagger: 0.14 }, 5.9);
+  tl.from(".s2-score-n",   { scale: 0.45, opacity: 0, duration: 0.35, ease: "back.out(1.6)", stagger: 0.13 }, 6.2);
+  tl.from(".s2-bet",       { y: 22, opacity: 0, duration: 0.32, ease: "power2.out", stagger: 0.1 }, 6.65);
+
+  // Breathe: LIVE dot pulse — available 6.5→9.6 = 3.1s, duration 0.38, repeat:7 → 0.38×8=3.04s ✓
+  tl.to("#s2-live-dot", { scale: 1.6, opacity: 0.35, duration: 0.38, ease: "sine.inOut", yoyo: true, repeat: 7 }, 6.5);
+
+  /* ── Transition 2→3  blur-crossfade @9.6s ── */
+  var T2 = 9.6;
+  tl.to("#scene2",   { filter: "blur(5px)", scale: 1.02, opacity: 0, duration: 0.32, ease: "power3.inOut" }, T2);
+  tl.fromTo("#scene3",
+    { filter: "blur(5px)", scale: 0.98, opacity: 0 },
+    { filter: "blur(0px)", scale: 1,    opacity: 1, duration: 0.32, ease: "power3.inOut" }, T2 + 0.06);
+
+  /* ════════════════════════════════════════
+     SCENE 3 — AI + Quiz  (10 → 15s, transition @14.6)
+  ════════════════════════════════════════ */
+  tl.from("#s3-left",         { x: -55, opacity: 0, duration: 0.48, ease: "expo.out" }, 10.12);
+  tl.from("#s3-sep",          { scaleY: 0, transformOrigin: "top center", opacity: 0, duration: 0.55, ease: "power3.out" }, 10.28);
+  tl.from("#s3-right",        { x: 55, opacity: 0, duration: 0.48, ease: "expo.out" }, 10.44);
+  tl.from(".s3-panel-label",  { opacity: 0, duration: 0.30, ease: "power2.out", stagger: 0.18 }, 10.7);
+  tl.from("#s3-bubble",       { y: 18, opacity: 0, duration: 0.38, ease: "power3.out" }, 11.05);
+  tl.from("#s3-usage",        { opacity: 0, duration: 0.28, ease: "power1.out" }, 11.38);
+  tl.from("#s3-input-mock",   { opacity: 0, y: 10, duration: 0.28, ease: "power2.out" }, 11.65);
+  tl.from("#s3-question",     { opacity: 0, y: 18, duration: 0.38, ease: "power2.out" }, 11.12);
+  tl.from(".s3-opt",          { opacity: 0, x: 16, duration: 0.28, ease: "power2.out", stagger: 0.08 }, 11.75);
+
+  /* ── Transition 3→4  blur-crossfade @14.6s ── */
+  var T3 = 14.6;
+  tl.to("#scene3",   { filter: "blur(5px)", scale: 1.02, opacity: 0, duration: 0.32, ease: "power3.inOut" }, T3);
+  tl.fromTo("#scene4",
+    { filter: "blur(5px)", scale: 0.98, opacity: 0 },
+    { filter: "blur(0px)", scale: 1,    opacity: 1, duration: 0.32, ease: "power3.inOut" }, T3 + 0.06);
+
+  /* ════════════════════════════════════════
+     SCENE 4 — Leagues  (15 → 20s, transition @19.6)
+  ════════════════════════════════════════ */
+  tl.from("#s4-left-label",  { opacity: 0, y: -22, duration: 0.38, ease: "power3.out" }, 15.12);
+  tl.from("#s4-right-label", { opacity: 0, x: 28,  duration: 0.38, ease: "power3.out" }, 15.28);
+  tl.from("#s4-league-card", { x: -52, opacity: 0, duration: 0.52, ease: "expo.out" }, 15.42);
+  tl.from(".s4-av",          { scale: 0, opacity: 0, duration: 0.28, ease: "back.out(2)", stagger: 0.09 }, 15.88);
+  tl.from("#s4-invite",      { opacity: 0, y: 12, duration: 0.32, ease: "power2.out" }, 16.35);
+  tl.from("#s4-lb",          { x: 52, opacity: 0, duration: 0.50, ease: "expo.out" }, 15.6);
+  tl.from(".s4-lb-row",      { opacity: 0, x: 28, duration: 0.32, ease: "power3.out", stagger: 0.13 }, 16.05);
+
+  // Breathe: gold row subtle scale pulse — 17→19.6 = 2.6s, dur 0.85, repeat:1 → 0.85×2=1.7s ✓
+  tl.to(".s4-lb-row.gold", { scale: 1.025, duration: 0.85, ease: "sine.inOut", yoyo: true, repeat: 1 }, 17.2);
+
+  /* ── Transition 4→5  blur-crossfade @19.6s ── */
+  var T4 = 19.6;
+  tl.to("#scene4",   { filter: "blur(5px)", scale: 1.02, opacity: 0, duration: 0.32, ease: "power3.inOut" }, T4);
+  tl.fromTo("#scene5",
+    { filter: "blur(5px)", scale: 0.98, opacity: 0 },
+    { filter: "blur(0px)", scale: 1,    opacity: 1, duration: 0.32, ease: "power3.inOut" }, T4 + 0.06);
+
+  /* ════════════════════════════════════════
+     SCENE 5 — CTA  (20 → 25s)
+  ════════════════════════════════════════ */
+  tl.from("#s5-eyebrow", { letterSpacing: "0.52em", opacity: 0, duration: 0.48, ease: "power3.out" }, 20.12);
+  tl.from("#s5-ball",    { rotation: -360, opacity: 0, duration: 0.52, ease: "power3.out" }, 20.42);
+  tl.from("#s5-cta",     { y: 65, opacity: 0, duration: 0.58, ease: "expo.out" }, 20.72);
+  tl.to("#s5-rule",      { width: 360, duration: 0.52, ease: "power4.out" }, 21.15);
+  tl.from("#s5-tagline", { opacity: 0, y: 20, duration: 0.38, ease: "power2.out" }, 21.55);
+
+  // Breathe: ball bounce — 21.8→24.1 = 2.3s, dur 0.32, repeat:6 → 0.32×7=2.24s ✓
+  tl.to("#s5-ball", { y: -36, duration: 0.32, ease: "power2.out", yoyo: true, repeat: 6, overwrite: "auto" }, 21.8);
+
+  // Final fade-out — only on last scene ✓
+  tl.to("#scene5", { opacity: 0, duration: 0.75, ease: "power2.inOut" }, 24.25);
+  tl.set("#scene5", { visibility: "hidden" }, 25.0);
+
+  window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

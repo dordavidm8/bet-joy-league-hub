@@ -129,7 +129,8 @@ router.get('/users', async (req, res, next) => {
   if (search) params.push(`%${search}%`);
   try {
     const result = await pool.query(
-      `SELECT id, firebase_uid, username, display_name, email, points_balance, total_bets, total_wins, created_at
+      `SELECT id, firebase_uid, username, display_name, email, points_balance, total_bets, total_wins, created_at,
+              phone_number, phone_verified
        FROM users ${where} ORDER BY created_at DESC LIMIT $1 OFFSET $2`, params
     );
     res.json({ users: result.rows });
@@ -187,6 +188,19 @@ router.delete('/users/:id', async (req, res, next) => {
     await client.query('ROLLBACK');
     next(err);
   } finally { client.release(); }
+});
+
+// DELETE /api/admin/users/:id/phone — unlink phone number from user
+router.delete('/users/:id/phone', async (req, res, next) => {
+  try {
+    const r = await pool.query(
+      `UPDATE users SET phone_number = NULL, phone_verified = false WHERE id = $1 RETURNING id, username`,
+      [req.params.id]
+    );
+    if (!r.rows[0]) return res.status(404).json({ error: 'User not found' });
+    await logAdminAction(req.user.email, 'unlink_phone', 'user', req.params.id, {});
+    res.json({ ok: true });
+  } catch (err) { next(err); }
 });
 
 // GET /api/admin/bets

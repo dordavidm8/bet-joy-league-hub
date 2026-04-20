@@ -5,6 +5,7 @@ const { extractNumber } = require('../utils/phoneUtils');
 const { processBetReply } = require('./groupHandler');
 const { getState, setState, clearState } = require('./stateRouter');
 const { formatPoints } = require('../utils/formatters');
+const { getHealthStatus, DEVELOPER_NUMBER } = require('../health');
 
 function getHelpText() {
   return `👋 *שלום! אני הבוט של Kickoff* ⚽\n\n` +
@@ -75,6 +76,13 @@ async function handleDmMessage(client, msg) {
   } else if (cmd === 'ביטול' || cmd === 'cancel') {
     await clearState(phone);
     await msg.reply('✅ הפעולה בוטלה');
+  } else if (cmd === '/status' || cmd === 'status') {
+    if (msg.from === DEVELOPER_NUMBER) {
+      const status = await getHealthStatus();
+      await msg.reply(status);
+    } else {
+      await msg.reply(`❌ אין לך הרשאה לפעולה זו.`);
+    }
   } else {
     await msg.reply(`❌ לא זיהיתי את הפקודה שלך.\n\n${getHelpText()}`);
   }
