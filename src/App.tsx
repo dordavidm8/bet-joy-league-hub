@@ -89,7 +89,7 @@ function DynamicTranslationsLoader() {
 }
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen max-w-lg mx-auto relative">
+  <div className="min-h-screen max-w-lg md:max-w-7xl mx-auto relative">
     <TopBar />
     <main>{children}</main>
     <div className="pb-16" />

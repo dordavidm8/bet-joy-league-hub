@@ -18,7 +18,7 @@ const BottomTabBar = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card shadow-elevated z-50 safe-area-bottom">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
+      <div className="flex items-center justify-around h-16 max-w-lg md:max-w-7xl md:px-8 mx-auto">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
           const Icon = tab.icon;
