@@ -71,6 +71,9 @@ async function sendMorningMessages(client, league) {
        VALUES ($1, $2, $3, $4, NOW())`,
       [league.league_id_val || league.league_id, game.id, groupMsg.id._serialized, league.wa_group_id]
     );
+
+    // Wait a brief moment to avoid WhatsApp sending limits/issues
+    await new Promise(r => setTimeout(r, 1500));
   }
 }
 

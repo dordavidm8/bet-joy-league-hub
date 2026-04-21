@@ -204,9 +204,9 @@ function startInternalApi(client) {
          WHERE l.id = $1`,
         [leagueId]
       );
-      if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not connected to WA' });
-      
-      await sendMorningMessages(client, leagueRes.rows[0]);
+      sendMorningMessages(client, leagueRes.rows[0]).catch((err) => {
+        console.error('[broadcast-league] background error:', err.message);
+      });
       res.json({ ok: true, message: 'Broadcast triggered' });
     } catch (err) {
       console.error('[internal/broadcast-league]', err.message);
