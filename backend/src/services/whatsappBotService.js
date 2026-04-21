@@ -133,11 +133,11 @@ async function notifyLeagueEnd(leagueId) {
 
     const dist = league.distribution || [];
     const rankEmoji = ['🥇', '🥈', '🥉'];
-    let msg = `🏆🏆🏆 ליגת "${league.name}" הסתיימה! 🏆🏆🏆\n\n📊 תוצאות סופיות:\n`;
+    let msg = `🏆🏆🏆 ליגת "${league.name}" הסתיימה! 🏆🏆🏆\n\n📊 תוצאות סופיות:\n\n`;
 
     membersRes.rows.forEach((m, i) => {
-      const payout = i < dist.length ? Math.floor(dist[i].pct / 100 * league.pool_total) : 0;
-      const payStr = payout > 0 ? ` [+${payout.toLocaleString()} מהפרס!]` : '';
+      const payoutAmount = i < dist.length ? Math.floor((dist[i].pct / 100) * league.pool_total) : 0;
+      const payStr = payoutAmount > 0 ? ` [+${payoutAmount.toLocaleString()} מהפרס!]` : '';
       msg += `${rankEmoji[i] || `${i + 1}.`} ${m.username} (${m.points_in_league})${payStr}\n\n`;
     });
 
