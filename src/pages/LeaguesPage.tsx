@@ -133,7 +133,7 @@ const LeaguesPage = () => {
     setEntryFee("0"); setMinStake("10"); setMaxMembers("");
     setDistribution(DEFAULT_DISTRIBUTION);
     setIsTournament(false); setTournamentSlug(""); setStakePerMatch("50");
-    setPenaltyPerMissedBet("0"); setSeasonEndDate("");
+    setSeasonEndDate("");
     setJoinPolicy("before_start"); setAutoSettle(true);
   };
 

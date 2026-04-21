@@ -79,7 +79,7 @@ router.post('/', authenticate, async (req, res, next) => {
         stake_per_match || 0,
         join_policy || 'anytime',
         auto_settle || false,
-        penalty_per_missed_bet || 0,
+        (is_tournament || format === 'pool') ? 0 : (penalty_per_missed_bet || 0),
         max_members || null,
       ]
     );
@@ -363,6 +363,7 @@ router.post('/:id/settle', authenticate, async (req, res, next) => {
     const leagueRes = await client.query(`SELECT * FROM leagues WHERE id = $1`, [req.params.id]);
     const league = leagueRes.rows[0];
     if (!league) return res.status(404).json({ error: 'League not found' });
+    if (league.access_type === 'public') return res.status(403).json({ error: 'ליגות ציבוריות נסגרות על ידי מנהלי האתר בלבד' });
     if (league.creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator can settle' });
     if (league.status !== 'active') return res.status(400).json({ error: 'League already settled' });
     if (!league.distribution && league.pool_total === 0) {

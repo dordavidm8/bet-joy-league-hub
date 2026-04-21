@@ -885,6 +885,22 @@ const LeaguesTab = () => {
   const [waLinkInput, setWaLinkInput] = useState("");
   const [waMsg, setWaMsg] = useState("");
 
+  // Send message to league
+  const [msgLeague, setMsgLeague] = useState<AdminLeague | null>(null);
+  const [msgTitle, setMsgTitle] = useState("");
+  const [msgBody, setMsgBody] = useState("");
+  const [msgResult, setMsgResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const sendMsgMutation = useMutation({
+    mutationFn: () => adminSendNotification({ type: 'admin_message', title: msgTitle, body: msgBody, target: { league_id: msgLeague!.id } as any }),
+    onSuccess: (res) => {
+      setMsgResult({ ok: true, text: `✅ נשלח ל-${res.sent_to} משתמשים` });
+      setMsgTitle(""); setMsgBody("");
+      setTimeout(() => { setMsgLeague(null); setMsgResult(null); }, 2000);
+    },
+    onError: (e: any) => setMsgResult({ ok: false, text: `❌ ${e.message}` }),
+  });
+
   // Public league creation
   const [showCreatePublic, setShowCreatePublic] = useState(false);
   const [pubName, setPubName] = useState("");
@@ -894,7 +910,6 @@ const LeaguesTab = () => {
   const [pubMaxMembers, setPubMaxMembers] = useState("");
   const [pubIsTournament, setPubIsTournament] = useState(false);
   const [pubTournamentSlug, setPubTournamentSlug] = useState("");
-  const [pubPenalty, setPubPenalty] = useState("0");
   const [pubSeasonEnd, setPubSeasonEnd] = useState("");
   const [pubJoinPolicy, setPubJoinPolicy] = useState<"before_start" | "anytime">("anytime");
   const [pubAutoSettle, setPubAutoSettle] = useState(false);
@@ -968,7 +983,6 @@ const LeaguesTab = () => {
         max_members: parseInt(pubMaxMembers) || undefined,
         is_tournament: pubIsTournament,
         tournament_slug: pubIsTournament && pubTournamentSlug && pubTournamentSlug !== "none" ? pubTournamentSlug : undefined,
-        penalty_per_missed_bet: pubIsTournament ? parseInt(pubPenalty) || 0 : undefined,
         season_end_date: pubIsTournament && pubSeasonEnd ? pubSeasonEnd : undefined,
         join_policy: pubIsTournament ? pubJoinPolicy : undefined,
         auto_settle: pubIsTournament ? pubAutoSettle : undefined,
@@ -979,8 +993,8 @@ const LeaguesTab = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
       setPubMsg(`✅ ליגה ציבורית נוצרה: ${res.league.name}`);
       setPubName(""); setPubDesc(""); setPubFormat("pool"); setPubEntryFee("0"); setPubMaxMembers(""); 
-      setPubIsTournament(false); setPubTournamentSlug(""); 
-      setPubPenalty("0"); setPubSeasonEnd(""); setPubJoinPolicy("anytime"); setPubAutoSettle(false);
+      setPubIsTournament(false); setPubTournamentSlug("");
+      setPubSeasonEnd(""); setPubJoinPolicy("anytime"); setPubAutoSettle(false);
       setPubDistribution([{ place: 1, pct: 60 }, { place: 2, pct: 30 }, { place: 3, pct: 10 }]);
       setTimeout(() => { setShowCreatePublic(false); setPubMsg(""); }, 2000);
     },
@@ -1187,7 +1201,11 @@ const LeaguesTab = () => {
                     </button>
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap">
+                      <button onClick={() => { setMsgLeague(l); setMsgTitle(""); setMsgBody(""); setMsgResult(null); }}
+                        className="text-[11px] text-blue-600 border border-blue-300 bg-blue-50 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors flex items-center gap-0.5">
+                        <Send size={10} /> שלח הודעה
+                      </button>
                       {l.status === "active" && (
                         <button onClick={() => { setPauseConfirm(l); setPauseMsg(""); }}
                           className="text-[11px] text-amber-600 border border-amber-300 bg-amber-50 px-2 py-0.5 rounded-full hover:bg-amber-100 transition-colors">
@@ -1261,6 +1279,27 @@ const LeaguesTab = () => {
               {stopMutation.isPending ? "מעצור..." : "עצור ללא חלוקת פרסים"}
             </Button>
             <Button variant="outline" onClick={() => { setStopConfirm(null); setCustomPool(""); setCustomDist(""); }}>ביטול</Button>
+          </div>
+        </Modal>
+      )}
+
+      {msgLeague && (
+        <Modal onClose={() => { setMsgLeague(null); setMsgResult(null); }} title={`שליחת הודעה — ${msgLeague.name}`}>
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-muted-foreground">ההודעה תישלח לכל חברי הליגה הפעילים ({msgLeague.member_count} חברים)</p>
+            <input value={msgTitle} onChange={e => setMsgTitle(e.target.value)} placeholder="כותרת"
+              className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none" />
+            <textarea value={msgBody} onChange={e => setMsgBody(e.target.value)} placeholder="תוכן ההודעה (אופציונלי)" rows={3}
+              className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none resize-none" />
+            {msgResult && <p className={`text-sm ${msgResult.ok ? "text-green-600" : "text-destructive"}`}>{msgResult.text}</p>}
+            <div className="flex gap-2">
+              <Button onClick={() => { setMsgResult(null); sendMsgMutation.mutate(); }}
+                disabled={!msgTitle || sendMsgMutation.isPending} className="flex-1">
+                <Send size={14} className="ml-1" />
+                {sendMsgMutation.isPending ? "שולח..." : "שלח הודעה"}
+              </Button>
+              <Button variant="outline" onClick={() => { setMsgLeague(null); setMsgResult(null); }}>ביטול</Button>
+            </div>
           </div>
         </Modal>
       )}
