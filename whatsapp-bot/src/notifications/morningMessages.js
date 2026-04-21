@@ -33,16 +33,22 @@ async function sendMorningMessages(client, league) {
 
   const gamesRes = await pool.query(gamesQuery, params);
 
+  console.log(`[morningMsg] Found ${gamesRes.rows.length} games for league ${league.league_name}`);
   if (gamesRes.rows.length === 0) return;
 
   for (const game of gamesRes.rows) {
     // Check if we already sent a message for this game+league today
-    const existing = await pool.query(
-      `SELECT id FROM wa_game_messages
-       WHERE league_id = $1 AND game_id = $2 AND group_jid IS NOT NULL`,
-      [league.league_id_val || league.league_id, game.id]
-    );
-    if (existing.rows.length > 0) continue;
+    // const existing = await pool.query(
+    //   `SELECT id FROM wa_game_messages
+    //    WHERE league_id = $1 AND game_id = $2 AND group_jid IS NOT NULL`,
+    //   [league.league_id_val || league.league_id, game.id]
+    // );
+    // if (existing.rows.length > 0) {
+    //   console.log(`[morningMsg] Skipping game ${game.home_team} vs ${game.away_team} (already sent)`);
+    //   continue;
+    // }
+
+    console.log(`[morningMsg] Sending game message: ${game.home_team} vs ${game.away_team}`);
 
     const text = buildGameMessage(game, league);
 
