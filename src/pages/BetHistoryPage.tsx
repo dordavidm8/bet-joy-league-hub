@@ -133,6 +133,7 @@ const BetHistoryPage = () => {
               )}
               <p className="text-xs font-semibold">
                 הבחירה שלי: <span className="text-foreground">{bet.selected_outcome}</span>
+                {bet.exact_score_prediction && <span className="text-foreground"> (תוצאה: {bet.exact_score_prediction})</span>}
                 <span className="text-muted-foreground ml-2">×{parseFloat(String(bet.odds)).toFixed(2)}</span>
               </p>
 

@@ -327,7 +327,10 @@ const ProfilePage = () => {
             >
               <div>
                 <p className="text-sm font-bold">{bet.home_team} נגד {bet.away_team}</p>
-                <p className="text-xs text-muted-foreground">{bet.selected_outcome}</p>
+                <p className="text-xs text-muted-foreground">
+                  {bet.selected_outcome}
+                  {bet.exact_score_prediction && ` (תוצאה: ${bet.exact_score_prediction})`}
+                </p>
               </div>
               <div className="text-left">
                 <p className={`text-sm font-bold ${bet.status === "won" ? "text-primary" : bet.status === "lost" ? "text-destructive" : "text-muted-foreground"}`}>
