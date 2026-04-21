@@ -47,7 +47,6 @@ const LeaguesPage = () => {
   const [isTournament, setIsTournament] = useState(false);
   const [tournamentSlug, setTournamentSlug] = useState("");
   const [stakePerMatch, setStakePerMatch] = useState("50");
-  const [penaltyPerMissedBet, setPenaltyPerMissedBet] = useState("0");
   const [seasonEndDate, setSeasonEndDate] = useState("");
   const [joinPolicy, setJoinPolicy] = useState<"before_start" | "anytime">("before_start");
   const [autoSettle, setAutoSettle] = useState(true);
@@ -106,7 +105,6 @@ const LeaguesPage = () => {
         ...(isTournament && {
           tournament_slug: tournamentSlug === "none" ? undefined : (tournamentSlug || undefined),
           stake_per_match: format === "per_game" ? (parseInt(stakePerMatch) || 0) : 0,
-          penalty_per_missed_bet: parseInt(penaltyPerMissedBet) || 0,
           season_end_date: seasonEndDate || undefined,
           join_policy: joinPolicy,
           auto_settle: autoSettle,
