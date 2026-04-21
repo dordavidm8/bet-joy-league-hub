@@ -398,7 +398,7 @@ const LeagueDetailPage = () => {
               {matchesData.stake_per_match > 0 && (
                 <span className="text-xs text-muted-foreground">מינימום {matchesData.stake_per_match} נק׳ למשחק</span>
               )}
-              {league.penalty_per_missed_bet != null && league.penalty_per_missed_bet > 0 && (
+              {league.penalty_per_missed_bet != null && league.penalty_per_missed_bet > 0 && league.format !== 'pool' && (
                 <span className="text-xs text-destructive/70">קנס אי-הימור: {league.penalty_per_missed_bet} נק׳</span>
               )}
             </div>
@@ -554,7 +554,7 @@ const LeagueDetailPage = () => {
             </>
           )}
 
-          {myMember?.is_active && (
+          {myMember?.is_active && league.access_type !== 'public' && (
             <button
               onClick={() => leaveMutation.mutate()}
               disabled={leaveMutation.isPending}
