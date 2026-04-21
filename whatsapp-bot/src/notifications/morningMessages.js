@@ -9,9 +9,16 @@ async function sendMorningMessages(client, league) {
   const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0)).toISOString();
   const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999)).toISOString();
 
+  const { translateTeam } = require('../utils/teamNames');
+
   let gamesQuery = `
-    SELECT g.id, g.home_team, g.away_team, g.start_time
+    SELECT g.id, g.home_team, g.away_team, g.start_time,
+           t1.name_he as home_he_db, t2.name_he as away_he_db,
+           bq.outcomes
     FROM games g
+    LEFT JOIN team_name_translations t1 ON t1.name_en = g.home_team
+    LEFT JOIN team_name_translations t2 ON t2.name_en = g.away_team
+    LEFT JOIN bet_questions bq ON bq.game_id = g.id AND bq.type = 'match_winner'
   `;
   const params = [tomorrowStart, tomorrowEnd];
 
@@ -37,6 +44,9 @@ async function sendMorningMessages(client, league) {
   if (gamesRes.rows.length === 0) return;
 
   for (const game of gamesRes.rows) {
+    // Add translated names to game object
+    game.home_team_he = game.home_he_db || translateTeam(game.home_team);
+    game.away_team_he = game.away_he_db || translateTeam(game.away_team);
     // Check if we already sent a message for this game+league today
     // const existing = await pool.query(
     //   `SELECT id FROM wa_game_messages

@@ -78,7 +78,7 @@ async function handleGroupMessage(client, msg, chat) {
   if (body === 'עזרה' || body === '?' || body === '/help' || body === 'תפריט') return;
 
   // ── Command: שלח טבלה גבר ────────────────────────────────────────────────
-  if (body.includes('שלח טבלה גבר')) {
+  if (body === 'שלח טבלה גבר') {
     const groupRes = await pool.query(
       `SELECT g.league_id, g.is_active, l.name as league_name 
        FROM wa_groups g
@@ -342,7 +342,7 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
     );
   }
 
-  const payout = Math.round((isFree ? 1 : stake) * odds);
+  const payout = (isFree ? 1 : stake) * odds;
 
   // Save match_winner bet
   await pool.query(
@@ -360,7 +360,7 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
     );
     if (exactQuestion.rows[0]) {
       const exactOdds = odds * 3;
-      const exactPayout = Math.round((isFree ? 1 : stake) * exactOdds);
+      const exactPayout = (isFree ? 1 : stake) * exactOdds;
       await pool.query(
         `INSERT INTO bets (user_id, bet_question_id, game_id, league_id, selected_outcome, odds, stake, potential_payout, is_free_bet, wa_bet, wa_source, wa_bet_message_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,$10,$11)`,
@@ -371,16 +371,6 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
 
   // React 👍 and confirm
   try { await msg.react('👍'); } catch {}
-
-  const outcomeLabel = resultLine === 'X' ? 'תיקו' : resultLine === '1' ? game.home_team : game.away_team;
-  const scoreInfo = normalizedScore ? ` | תוצאה מדויקת: *${normalizedScore}*` : '';
-  const confMsg = await msg.reply(`✅ הימור נשמר!\n*${outcomeLabel}*${scoreInfo}\nרווח פוטנציאלי: *${payout} נקודות*`);
-
-  // Save confirmation ID to ALL bets created for this message
-  await pool.query(
-    `UPDATE bets SET wa_confirmation_message_id = $1 WHERE wa_bet_message_id = $2`,
-    [confMsg.id._serialized, msg.id._serialized]
-  );
 }
 
 // ── Process a bet correction (reply to own bet message) ──────────────────────
