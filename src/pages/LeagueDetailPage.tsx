@@ -627,9 +627,8 @@ const LeagueDetailPage = () => {
 
                     <button
                       onClick={() => {
-                        if (confirm('האם לשדר את משחקי מחר לקבוצת ה-WhatsApp כעת?')) {
-                          waBroadcastMutation.mutate();
-                        }
+                        console.log('[DEBUG] Triggering manual broadcast for league:', leagueId);
+                        waBroadcastMutation.mutate();
                       }}
                       disabled={waBroadcastMutation.isPending}
                       className="text-xs text-primary hover:underline self-start flex items-center gap-1"
