@@ -211,13 +211,16 @@ function startInternalApi(client) {
     try {
       const { sendMorningMessages } = require('./notifications/morningMessages');
       const leagueRes = await pool.query(
-        `SELECT wls.*, wg.wa_group_id, l.name AS league_name, l.id AS league_id_val, l.is_tournament, l.tournament_slug
-         FROM wa_league_settings wls
-         JOIN wa_groups wg ON wg.league_id = wls.league_id AND wg.is_active = true
-         JOIN leagues l ON l.id = wls.league_id
+        `SELECT wg.wa_group_id, l.name AS league_name, l.id AS league_id_val, l.is_tournament, l.tournament_slug, wls.*
+         FROM leagues l
+         JOIN wa_groups wg ON wg.league_id = l.id AND wg.is_active = true
+         LEFT JOIN wa_league_settings wls ON wls.league_id = l.id
          WHERE l.id = $1`,
         [leagueId]
       );
+      if (!leagueRes.rows[0]) {
+        return res.status(404).json({ error: 'League group not found' });
+      }
       sendMorningMessages(client, leagueRes.rows[0]).catch((err) => {
         console.error('[broadcast-league] background error:', err.message);
       });

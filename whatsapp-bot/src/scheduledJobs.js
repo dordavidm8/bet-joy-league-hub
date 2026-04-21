@@ -17,7 +17,7 @@ function startScheduledJobs(client) {
     try {
       // Morning messages
       const morningLeagues = await pool.query(
-        `SELECT wls.*, wg.wa_group_id, l.name AS league_name, l.id AS league_id_val
+        `SELECT wls.*, wg.wa_group_id, l.name AS league_name, l.id AS league_id_val, l.is_tournament, l.tournament_slug
          FROM wa_league_settings wls
          JOIN wa_groups wg ON wg.league_id = wls.league_id AND wg.is_active = true
          JOIN leagues l ON l.id = wls.league_id
