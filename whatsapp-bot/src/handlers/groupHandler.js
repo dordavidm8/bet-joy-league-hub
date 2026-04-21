@@ -329,10 +329,16 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
   }
   const question = questionRes.rows[0];
 
-  // Get odds from JSONB outcomes
+  // Get odds from JSONB outcomes (which are stored as [Home, Draw, Away])
   const outcomes = question.outcomes || [];
-  const matched = outcomes.find(o => o.label === selectedOutcome);
-  const odds = matched?.odds || 2.0;
+  let odds = 2.0;
+  if (selectedOutcome === 'Draw') {
+    odds = outcomes[1]?.odds || 2.0;
+  } else if (selectedOutcome === game.home_team) {
+    odds = outcomes[0]?.odds || 2.0;
+  } else if (selectedOutcome === game.away_team) {
+    odds = outcomes[2]?.odds || 2.0;
+  }
   console.log(`[WA-DEBUG] Odds for ${selectedOutcome}: ${odds}`);
 
   // Handle stake / balance

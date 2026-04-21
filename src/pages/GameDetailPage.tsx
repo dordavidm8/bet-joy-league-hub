@@ -260,7 +260,13 @@ const GameDetailPage = () => {
         </div>
       ) : (
         <div className="flex flex-col gap-6 px-5">
-          {bet_questions.map((q: any, i: number) => {
+          {[...bet_questions]
+            .sort((a, b) => {
+              if (a.type === 'match_winner') return -1;
+              if (b.type === 'match_winner') return 1;
+              return 0;
+            })
+            .map((q: any, i: number) => {
             const isLocked = q.is_locked;
             const inSlipItems = slipForQuestion(q.id);
             const contexts = getContexts(q.id);
