@@ -9,7 +9,7 @@ async function sendMorningMessages(client, league) {
   const todayEnd = new Date(now.setHours(23, 59, 59, 999)).toISOString();
 
   let gamesQuery = `
-    SELECT g.id, g.home_team, g.away_team, g.home_team_he, g.away_team_he, g.start_time
+    SELECT g.id, g.home_team, g.away_team, g.start_time
     FROM games g
   `;
   const params = [todayStart, todayEnd];
