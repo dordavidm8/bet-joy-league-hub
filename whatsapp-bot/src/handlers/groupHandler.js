@@ -103,7 +103,8 @@ async function handleGroupMessage(client, msg, chat) {
   if (body.startsWith('תיקון') && msg.hasQuotedMsg) {
     const quoted = await msg.getQuotedMessage();
     const quotedId = quoted.id._serialized;
-    const senderPhone = extractNumber(msg.author || msg.from);
+    const contact = await msg.getContact();
+    const senderPhone = contact.number;
 
     // 1. Resolve user
     const userRes = await pool.query(`SELECT id FROM users WHERE phone_number = $1`, [senderPhone]);
@@ -193,11 +194,12 @@ async function handleGroupMessage(client, msg, chat) {
   if (!msg.hasQuotedMsg) return;
 
   console.log(`[WA-DEBUG] Processing message from ${msg.author || msg.from} | body: ${body}`);
+  const contact = await msg.getContact();
+  const senderPhone = contact.number;
   const quoted = await msg.getQuotedMessage();
   if (!quoted) return;
   
   const quotedId = quoted.id._serialized;
-  const senderPhone = extractNumber(msg.author || msg.from);
   console.log(`[WA-DEBUG] Quoted message ID: ${quotedId} | SenderPhone: ${senderPhone}`);
 
   // Check if reply is to one of our game messages
