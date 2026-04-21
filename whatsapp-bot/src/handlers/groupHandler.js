@@ -2,6 +2,7 @@
 
 const { pool } = require('../utils/db');
 const { extractNumber } = require('../utils/phoneUtils');
+const { handleSetupCommand } = require('../commands/groupCommands');
 
 // ── Score parsing helper ─────────────────────────────────────────────────────
 // Accepts: "2-0", "2 0", "2:0"
@@ -76,6 +77,15 @@ async function handleGroupMessage(client, msg, chat) {
   const body = (msg.body || '').toLowerCase();
   // Ignore help commands in groups explicitly
   if (body === 'עזרה' || body === '?' || body === '/help' || body === 'תפריט') return;
+
+  // ── Command: Setup / Link League ───────────────────────────────────────────
+  if (body.startsWith('/kickoff setup ')) {
+    const inviteCode = body.replace('/kickoff setup ', '').trim();
+    if (inviteCode) {
+      await handleSetupCommand(client, msg, groupJid, inviteCode);
+      return;
+    }
+  }
 
   // ── Command: שלח טבלה גבר ────────────────────────────────────────────────
   if (body === 'שלח טבלה גבר') {
