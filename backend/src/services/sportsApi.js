@@ -173,11 +173,11 @@ async function fetchGameById(leagueSlug, espnId) {
 
 // ── Build bet questions for a game ────────────────────────────────────────────
 // Returns array of { question_text, outcomes: [{label, odds}], type }
-function buildBetQuestions(game) {
+function buildBetQuestions(game, dbTranslations = {}) {
   const hEn = game.home_team;
   const aEn = game.away_team;
-  const h = translateTeam(hEn);
-  const a = translateTeam(aEn);
+  const h = translateTeam(hEn, dbTranslations);
+  const a = translateTeam(aEn, dbTranslations);
 
   // Priority: 1. ESPN live odds, 2. The Odds API cache, 3. Defaults
   // Use English names for cache lookup. Normalized fallback handles accent mismatches

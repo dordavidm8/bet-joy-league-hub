@@ -71,8 +71,8 @@ async function ensureCompetitions(client, slugs) {
 }
 
 // ── Seed bet questions for a newly inserted game ──────────────────────────────
-async function seedBetQuestions(client, gameId, game) {
-  const questions = buildBetQuestions(game);
+async function seedBetQuestions(client, gameId, game, translations = {}) {
+  const questions = buildBetQuestions(game, translations);
   for (const q of questions) {
     await client.query(
       `INSERT INTO bet_questions (game_id, type, question_text, outcomes, odds_source)
@@ -84,7 +84,7 @@ async function seedBetQuestions(client, gameId, game) {
 
 // ── Reseed bet questions when team names change (knockout stage) ───────────────
 // Cancels and refunds any pending bets, then reseeds all questions
-async function reseedBetQuestionsOnTeamChange(client, gameId, game) {
+async function reseedBetQuestionsOnTeamChange(client, gameId, game, translations = {}) {
   // Find all pending bets on this game's questions
   const pendingBets = await client.query(`
     SELECT b.id, b.user_id, b.stake
@@ -116,7 +116,7 @@ async function reseedBetQuestionsOnTeamChange(client, gameId, game) {
 
   // Delete all bet questions (including those that had bets, which are now cancelled)
   await client.query(`DELETE FROM bet_questions WHERE game_id = $1`, [gameId]);
-  await seedBetQuestions(client, gameId, game);
+  await seedBetQuestions(client, gameId, game, translations);
   console.log(`[syncGames] Reseeded bet questions for game ${gameId} (team names changed)`);
 }
 
@@ -151,16 +151,21 @@ async function syncGames() {
     await ensureCompetitions(client, slugs);
     console.log(`[syncGames] Competitions verified: ${slugs.join(', ')}`);
 
+    // Fetch all current translations to ensure buildBetQuestions uses them as labels
+    const transRes = await client.query(`SELECT name_en, name_he FROM team_name_translations WHERE name_he IS NOT NULL`);
+    const translations = {};
+    for (const r of transRes.rows) translations[r.name_en] = r.name_he;
+
     let inserted = 0, updated = 0;
     for (let j = 0; j < games.length; j++) {
       const game = games[j];
       const row = await upsertGame(client, game);
       if (row.inserted) {
-        await seedBetQuestions(client, row.id, game);
+        await seedBetQuestions(client, row.id, game, translations);
         inserted++;
       } else {
         if (row.teams_changed) {
-          await reseedBetQuestionsOnTeamChange(client, row.id, game);
+          await reseedBetQuestionsOnTeamChange(client, row.id, game, translations);
         }
         updated++;
       }
