@@ -1,6 +1,6 @@
 'use strict';
 
-const pool = require('../utils/db');
+const { pool } = require('../utils/db');
 const { extractNumber } = require('../utils/phoneUtils');
 
 // /kickoff setup <invite_code> — links an existing WA group to a Kickoff league
