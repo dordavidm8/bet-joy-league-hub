@@ -79,8 +79,8 @@ async function handleGroupMessage(client, msg, chat) {
   if (body === 'עזרה' || body === '?' || body === '/help' || body === 'תפריט') return;
 
   // ── Command: Setup / Link League ───────────────────────────────────────────
-  if (body.startsWith('/kickoff setup ')) {
-    const inviteCode = body.replace('/kickoff setup ', '').trim();
+  if (body.includes('/kickoff setup ')) {
+    const inviteCode = body.split('/kickoff setup ')[1].split(' ')[0].trim();
     if (inviteCode) {
       await handleSetupCommand(client, msg, groupJid, inviteCode);
       return;
