@@ -21,6 +21,7 @@ const LeagueDetailPage = () => {
   const { backendUser } = useAuth();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [copiedSetup, setCopiedSetup] = useState(false);
   const [showSettle, setShowSettle] = useState(false);
   const [inviteUsername, setInviteUsername] = useState("");
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -158,6 +159,13 @@ const LeagueDetailPage = () => {
     navigator.clipboard.writeText(data.league.invite_code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copySetupCommand = () => {
+    if (!data?.league.invite_code) return;
+    navigator.clipboard.writeText(`/kickoff setup ${data.league.invite_code}`);
+    setCopiedSetup(true);
+    setTimeout(() => setCopiedSetup(false), 2000);
   };
 
   if (isLoading) return <div className="p-5 text-sm text-muted-foreground">טוען...</div>;
@@ -716,9 +724,17 @@ const LeagueDetailPage = () => {
                   <p className="text-[11px] text-muted-foreground mb-1">
                     או הוסף בוט לקבוצה קיימת — שלח בקבוצה:
                   </p>
-                  <p className="font-mono text-xs bg-secondary rounded px-2 py-1 select-all">
-                    /kickoff setup {league.invite_code}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="flex-1 font-mono text-[11px] bg-secondary rounded-lg px-2 py-1.5 select-all">
+                      /kickoff setup {league.invite_code}
+                    </span>
+                    <button
+                      onClick={copySetupCommand}
+                      className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center transition-colors hover:bg-primary/20 shrink-0"
+                    >
+                      {copiedSetup ? <Check size={14} className="text-primary" /> : <Copy size={14} className="text-primary" />}
+                    </button>
+                  </div>
                 </div>
                 {showWaLinkEdit ? (
                   <div className="flex flex-col gap-2">
