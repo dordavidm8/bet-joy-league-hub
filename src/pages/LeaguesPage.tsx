@@ -259,16 +259,7 @@ const LeaguesPage = () => {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground shrink-0">קנס על אי-הימור</span>
-                    <input type="number" min={0} value={penaltyPerMissedBet}
-                      onChange={(e) => setPenaltyPerMissedBet(e.target.value)}
-                      className="flex-1 bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                    <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
-                  </div>
-                  {parseInt(penaltyPerMissedBet) > 0 && (
-                    <p className="text-[11px] text-muted-foreground">חבר שיש לו מספיק נקודות ולא מהמר יקוזז ב-{penaltyPerMissedBet} נק׳ עם סיום המשחק</p>
-                  )}
+
 
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground shrink-0">תאריך סיום</span>

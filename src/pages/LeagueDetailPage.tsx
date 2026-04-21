@@ -533,7 +533,7 @@ const LeagueDetailPage = () => {
       {/* Actions */}
       {!isFinished && (
         <div className="px-5 flex flex-col gap-3">
-          {isCreator && league.pool_total > 0 && (
+          {isCreator && league.pool_total > 0 && league.access_type !== 'public' && (
             <>
               {showSettle ? (
                 <div className="card-kickoff flex flex-col gap-3 border border-destructive/30">
