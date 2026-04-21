@@ -304,16 +304,17 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
 
   if (existingRes.rows[0]) {
     const prevBet = existingRes.rows[0];
-    // Delete old bets for this user+game to avoid unique constraint violations
-    await pool.query(
-      `DELETE FROM bets WHERE user_id = $1 AND game_id = $2 AND status = 'pending'`,
-      [user.id, game.id]
-    );
     // Refund stake if needed
     if (!prevBet.is_free_bet && prevBet.stake > 0) {
       await pool.query(`UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`, [prevBet.stake, user.id]);
     }
   }
+
+  // Delete old pending/cancelled bets for this user+game to avoid unique constraint violations
+  await pool.query(
+    `DELETE FROM bets WHERE user_id = $1 AND game_id = $2 AND status IN ('pending', 'cancelled')`,
+    [user.id, game.id]
+  );
 
   // Get the match_winner bet_question for this game
   const questionRes = await pool.query(
@@ -400,7 +401,7 @@ async function processBetCorrection(client, msg, senderPhone, prevBet) {
   // Delete ALL pending bets for this game from this user (match_winner + exact_score)
   await pool.query(
     `DELETE FROM bets
-     WHERE user_id = $1 AND game_id = $2 AND wa_bet = true AND status = 'pending'`,
+     WHERE user_id = $1 AND game_id = $2 AND wa_bet = true AND status IN ('pending', 'cancelled')`,
     [prevBet.user_id, prevBet.game_id]
   );
 
