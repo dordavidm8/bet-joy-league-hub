@@ -467,14 +467,26 @@ const GameDetailPage = () => {
       )}
 
       {/* AI Button */}
-      {!isFinished && !isLive && (
-        <button
-          onClick={() => setShowAi(true)}
-          className="fixed bottom-24 left-6 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-40"
-        >
-          <Sparkles size={22} />
-        </button>
-      )}
+      {!isFinished && !isLive && (() => {
+        const isAiLocked = !backendUser?.is_admin;
+        return (
+          <button
+            onClick={() => {
+              if (isAiLocked) {
+                alert("תכונה זו בשלבי הרצה וזמינה כרגע למנהלים בלבד.");
+                return;
+              }
+              setShowAi(true);
+            }}
+            className={`fixed bottom-24 left-6 w-14 h-14 rounded-full shadow-elevated flex items-center justify-center transition-transform z-40 relative
+              ${isAiLocked ? 'bg-secondary text-muted-foreground opacity-80' : 'bg-primary text-primary-foreground hover:scale-110 active:scale-95'}
+            `}
+          >
+            <Sparkles size={22} className={isAiLocked ? "opacity-50" : ""} />
+            {isAiLocked && <span className="absolute -top-1 -right-1 text-xs">🔒</span>}
+          </button>
+        );
+      })()}
 
       {showAi && (
         <AiAdvisor

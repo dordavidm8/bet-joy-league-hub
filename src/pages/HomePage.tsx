@@ -110,7 +110,7 @@ const HomePage = () => {
             <span className="text-base">⭐</span>
             <span className="section-label">בחירת העורך</span>
           </div>
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-5 pb-2 scrollbar-hide">
+          <div className="flex gap-4 overflow-x-auto pb-4 pt-1 px-5 snap-x snap-mandatory scrollbar-hide items-stretch">
             {featuredGames.map((game, i) => (
               <GameCard key={game.id} game={game} index={i} />
             ))}

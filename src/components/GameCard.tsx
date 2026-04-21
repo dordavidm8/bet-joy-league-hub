@@ -29,7 +29,7 @@ const GameCard = ({ game, index }: GameCardProps) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.05, ease: [0.32, 0.72, 0, 1] }}
-      className="card-kickoff min-w-[280px] flex flex-col gap-4 snap-center h-full"
+      className="card-kickoff min-w-[280px] flex flex-col gap-4 snap-center self-stretch"
     >
       {/* Competition + Live badge */}
       <div className="flex items-center justify-between">
