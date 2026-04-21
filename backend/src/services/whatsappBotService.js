@@ -111,6 +111,11 @@ async function buildResultMessage(gameId, leagueId) {
   return msg;
 }
 
+async function leaveGroup(groupJid) {
+  const ok = await callBot('/internal/leave-group', { groupJid });
+  return ok;
+}
+
 async function notifyLeagueEnd(leagueId) {
   try {
     const groupRes = await pool.query(
@@ -137,15 +142,26 @@ async function notifyLeagueEnd(leagueId) {
 
     membersRes.rows.forEach((m, i) => {
       const payoutAmount = i < dist.length ? Math.floor((dist[i].pct / 100) * league.pool_total) : 0;
-      const payStr = payoutAmount > 0 ? ` [+${payoutAmount.toLocaleString()} מהפרס!]` : '';
+      const payStr = payoutAmount > 0 ? ` [+${payoutAmount.toLocaleString()} נקודות!]` : '';
       msg += `${rankEmoji[i] || `${i + 1}.`} ${m.username} (${m.points_in_league})${payStr}\n\n`;
     });
 
     msg += `כל הכבוד לכולם! 🎉`;
     await sendGroup(groupRes.rows[0].wa_group_id, msg);
+
+    // Wait a few seconds to let the message deliver, then leave the group
+    setTimeout(async () => {
+      try {
+        console.log(`[WA] Leaving group ${groupRes.rows[0].wa_group_id} after league end`);
+        await leaveGroup(groupRes.rows[0].wa_group_id);
+      } catch (err) {
+        console.error('[WA] Failed to leave group after league end:', err.message);
+      }
+    }, 5000);
+
   } catch (err) {
     console.error('[WA] notifyLeagueEnd error:', err.message);
   }
 }
 
-module.exports = { sendDM, sendGroup, notifyGameResult, notifyLeagueEnd, callBot };
+module.exports = { sendDM, sendGroup, leaveGroup, notifyGameResult, notifyLeagueEnd, callBot };

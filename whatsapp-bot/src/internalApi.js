@@ -153,6 +153,20 @@ function startInternalApi(client) {
     }
   });
 
+  // POST /internal/leave-group
+  app.post('/internal/leave-group', auth, async (req, res) => {
+    const { groupJid } = req.body;
+    if (!groupJid) return res.status(400).json({ error: 'groupJid required' });
+    try {
+      const chat = await client.getChatById(groupJid);
+      await chat.leave();
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[internal/leave-group]', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // POST /internal/react — react to message
   app.post('/internal/react', auth, async (req, res) => {
     const { msgId, groupJid, emoji } = req.body;
