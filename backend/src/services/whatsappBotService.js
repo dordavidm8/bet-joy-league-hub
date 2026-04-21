@@ -127,7 +127,7 @@ async function notifyLeagueEnd(leagueId) {
       `SELECT u.username, lm.points_in_league
        FROM league_members lm JOIN users u ON u.id = lm.user_id
        WHERE lm.league_id = $1 AND lm.is_active = true
-       ORDER BY lm.points_in_league DESC`,
+       ORDER BY lm.points_in_league DESC LIMIT 5`,
       [leagueId]
     );
 
@@ -138,10 +138,10 @@ async function notifyLeagueEnd(leagueId) {
     membersRes.rows.forEach((m, i) => {
       const payout = i < dist.length ? Math.floor(dist[i].pct / 100 * league.pool_total) : 0;
       const payStr = payout > 0 ? ` [+${payout.toLocaleString()} מהפרס!]` : '';
-      msg += `${rankEmoji[i] || `${i + 1}.`} ${m.username} — ${m.points_in_league} נקודות${payStr}\n`;
+      msg += `${rankEmoji[i] || `${i + 1}.`} ${m.username} (${m.points_in_league})${payStr}\n\n`;
     });
 
-    msg += `\nכל הכבוד לכולם! 🎉`;
+    msg += `כל הכבוד לכולם! 🎉`;
     await sendGroup(groupRes.rows[0].wa_group_id, msg);
   } catch (err) {
     console.error('[WA] notifyLeagueEnd error:', err.message);
