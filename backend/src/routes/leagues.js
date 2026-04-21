@@ -85,8 +85,8 @@ router.post('/', authenticate, async (req, res, next) => {
     );
     const league = leagueRes.rows[0];
 
-    // Deduct entry fee from creator
-    if (entry_fee > 0) {
+    // Deduct entry fee from creator and add to pool (only if they actually join, i.e., non-public)
+    if (entry_fee > 0 && access_type !== 'public') {
       const balRes = await client.query(
         `UPDATE users SET points_balance = points_balance - $1
          WHERE id = $2 AND points_balance >= $1 RETURNING points_balance`,
