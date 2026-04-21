@@ -117,7 +117,7 @@ async function handleGroupMessage(client, msg, chat) {
       `SELECT b.*, g.status as game_status, g.home_team, g.away_team
        FROM bets b
        JOIN games g ON g.id = b.game_id
-       WHERE b.user_id = $1 AND (b.wa_bet_message_id = $2 OR b.wa_source_message_id = $2)
+       WHERE b.user_id = $1 AND (b.wa_bet_message_id = $2 OR b.wa_confirmation_message_id = $2)
        AND b.status = 'pending'
        ORDER BY b.placed_at DESC LIMIT 1`,
       [user.id, quotedId]
@@ -223,7 +223,7 @@ async function handleGroupMessage(client, msg, chat) {
      FROM bets b
      JOIN games g ON g.id = b.game_id
      WHERE b.user_id = $1 
-     AND (b.wa_bet_message_id = $2 OR b.wa_source_message_id = $2 OR b.wa_confirmation_message_id = $2)
+     AND (b.wa_bet_message_id = $2 OR b.wa_confirmation_message_id = $2)
      AND b.status = 'pending'
      ORDER BY b.placed_at DESC LIMIT 1`,
     [user.id, quotedId]
@@ -304,9 +304,9 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
 
   if (existingRes.rows[0]) {
     const prevBet = existingRes.rows[0];
-    // Cancel old bets for this user+game
+    // Delete old bets for this user+game to avoid unique constraint violations
     await pool.query(
-      `UPDATE bets SET status = 'cancelled' WHERE user_id = $1 AND game_id = $2 AND status = 'pending'`,
+      `DELETE FROM bets WHERE user_id = $1 AND game_id = $2 AND status = 'pending'`,
       [user.id, game.id]
     );
     // Refund stake if needed
@@ -397,9 +397,9 @@ async function processBetCorrection(client, msg, senderPhone, prevBet) {
     );
   }
 
-  // Cancel ALL pending bets for this game from this user (match_winner + exact_score)
+  // Delete ALL pending bets for this game from this user (match_winner + exact_score)
   await pool.query(
-    `UPDATE bets SET status = 'cancelled'
+    `DELETE FROM bets
      WHERE user_id = $1 AND game_id = $2 AND wa_bet = true AND status = 'pending'`,
     [prevBet.user_id, prevBet.game_id]
   );
