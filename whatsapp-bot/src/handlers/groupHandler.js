@@ -265,11 +265,14 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
      WHERE g.status = 'scheduled'`,
     [gameMsg.wa_message_id]
   );
+  console.log(`[WA-DEBUG] Game look-up result: ${gameRes.rows.length} rows found for msgId ${gameMsg.wa_message_id}`);
+  
   if (!gameRes.rows[0]) {
     await msg.reply('❌ המשחק הזה כבר לא פתוח להימורים');
     return;
   }
   const game = gameRes.rows[0];
+  console.log(`[WA-DEBUG] Processing bet for Game: ${game.home_team} vs ${game.away_team} (ID: ${game.id})`);
 
   // Map 1/X/2 to outcome
   const outcomeMap = { '1': game.home_team, 'X': 'Draw', '2': game.away_team };
@@ -309,6 +312,8 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
     `SELECT * FROM bet_questions WHERE game_id = $1 AND type = 'match_winner' LIMIT 1`,
     [game.id]
   );
+  console.log(`[WA-DEBUG] Question look-up: ${questionRes.rows.length} rows found for game ${game.id}`);
+  
   if (!questionRes.rows[0]) {
     await msg.reply('❌ לא נמצאו שאלות הימור למשחק זה');
     return;
@@ -346,6 +351,7 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,$10,$11)`,
     [user.id, question.id, game.id, gameMsg.league_id, selectedOutcome, odds, stake, payout, isFree, source, msg.id._serialized]
   );
+  console.log(`[WA-DEBUG] Main bet inserted successfully for user ${user.id}`);
 
   // Save exact_score bet if provided and enabled
   if (normalizedScore && game.exact_score_enabled) {
