@@ -17,7 +17,7 @@ const TopBar = () => {
         <div className="flex items-center gap-2">
           <NotificationBell />
           <div className="flex items-center gap-1.5 bg-secondary rounded-full px-3 py-1.5">
-            <span className="text-sm font-bold">{points.toLocaleString()}</span>
+            <span className="text-sm font-bold">{Math.floor(points).toLocaleString()}</span>
             <span className="text-xs text-muted-foreground">נקודות</span>
           </div>
         </div>

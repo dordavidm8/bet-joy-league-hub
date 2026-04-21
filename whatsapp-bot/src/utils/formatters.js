@@ -8,8 +8,9 @@ function formatDate(date) {
   return date.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-function formatPoints(p) {
+function formatPoints(p, allowDecimals = true) {
   const num = Number(p);
+  if (!allowDecimals) return Math.floor(num).toLocaleString('he-IL');
   return num % 1 === 0 ? num.toLocaleString('he-IL') : num.toFixed(1);
 }
 

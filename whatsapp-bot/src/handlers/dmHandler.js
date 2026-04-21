@@ -95,7 +95,7 @@ async function handleDmMessage(client, msg) {
 }
 
 async function sendBalance(msg, user) {
-  await msg.reply(`💰 *${user.username}*, יתרתך: *${formatPoints(user.points_balance)} נקודות*`);
+  await msg.reply(`💰 *${user.username}*, יתרתך: *${formatPoints(user.points_balance, false)} נקודות*`);
 }
 
 
