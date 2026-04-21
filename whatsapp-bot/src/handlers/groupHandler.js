@@ -303,8 +303,16 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
   );
 
   if (existingRes.rows[0]) {
-    await msg.reply('⚠️ כבר הימרת על משחק זה. כדי לתקן, *השב להודעת ההימור שלך* עם ההימור המעודכן');
-    return;
+    const prevBet = existingRes.rows[0];
+    // Cancel old bets for this user+game
+    await pool.query(
+      `UPDATE bets SET status = 'cancelled' WHERE user_id = $1 AND game_id = $2 AND status = 'pending'`,
+      [user.id, game.id]
+    );
+    // Refund stake if needed
+    if (!prevBet.is_free_bet && prevBet.stake > 0) {
+      await pool.query(`UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`, [prevBet.stake, user.id]);
+    }
   }
 
   // Get the match_winner bet_question for this game

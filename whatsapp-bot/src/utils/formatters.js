@@ -31,9 +31,9 @@ function buildGameMessage(game, leagueSettings) {
   let msg = `⚽ *${homeName} נגד ${awayName}*\n`;
   msg += `🗓 ${dateStr} | ${timeStr}\n\n`;
   msg += `הגב להודעה זו עם ההימור שלך:\n`;
-  msg += `• *1* — ${homeName} (יחס: ${getOdds(game.home_team)})\n`;
-  msg += `• *X* — תיקו (יחס: ${getOdds('Draw')})\n`;
-  msg += `• *2* — ${awayName} (יחס: ${getOdds(game.away_team)})\n\n`;
+  msg += `• *1* — ${homeName} (יחס: ${getOdds(homeName)})\n`;
+  msg += `• *X* — תיקו (יחס: ${getOdds('תיקו')})\n`;
+  msg += `• *2* — ${awayName} (יחס: ${getOdds(awayName)})\n\n`;
   msg += `🎯 *ניתן להמר גם על תוצאה מדויקת!* (בונוס x3)\n`;
   msg += `פשוט הוסף את התוצאה לאחר ה-1,X,2.\n`;
   msg += `דוגמה: *1 2-1* (ניצחון לבית בתוצאה 2-1)`;
