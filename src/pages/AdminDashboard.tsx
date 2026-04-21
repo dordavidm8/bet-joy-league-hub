@@ -4,10 +4,21 @@ import { useNavigate } from "react-router-dom";
 import {
   BarChart2, Users, Target, Trophy, Bell, HelpCircle, Settings,
   Search, Plus, Trash2, Send, Star, StarOff, ChevronDown, ChevronUp,
-  LogOut, XCircle, ToggleLeft, ToggleRight, Activity, X, Check, Bot,
+  LogOut, XCircle, ToggleLeft, ToggleRight, Activity, X, Check, Bot, Flag
 } from "lucide-react";
 import { AdvisorTab } from "@/components/admin/AdvisorTab";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const KNOWN_COMPETITIONS = [
+  { slug: 'fifa.world',      name: 'גביע העולם 2026' },
+  { slug: 'uefa.champions',  name: 'ליגת האלופות' },
+  { slug: 'eng.1',           name: 'פרמייר ליג' },
+  { slug: 'esp.1',           name: 'לה ליגה' },
+  { slug: 'ger.1',           name: 'בונדסליגה' },
+  { slug: 'ita.1',           name: 'סריה א' },
+  { slug: 'fra.1',           name: 'ליג 1' },
+];
 import {
   adminGetStats, adminGetUsers, adminGetBets, adminGetGames, adminGetLeagues,
   adminGetCompetitions, adminGetLog,
@@ -881,7 +892,16 @@ const LeaguesTab = () => {
   const [pubFormat, setPubFormat] = useState<"pool" | "per_game">("pool");
   const [pubEntryFee, setPubEntryFee] = useState("0");
   const [pubMaxMembers, setPubMaxMembers] = useState("");
+  const [pubIsTournament, setPubIsTournament] = useState(false);
+  const [pubTournamentSlug, setPubTournamentSlug] = useState("");
+  const [pubPenalty, setPubPenalty] = useState("0");
+  const [pubSeasonEnd, setPubSeasonEnd] = useState("");
+  const [pubJoinPolicy, setPubJoinPolicy] = useState<"before_start" | "anytime">("anytime");
+  const [pubAutoSettle, setPubAutoSettle] = useState(false);
+  const [pubDistribution, setPubDistribution] = useState([{ place: 1, pct: 60 }, { place: 2, pct: 30 }, { place: 3, pct: 10 }]);
   const [pubMsg, setPubMsg] = useState("");
+
+  const distTotal = pubDistribution.reduce((acc, curr) => acc + curr.pct, 0);
 
   const { data, isLoading, isError } = useQuery({ queryKey: ["admin-leagues"], queryFn: adminGetLeagues, staleTime: 30_000 });
   const leagues = (data?.leagues ?? []).filter((l: AdminLeague) => {
@@ -937,19 +957,31 @@ const LeaguesTab = () => {
   });
 
   const createPublicMutation = useMutation({
-    mutationFn: () => createLeague({
-      name: pubName,
-      description: pubDesc.trim() || undefined,
-      format: pubFormat,
-      duration_type: 'full_season',
-      access_type: 'public',
-      entry_fee: parseInt(pubEntryFee) || 0,
-      max_members: parseInt(pubMaxMembers) || undefined,
-    }),
+    mutationFn: () => {
+      return createLeague({
+        name: pubName,
+        description: pubDesc.trim() || undefined,
+        format: pubFormat,
+        duration_type: pubIsTournament ? 'tournament' : 'full_season',
+        access_type: 'public',
+        entry_fee: parseInt(pubEntryFee) || 0,
+        max_members: parseInt(pubMaxMembers) || undefined,
+        is_tournament: pubIsTournament,
+        tournament_slug: pubIsTournament && pubTournamentSlug && pubTournamentSlug !== "none" ? pubTournamentSlug : undefined,
+        penalty_per_missed_bet: pubIsTournament ? parseInt(pubPenalty) || 0 : undefined,
+        season_end_date: pubIsTournament && pubSeasonEnd ? pubSeasonEnd : undefined,
+        join_policy: pubIsTournament ? pubJoinPolicy : undefined,
+        auto_settle: pubIsTournament ? pubAutoSettle : undefined,
+        distribution: (pubFormat === "pool" || parseInt(pubEntryFee) > 0) ? pubDistribution : undefined,
+      });
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
       setPubMsg(`✅ ליגה ציבורית נוצרה: ${res.league.name}`);
-      setPubName(""); setPubDesc(""); setPubFormat("pool"); setPubEntryFee("0"); setPubMaxMembers("");
+      setPubName(""); setPubDesc(""); setPubFormat("pool"); setPubEntryFee("0"); setPubMaxMembers(""); 
+      setPubIsTournament(false); setPubTournamentSlug(""); 
+      setPubPenalty("0"); setPubSeasonEnd(""); setPubJoinPolicy("anytime"); setPubAutoSettle(false);
+      setPubDistribution([{ place: 1, pct: 60 }, { place: 2, pct: 30 }, { place: 3, pct: 10 }]);
       setTimeout(() => { setShowCreatePublic(false); setPubMsg(""); }, 2000);
     },
     onError: (e: any) => setPubMsg(`❌ ${e.message}`),
@@ -964,33 +996,148 @@ const LeaguesTab = () => {
           <Plus size={15} /> צור ליגה ציבורית
         </button>
         {showCreatePublic && (
-          <div className="flex flex-col gap-2 mt-3">
-            <input value={pubName} onChange={e => setPubName(e.target.value)} placeholder="שם הליגה"
-              className="bg-background border rounded-xl px-3 py-2 text-sm outline-none" />
-            <input value={pubDesc} onChange={e => setPubDesc(e.target.value)} placeholder="תיאור (אופציונלי)"
-              className="bg-background border rounded-xl px-3 py-2 text-sm outline-none" />
-            <div className="flex gap-2">
-              {(["pool", "per_game"] as const).map(f => (
-                <button key={f} onClick={() => setPubFormat(f)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${pubFormat === f ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
-                  {f === "pool" ? "קופה משותפת" : "תשלום למשחק"}
+          <div className="flex flex-col gap-3 mt-4">
+            <input placeholder="שם הליגה" value={pubName} onChange={(e) => setPubName(e.target.value)}
+              className="bg-background rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 border" />
+
+            <textarea placeholder="תיאור הליגה (אופציונלי)" value={pubDesc} onChange={(e) => setPubDesc(e.target.value)}
+              rows={2}
+              className="bg-background rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 border resize-none" />
+
+            {/* Format */}
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs text-muted-foreground font-medium">פורמט ליגה</p>
+              <div className="flex gap-2">
+                <button onClick={() => setPubFormat("pool")}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
+                    pubFormat === "pool" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
+                  }`}>
+                  <span className="block font-bold">קופה משותפת</span>
+                  <span className="opacity-70">ניקוד · חלוקה לפי מקום</span>
                 </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1 flex flex-col gap-1">
-                <label className="text-[11px] text-muted-foreground">דמי כניסה (נק׳)</label>
-                <input type="number" min={0} value={pubEntryFee} onChange={e => setPubEntryFee(e.target.value)}
-                  className="bg-background border rounded-xl px-3 py-2 text-sm outline-none" />
-              </div>
-              <div className="flex-1 flex flex-col gap-1">
-                <label className="text-[11px] text-muted-foreground">מקס׳ חברים (ריק=ללא הגבלה)</label>
-                <input type="number" min={1} value={pubMaxMembers} onChange={e => setPubMaxMembers(e.target.value)}
-                  placeholder="ללא הגבלה" className="bg-background border rounded-xl px-3 py-2 text-sm outline-none" />
+                <button onClick={() => setPubFormat("per_game")}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
+                    pubFormat === "per_game" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
+                  }`}>
+                  <span className="block font-bold">תשלום למשחק</span>
+                  <span className="opacity-70">הימור מהמאזן · זוכה שומר</span>
+                </button>
               </div>
             </div>
-            {pubMsg && <p className="text-xs">{pubMsg}</p>}
-            <Button onClick={() => createPublicMutation.mutate()} disabled={!pubName || createPublicMutation.isPending} className="bg-primary">
+
+            {/* Tournament modifier */}
+            <label className="flex items-center gap-2.5 cursor-pointer bg-background border rounded-xl px-4 py-3">
+              <input type="checkbox" checked={pubIsTournament} onChange={(e) => setPubIsTournament(e.target.checked)}
+                className="w-4 h-4 accent-primary shrink-0 cursor-pointer" />
+              <div>
+                <span className="text-sm font-bold flex items-center gap-1"><Flag size={13} className="text-primary" /> ליגת טורניר</span>
+                <span className="text-[11px] text-muted-foreground">כל חברי הליגה מהמרים על אותו טורניר</span>
+              </div>
+            </label>
+
+            {/* Tournament settings */}
+            {pubIsTournament && (
+              <div className="flex flex-col gap-3 border border-primary/20 rounded-xl p-3 bg-white/50">
+                <p className="text-xs font-bold text-primary">הגדרות טורניר</p>
+
+                {/* Competition selector */}
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs text-muted-foreground">תחרות (אופציונלי)</p>
+                  <Select value={pubTournamentSlug || "none"} onValueChange={setPubTournamentSlug} dir="rtl">
+                    <SelectTrigger className="bg-background rounded-xl px-4 py-2 text-sm outline-none border h-11">
+                      <SelectValue placeholder="ללא — ידני" />
+                    </SelectTrigger>
+                    <SelectContent dir="rtl">
+                      <SelectItem value="none">ללא — ידני</SelectItem>
+                      {KNOWN_COMPETITIONS.map(c => (
+                        <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground shrink-0">קנס על אי-הימור</span>
+                  <input type="number" min={0} value={pubPenalty} onChange={(e) => setPubPenalty(e.target.value)}
+                    className="flex-1 bg-background border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground shrink-0">תאריך סיום</span>
+                  <input type="date" value={pubSeasonEnd} onChange={(e) => setPubSeasonEnd(e.target.value)}
+                    className="flex-1 bg-background border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs text-muted-foreground">הצטרפות לליגה</p>
+                  <div className="flex gap-2">
+                    {(["before_start", "anytime"] as const).map(p => (
+                      <button key={p} onClick={() => setPubJoinPolicy(p)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-colors ${
+                          pubJoinPolicy === p ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
+                        }`}>
+                        {p === "before_start" ? "לפני תחילת הטורניר בלבד" : "בכל שלב"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={pubAutoSettle} onChange={(e) => setPubAutoSettle(e.target.checked)}
+                    className="w-4 h-4 accent-primary cursor-pointer" />
+                  <span className="text-sm font-medium">סיום וחלוקה אוטומטיים עם סיום הטורניר</span>
+                </label>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground shrink-0">מקסימום חברים</span>
+              <input type="number" min={2} value={pubMaxMembers} onChange={(e) => setPubMaxMembers(e.target.value)}
+                placeholder="ללא הגבלה"
+                className="flex-1 bg-background border rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground shrink-0">דמי כניסה (לקופה)</span>
+              <input type="number" min={0} value={pubEntryFee} onChange={(e) => setPubEntryFee(e.target.value)}
+                placeholder="0"
+                className="flex-1 bg-background border rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+              <span className="text-sm text-muted-foreground shrink-0">נק׳</span>
+            </div>
+
+            {(pubFormat === "pool" || parseInt(pubEntryFee) > 0) && (
+              <div className="flex flex-col gap-2 mt-2">
+                <p className="text-xs font-bold text-muted-foreground">חלוקת פרסים (סה״כ: {distTotal}%)</p>
+                {pubDistribution.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground w-16 shrink-0">מקום {d.place}</span>
+                    <input type="number" min={0} max={100} value={d.pct}
+                      onChange={(e) => setPubDistribution(prev => prev.map((x, j) => j === i ? { ...x, pct: parseInt(e.target.value) || 0 } : x))}
+                      className="flex-1 bg-background border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    <span className="text-sm text-muted-foreground shrink-0">%</span>
+                    {i > 0 && (
+                      <button onClick={() => setPubDistribution(prev => prev.filter((_, j) => j !== i))}
+                        className="text-muted-foreground hover:text-destructive text-xs px-1">×</button>
+                    )}
+                  </div>
+                ))}
+                {pubDistribution.length < 5 && (
+                  <button onClick={() => setPubDistribution(prev => [...prev, { place: prev.length + 1, pct: 0 }])}
+                    className="text-xs text-primary self-start hover:underline font-medium">
+                    + הוסף מקום
+                  </button>
+                )}
+                {distTotal !== 100 && (
+                  <p className="text-xs text-destructive">סה״כ חייב להיות 100% (כרגע: {distTotal}%)</p>
+                )}
+              </div>
+            )}
+
+            {pubMsg && <p className="text-xs font-bold">{pubMsg}</p>}
+            <Button onClick={() => createPublicMutation.mutate()} 
+              disabled={!pubName || createPublicMutation.isPending || ((pubFormat === "pool" || parseInt(pubEntryFee) > 0) && distTotal !== 100)} 
+              className="bg-primary hover:bg-primary/90 mt-2">
               {createPublicMutation.isPending ? "יוצר..." : "צור ליגה ציבורית"}
             </Button>
           </div>
