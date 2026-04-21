@@ -320,12 +320,11 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
   }
   const question = questionRes.rows[0];
 
-  // Get odds
-  const oddsRes = await pool.query(
-    `SELECT odds FROM bet_options WHERE bet_question_id = $1 AND outcome = $2`,
-    [question.id, selectedOutcome]
-  );
-  const odds = oddsRes.rows[0]?.odds || 2.0;
+  // Get odds from JSONB outcomes
+  const outcomes = question.outcomes || [];
+  const matched = outcomes.find(o => o.outcome === selectedOutcome);
+  const odds = matched?.odds || 2.0;
+  console.log(`[WA-DEBUG] Odds for ${selectedOutcome}: ${odds}`);
 
   // Handle stake / balance
   const isFree = game.bet_mode === 'prediction';
