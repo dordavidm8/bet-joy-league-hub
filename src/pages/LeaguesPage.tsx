@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins, Flag } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Tab = "leagues" | "leaderboard";
 
@@ -103,7 +104,7 @@ const LeaguesPage = () => {
         distribution: parseInt(entryFee) > 0 ? distribution : undefined,
         is_tournament: isTournament || undefined,
         ...(isTournament && {
-          tournament_slug: tournamentSlug || undefined,
+          tournament_slug: tournamentSlug === "none" ? undefined : (tournamentSlug || undefined),
           stake_per_match: format === "per_game" ? (parseInt(stakePerMatch) || 0) : 0,
           penalty_per_missed_bet: parseInt(penaltyPerMissedBet) || 0,
           season_end_date: seasonEndDate || undefined,
@@ -234,13 +235,17 @@ const LeaguesPage = () => {
                   {/* Competition selector (optional) */}
                   <div className="flex flex-col gap-1">
                     <p className="text-xs text-muted-foreground">תחרות (אופציונלי)</p>
-                    <select value={tournamentSlug} onChange={(e) => setTournamentSlug(e.target.value)}
-                      className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none appearance-none">
-                      <option value="">ללא — ידני</option>
-                      {KNOWN_COMPETITIONS.map(c => (
-                        <option key={c.slug} value={c.slug}>{c.name}</option>
-                      ))}
-                    </select>
+                    <Select value={tournamentSlug || "none"} onValueChange={setTournamentSlug} dir="rtl">
+                      <SelectTrigger className="bg-secondary rounded-xl px-4 py-2 text-sm outline-none border-none h-11">
+                        <SelectValue placeholder="ללא — ידני" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        <SelectItem value="none">ללא — ידני</SelectItem>
+                        {KNOWN_COMPETITIONS.map(c => (
+                          <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Stake per match — only for per_game */}

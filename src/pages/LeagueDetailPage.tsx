@@ -7,6 +7,7 @@ import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, Che
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { translateTeam } from "@/lib/teamNames";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const FORMAT_LABEL: Record<string, string> = { pool: "קופה משותפת", per_game: "תשלום למשחק" };
 const DURATION_LABEL: Record<string, string> = {
@@ -38,7 +39,7 @@ const LeagueDetailPage = () => {
     leaderboard_day: number;
   }>({
     morning_message_time: '09:00',
-    leaderboard_frequency: 'after_game',
+    leaderboard_frequency: 'weekly',
     leaderboard_time: '10:00',
     leaderboard_day: 0,
   });
@@ -613,9 +614,9 @@ const LeagueDetailPage = () => {
                         if (waSettingsData?.settings) {
                           setEditWaSettings({
                             morning_message_time: waSettingsData.settings.morning_message_time || '09:00',
-                            leaderboard_frequency: waSettingsData.settings.leaderboard_frequency || 'after_game',
+                            leaderboard_frequency: waSettingsData.settings.leaderboard_frequency || 'weekly',
                             leaderboard_time: waSettingsData.settings.leaderboard_time || '10:00',
-                            leaderboard_day: waSettingsData.settings.leaderboard_day || 0,
+                            leaderboard_day: waSettingsData.settings.leaderboard_day ?? 0,
                           });
                         }
                         setShowWaSettings(!showWaSettings);
@@ -647,14 +648,17 @@ const LeagueDetailPage = () => {
 
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] font-bold text-muted-foreground mr-1">תדירות שליחת טבלה</label>
-                          <select value={editWaSettings.leaderboard_frequency}
-                            onChange={e => setEditWaSettings(prev => ({ ...prev, leaderboard_frequency: e.target.value as any }))}
-                            className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50">
-                            <option value="after_game">אחרי כל משחק</option>
-                            <option value="daily">פעם ביום (בשעה קבועה)</option>
-                            <option value="weekly">פעם בשבוע (ביום ושעה קבועים)</option>
-                            <option value="never">לעולם לא</option>
-                          </select>
+                          <Select value={editWaSettings.leaderboard_frequency} onValueChange={(val: any) => setEditWaSettings(prev => ({ ...prev, leaderboard_frequency: val }))} dir="rtl">
+                            <SelectTrigger className="bg-secondary rounded-lg px-3 py-1 text-xs outline-none border-border/50 h-8">
+                              <SelectValue placeholder="בחר תדירות" />
+                            </SelectTrigger>
+                            <SelectContent dir="rtl">
+                              <SelectItem value="after_game">אחרי כל משחק</SelectItem>
+                              <SelectItem value="daily">פעם ביום (בשעה קבועה)</SelectItem>
+                              <SelectItem value="weekly">פעם בשבוע (ביום ושעה קבועים)</SelectItem>
+                              <SelectItem value="never">לעולם לא</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         {(editWaSettings.leaderboard_frequency === 'daily' || editWaSettings.leaderboard_frequency === 'weekly') && (
@@ -669,17 +673,20 @@ const LeagueDetailPage = () => {
                         {editWaSettings.leaderboard_frequency === 'weekly' && (
                           <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-muted-foreground mr-1">יום בשבוע</label>
-                            <select value={editWaSettings.leaderboard_day}
-                              onChange={e => setEditWaSettings(prev => ({ ...prev, leaderboard_day: parseInt(e.target.value) }))}
-                              className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50">
-                              <option value={0}>ראשון</option>
-                              <option value={1}>שני</option>
-                              <option value={2}>שלישי</option>
-                              <option value={3}>רביעי</option>
-                              <option value={4}>חמישי</option>
-                              <option value={5}>שישי</option>
-                              <option value={6}>שבת</option>
-                            </select>
+                            <Select value={editWaSettings.leaderboard_day.toString()} onValueChange={val => setEditWaSettings(prev => ({ ...prev, leaderboard_day: parseInt(val) }))} dir="rtl">
+                              <SelectTrigger className="bg-secondary rounded-lg px-3 py-1 text-xs outline-none border-border/50 h-8">
+                                <SelectValue placeholder="בחר יום" />
+                              </SelectTrigger>
+                              <SelectContent dir="rtl">
+                                <SelectItem value="0">ראשון</SelectItem>
+                                <SelectItem value="1">שני</SelectItem>
+                                <SelectItem value="2">שלישי</SelectItem>
+                                <SelectItem value="3">רביעי</SelectItem>
+                                <SelectItem value="4">חמישי</SelectItem>
+                                <SelectItem value="5">שישי</SelectItem>
+                                <SelectItem value="6">שבת</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         )}
 

@@ -165,6 +165,12 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
          invite_link = COALESCE(EXCLUDED.invite_link, wa_groups.invite_link)`,
       [result.wa_group_id, leagueId, result.invite_link || null]
     );
+    await pool.query(
+      `INSERT INTO wa_league_settings (league_id, bet_mode, stake_amount, exact_score_enabled, morning_message_time, leaderboard_frequency, leaderboard_time, leaderboard_day)
+       VALUES ($1, 'prediction', 0, false, '09:00', 'weekly', '10:00', 0)
+       ON CONFLICT (league_id) DO NOTHING`,
+      [leagueId]
+    );
     await pool.query(`UPDATE leagues SET wa_enabled = true WHERE id = $1`, [leagueId]);
 
     res.json({ wa_group_id: result.wa_group_id, invite_link: result.invite_link });
@@ -188,6 +194,12 @@ router.post('/leagues/:id/link-group', authenticate, async (req, res, next) => {
       `INSERT INTO wa_groups (wa_group_id, league_id)
        VALUES ($1,$2) ON CONFLICT (wa_group_id) DO UPDATE SET league_id=$2, is_active=true`,
       [wa_group_id, leagueId]
+    );
+    await pool.query(
+      `INSERT INTO wa_league_settings (league_id, bet_mode, stake_amount, exact_score_enabled, morning_message_time, leaderboard_frequency, leaderboard_time, leaderboard_day)
+       VALUES ($1, 'prediction', 0, false, '09:00', 'weekly', '10:00', 0)
+       ON CONFLICT (league_id) DO NOTHING`,
+      [leagueId]
     );
     await pool.query(`UPDATE leagues SET wa_enabled = true WHERE id = $1`, [leagueId]);
 

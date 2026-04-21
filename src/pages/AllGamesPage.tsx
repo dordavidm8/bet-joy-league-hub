@@ -4,6 +4,7 @@ import GameListItem from "@/components/GameListItem";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 
 const LEAGUES = [
@@ -35,7 +36,7 @@ const AllGamesPage = () => {
     queryKey: ["all-games", league, search, from, to],
     queryFn: () => getGames({
       status: "scheduled",
-      ...(league ? { competition: league } : {}),
+      ...(league && league !== "all" ? { competition: league } : {}),
       ...(search ? { search } : {}),
       from,
       to,
@@ -56,14 +57,16 @@ const AllGamesPage = () => {
 
       {/* Filters */}
       <div className="flex flex-col gap-2 px-5">
-        <select
-          value={league}
-          onChange={e => setLeague(e.target.value)}
-          className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none w-full"
-          dir="rtl"
-        >
-          {LEAGUES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-        </select>
+        <Select value={league} onValueChange={setLeague} dir="rtl">
+          <SelectTrigger className="w-full bg-secondary rounded-xl border-none h-11 px-4 text-sm mt-1">
+            <SelectValue placeholder="כל הליגות" />
+          </SelectTrigger>
+          <SelectContent dir="rtl">
+            {LEAGUES.map(l => (
+              <SelectItem key={l.value} value={l.value || "all"}>{l.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <input
           type="text"
