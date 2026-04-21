@@ -265,6 +265,7 @@ async function settleBets() {
 }
 
 // ── Settle parlays: a parlay wins only if ALL its legs win ────────────────────
+// Short-circuits as soon as any leg loses. Payout = sum(stake × odds) × 1.1.
 async function settleParlays(client, gameId, correctOutcomeMap) {
   // Find parlays that have legs on this game and are still pending
   const parlayRes = await client.query(
@@ -275,17 +276,15 @@ async function settleParlays(client, gameId, correctOutcomeMap) {
   );
 
   for (const { id: parlayId } of parlayRes.rows) {
-    const legsRes = await client.query(
-      `SELECT b.status, b.stake, b.odds FROM bets b WHERE b.parlay_id = $1`,
-      [parlayId]
-    );
-
-    const allSettled = legsRes.rows.every(l => l.status !== 'pending');
-    if (!allSettled) continue;
-
     const parlayRow = await client.query(`SELECT * FROM parlays WHERE id = $1`, [parlayId]);
     const parlay = parlayRow.rows[0];
     if (!parlay) continue;
+
+    // Fetch all legs with their current status and individual stake
+    const legsRes = await client.query(
+      `SELECT b.id, b.status, b.stake, b.odds FROM bets b WHERE b.parlay_id = $1`,
+      [parlayId]
+    );
 
     // If any leg was cancelled, refund the whole parlay stake
     const anyCancelled = legsRes.rows.some(l => l.status === 'cancelled');
@@ -300,48 +299,76 @@ async function settleParlays(client, gameId, correctOutcomeMap) {
       );
       await client.query(
         `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
-         VALUES ($1,$2,'bet_cancelled',$3,'פרלאי בוטל — רגל אחת בוטלה, הסכום הוחזר')`,
-        [parlay.user_id, parlay.total_stake, parlayId]
+         VALUES ($1,$2,'bet_cancelled',$3,$4)`,
+        [parlay.user_id, parlay.total_stake, parlayId,
+         `פרליי #${parlay.parlay_number} בוטל — רגל אחת בוטלה, הסכום הוחזר`]
       );
       continue;
     }
 
-    const allWon = legsRes.rows.every(l => l.status === 'won');
-    const payout = allWon ? parlay.potential_payout : 0;
+    const anyLost = legsRes.rows.some(l => l.status === 'lost' || l.status === 'parlay_failed');
 
-    await client.query(
-      `UPDATE parlays SET status = $1, actual_payout = $2, settled_at = NOW() WHERE id = $3`,
-      [allWon ? 'won' : 'lost', payout, parlayId]
-    );
-
-    if (allWon) {
+    // Short-circuit: if any leg just lost, fail the whole parlay immediately
+    if (anyLost) {
+      // Mark remaining pending legs as parlay_failed
+      const pendingLegIds = legsRes.rows.filter(l => l.status === 'pending').map(l => l.id);
+      if (pendingLegIds.length > 0) {
+        await client.query(
+          `UPDATE bets SET status = 'parlay_failed', settled_at = NOW() WHERE id = ANY($1::uuid[])`,
+          [pendingLegIds]
+        );
+      }
+      // Already-settled lost leg(s) are already status='lost'
       await client.query(
-        `UPDATE users SET points_balance = points_balance + $1, total_wins = total_wins + 1 WHERE id = $2`,
-        [payout, parlay.user_id]
+        `UPDATE parlays SET status = 'lost', actual_payout = 0, settled_at = NOW() WHERE id = $1`,
+        [parlayId]
       );
-      await client.query(
-        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
-         VALUES ($1,$2,'bet_won',$3,'Parlay won')`,
-        [parlay.user_id, payout, parlayId]
-      );
-      // Award achievement + notification (best-effort, outside transaction)
-      checkAndAwardAchievements(parlay.user_id, 'parlay_won').catch(() => {});
-      createNotification(parlay.user_id, {
-        type: 'bet_won',
-        title: '🎉 פרליי ניצח!',
-        body: `ניצחת ${payout.toLocaleString()} נק׳ — כל ${legsRes.rows.length} הבחירות הצליחו`,
-        data: { parlay_id: parlayId },
-      }).catch(() => {});
-    } else {
       createNotification(parlay.user_id, {
         type: 'bet_lost',
-        title: '❌ פרליי לא הצליח',
-        body: `לפחות אחת מהבחירות שלך לא הצליחה`,
-        data: { parlay_id: parlayId },
+        title: `❌ פרליי #${parlay.parlay_number} נכשל`,
+        body: `לפחות אחת מהבחירות לא הצליחה — קיבלת 0 נקודות`,
+        data: { parlay_id: parlayId, parlay_number: parlay.parlay_number },
       }).catch(() => {});
+      continue;
     }
+
+    // Check if ALL legs are now settled (won)
+    const allSettled = legsRes.rows.every(l => l.status !== 'pending');
+    if (!allSettled) continue; // Still waiting for other legs
+
+    const allWon = legsRes.rows.every(l => l.status === 'won');
+    if (!allWon) continue; // Shouldn't reach here but safety check
+
+    // Calculate payout: sum(stake × odds) × 1.1
+    const payout = Math.floor(
+      legsRes.rows.reduce((sum, l) => sum + parseFloat(l.stake) * parseFloat(l.odds), 0) * 1.1
+    );
+
+    await client.query(
+      `UPDATE parlays SET status = 'won', actual_payout = $1, settled_at = NOW() WHERE id = $2`,
+      [payout, parlayId]
+    );
+
+    await client.query(
+      `UPDATE users SET points_balance = points_balance + $1, total_wins = total_wins + 1 WHERE id = $2`,
+      [payout, parlay.user_id]
+    );
+    await client.query(
+      `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+       VALUES ($1,$2,'bet_won',$3,$4)`,
+      [parlay.user_id, payout, parlayId, `פרליי #${parlay.parlay_number} ניצח!`]
+    );
+    // Award achievement + notification (best-effort, outside transaction)
+    checkAndAwardAchievements(parlay.user_id, 'parlay_won').catch(() => {});
+    createNotification(parlay.user_id, {
+      type: 'bet_won',
+      title: `🎉 פרליי #${parlay.parlay_number} ניצח!`,
+      body: `כל ${legsRes.rows.length} הבחירות הצליחו — ניצחת ${payout.toLocaleString()} נק׳!`,
+      data: { parlay_id: parlayId, parlay_number: parlay.parlay_number },
+    }).catch(() => {});
   }
 }
+
 
 // ── Apply missed-bet penalties for tournament leagues ─────────────────────────
 // Called after bet settlement. For each finished game that belongs to a

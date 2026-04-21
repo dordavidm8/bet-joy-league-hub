@@ -25,17 +25,19 @@ const BetSlipPage = () => {
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [shareText, setShareText] = useState("");
 
-  // Only real-stake bets count toward parlay and global cost
+  // Only free (global, no league_id) real-stake bets can form a parlay
   const realBets = betSlip.filter((b) => b.bet_mode !== "initial_balance");
+  const freeBets = realBets.filter((b) => !b.league_id);
   const scoringBets = betSlip.filter((b) => b.bet_mode === "initial_balance");
 
   const totalStake = realBets.reduce((sum, b) => sum + b.points, 0);
   const userPoints = backendUser?.points_balance ?? 0;
 
+  // Non-parlay: each bet pays individually
   const individualPayout = realBets.reduce((sum, b) => sum + Math.floor(b.points * b.odds), 0);
-  const combinedOdds = realBets.reduce((product, b) => product * b.odds, 1);
-  const parlayPayout = realBets.length >= 2
-    ? Math.floor(totalStake * combinedOdds * parlayBonus(realBets.length))
+  // Parlay: sum(stake × odds) × 1.1 — only free bets
+  const parlayPayout = freeBets.length >= 2
+    ? Math.floor(freeBets.reduce((sum, b) => sum + b.points * b.odds, 0) * 1.1)
     : 0;
   const potentialPayout = isParlay ? parlayPayout : individualPayout;
 
@@ -57,23 +59,23 @@ const BetSlipPage = () => {
     setLoading(true);
     setResult(null);
     try {
-      if (isParlay && realBets.length >= 2) {
+      if (isParlay && freeBets.length >= 2) {
         await placeParlay({
-          legs: realBets.map((b) => ({
+          legs: freeBets.map((b) => ({
             game_id: b.game_id,
             bet_question_id: b.bet_question_id,
             selected_outcome: b.selectedOption,
             odds: b.odds,
+            stake: b.points,
           })),
-          stake: totalStake,
         });
-        // Scoring-only bets placed separately
-        for (const bet of scoringBets) {
+        // League and scoring bets placed separately
+        for (const bet of [...scoringBets, ...realBets.filter(b => b.league_id)]) {
           await placeBet({
             game_id: bet.game_id,
             bet_question_id: bet.bet_question_id,
             selected_outcome: bet.selectedOption,
-            stake: 0,
+            stake: bet.points,
             league_id: bet.league_id,
             exact_score_prediction: bet.exact_score_prediction,
           });
@@ -149,25 +151,32 @@ const BetSlipPage = () => {
     <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
       <h2 className="text-2xl font-black">תלוש הימורים</h2>
 
-      {/* Parlay Toggle — only for real-stake bets with 2+ */}
-      {realBets.length > 1 && (
-        <div className="card-kickoff flex items-center justify-between">
-          <div>
-            <p className="font-bold text-sm">שילוב הימורים (פרליי)</p>
-            <p className="text-xs text-muted-foreground">
-              בונוס ×{parlayBonus(realBets.length).toFixed(2)} · כל הבחירות חייבות לנצח
-            </p>
+      {/* Parlay Toggle — only for free (global) bets with 2+ */}
+      {freeBets.length > 1 && (
+        <div className="card-kickoff flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold text-sm">שילוב הימורים חופשיים (פרליי)</p>
+              <p className="text-xs text-muted-foreground">
+                בונוס ×1.10 · כל הבחירות חייבות לנצח
+              </p>
+            </div>
+            <button
+              onClick={() => setIsParlay(!isParlay)}
+              className={`w-12 h-7 rounded-full transition-colors duration-200 relative ${isParlay ? "bg-primary" : "bg-border"}`}
+            >
+              <span
+                className={`absolute top-0.5 w-6 h-6 bg-card rounded-full shadow-sm transition-transform duration-200 ${
+                  isParlay ? "left-0.5" : "left-[calc(100%-1.625rem)]"
+                }`}
+              />
+            </button>
           </div>
-          <button
-            onClick={() => setIsParlay(!isParlay)}
-            className={`w-12 h-7 rounded-full transition-colors duration-200 relative ${isParlay ? "bg-primary" : "bg-border"}`}
-          >
-            <span
-              className={`absolute top-0.5 w-6 h-6 bg-card rounded-full shadow-sm transition-transform duration-200 ${
-                isParlay ? "left-0.5" : "left-[calc(100%-1.625rem)]"
-              }`}
-            />
-          </button>
+          {freeBets.length < realBets.length && isParlay && (
+            <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1">
+              ⚠️ הפרליי יכלול רק את ההימורים החופשיים ({freeBets.length} מתוך {realBets.length}). הימורי הליגה יישלחו בנפרד.
+            </p>
+          )}
         </div>
       )}
 
@@ -243,10 +252,10 @@ const BetSlipPage = () => {
             <span className="font-bold">{scoringBets.length} הימורים</span>
           </div>
         )}
-        {isParlay && realBets.length >= 2 && (
+        {isParlay && freeBets.length >= 2 && (
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">מכפיל משולב</span>
-            <span className="font-bold">×{(combinedOdds * parlayBonus(realBets.length)).toFixed(2)}</span>
+            <span className="text-muted-foreground">מכפיל פרליי</span>
+            <span className="font-bold">×1.10</span>
           </div>
         )}
         {potentialPayout > 0 && (

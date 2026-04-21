@@ -225,27 +225,35 @@ router.post('/', authenticate, async (req, res, next) => {
 });
 
 // ── POST /api/bets/parlay ──────────────────────────────────────────────────────
-// Parlays remain global (league_id = NULL)
+// Parlays are free-bet only (global, no league). Each leg has its own stake.
+// Payout = Math.floor( sum(leg.stake × leg.odds) × 1.1 ) — awarded after LAST leg settles.
 router.post('/parlay', authenticate, async (req, res, next) => {
-  const { legs, stake } = req.body;
+  const { legs } = req.body;
   if (!Array.isArray(legs) || legs.length < 2) {
-    return res.status(400).json({ error: 'Parlay requires at least 2 selections' });
+    return res.status(400).json({ error: 'פרליי דורש לפחות 2 בחירות' });
   }
-  if (!Number.isInteger(stake) || stake <= 0) {
-    return res.status(400).json({ error: 'stake must be a positive integer' });
+  for (const leg of legs) {
+    if (!Number.isInteger(leg.stake) || leg.stake <= 0) {
+      return res.status(400).json({ error: 'כל רגל חייבת לכלול stake חיובי' });
+    }
+    if (leg.league_id) {
+      return res.status(400).json({ error: 'פרליי מותר רק בהימורים חופשיים (לא בתוך ליגה)' });
+    }
   }
+
+  const totalStake = legs.reduce((s, l) => s + l.stake, 0);
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    let combinedOdds = 1;
+    let weightedOddsSum = 0;
     const betData = [];
 
     for (const sel of legs) {
       const gameRes = await client.query('SELECT * FROM games WHERE id = $1', [sel.game_id]);
       const game = gameRes.rows[0];
       if (!game || ['finished', 'cancelled', 'live'].includes(game.status)) {
-        throw Object.assign(new Error(`Game unavailable: ${sel.game_id}`), { status: 400 });
+        throw Object.assign(new Error(`המשחק לא פתוח להימורים: ${sel.game_id}`), { status: 400 });
       }
       const qRes = await client.query(
         'SELECT * FROM bet_questions WHERE id = $1 AND game_id = $2',
@@ -253,47 +261,61 @@ router.post('/parlay', authenticate, async (req, res, next) => {
       );
       const question = qRes.rows[0];
       if (!question || question.is_locked) {
-        throw Object.assign(new Error('A selection is locked or invalid'), { status: 400 });
+        throw Object.assign(new Error('בחירה נעולה או לא חוקית'), { status: 400 });
       }
       const chosen = question.outcomes.find(o => o.label === sel.selected_outcome);
-      if (!chosen) throw Object.assign(new Error('Invalid option'), { status: 400 });
+      if (!chosen) throw Object.assign(new Error('אפשרות לא חוקית'), { status: 400 });
+
+      // Check for duplicate bets on same question in same parlay
+      const dupCheck = await client.query(
+        `SELECT id FROM bets WHERE user_id = $1 AND bet_question_id = $2 AND league_id IS NULL AND status = 'pending'`,
+        [req.user.id, sel.bet_question_id]
+      );
+      if (dupCheck.rows[0]) {
+        throw Object.assign(new Error('כבר הימרת על שאלה זו בהימור חופשי'), { status: 409 });
+      }
 
       const odds = parseFloat(chosen.odds);
-      combinedOdds *= odds;
+      weightedOddsSum += sel.stake * odds;
       betData.push({ ...sel, odds, questionText: question.question_text });
     }
 
-    const bonus = betData.length >= 4 ? 1.20 : betData.length >= 3 ? 1.15 : 1.10;
-    const potentialPayout = Math.floor(stake * combinedOdds * bonus);
+    // Potential payout = sum(stake × odds) × 1.1
+    const potentialPayout = Math.floor(weightedOddsSum * 1.1);
 
+    // Deduct total stake from balance
     const balRes = await client.query(
       `UPDATE users SET points_balance = points_balance - $1, total_bets = total_bets + 1
        WHERE id = $2 AND points_balance >= $1 RETURNING points_balance`,
-      [stake, req.user.id]
+      [totalStake, req.user.id]
     );
-    if (!balRes.rows[0]) throw Object.assign(new Error('Insufficient points'), { status: 400 });
+    if (!balRes.rows[0]) throw Object.assign(new Error('אין מספיק נקודות'), { status: 400 });
 
+    // Create the parlay record (parlay_number auto-assigned by SERIAL)
     const parlayRes = await client.query(
       `INSERT INTO parlays (user_id, total_stake, total_odds, potential_payout)
        VALUES ($1,$2,$3,$4) RETURNING *`,
-      [req.user.id, stake, combinedOdds.toFixed(2), potentialPayout]
+      [req.user.id, totalStake, (weightedOddsSum / totalStake).toFixed(2), potentialPayout]
     );
     const parlay = parlayRes.rows[0];
 
+    // Insert one bet per leg — store individual stake in bets.stake
     for (const b of betData) {
+      const legPotentialPayout = Math.floor(b.stake * b.odds * 1.1);
       await client.query(
         `INSERT INTO bets
            (user_id, game_id, bet_question_id, selected_outcome, stake, odds,
-            live_penalty_pct, potential_payout, is_live_bet, match_minute_placed, parlay_id)
-         VALUES ($1,$2,$3,$4,0,$5,0,0,false,NULL,$6)`,
-        [req.user.id, b.game_id, b.bet_question_id, b.selected_outcome, b.odds, parlay.id]
+            live_penalty_pct, potential_payout, is_live_bet, match_minute_placed, parlay_id, league_id)
+         VALUES ($1,$2,$3,$4,$5,$6,0,$7,false,NULL,$8,NULL)`,
+        [req.user.id, b.game_id, b.bet_question_id, b.selected_outcome,
+         b.stake, b.odds, legPotentialPayout, parlay.id]
       );
     }
 
     await client.query(
       `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
-       VALUES ($1,$2,'bet_placed',$3,'Parlay bet')`,
-      [req.user.id, -stake, parlay.id]
+       VALUES ($1,$2,'bet_placed',$3,$4)`,
+      [req.user.id, -totalStake, parlay.id, `פרליי #${parlay.parlay_number} (${legs.length} בחירות)`]
     );
 
     await client.query('COMMIT');
@@ -305,6 +327,7 @@ router.post('/parlay', authenticate, async (req, res, next) => {
     client.release();
   }
 });
+
 
 // ── GET /api/bets/:id ─────────────────────────────────────────────────────────
 router.get('/:id', authenticate, async (req, res, next) => {

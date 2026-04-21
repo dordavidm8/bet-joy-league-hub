@@ -459,3 +459,8 @@ CREATE TABLE IF NOT EXISTS team_name_translations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_team_translations_status ON team_name_translations(status);
+
+-- ── Parlay improvements ───────────────────────────────────────────────────────
+-- Sequential human-readable parlay number
+ALTER TABLE parlays ADD COLUMN IF NOT EXISTS parlay_number SERIAL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_parlays_number ON parlays(parlay_number);

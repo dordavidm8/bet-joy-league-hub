@@ -430,7 +430,8 @@ export interface Bet {
 export interface Parlay {
   id: string;
   user_id: string;
-  stake: number;
+  parlay_number: number;
+  total_stake: number;
   potential_payout: number;
   actual_payout?: number;
   status: 'pending' | 'won' | 'lost';
@@ -446,9 +447,9 @@ export interface PlaceBetInput {
   exact_score_prediction?: string;
 }
 
+/** Each leg now carries its own stake. No top-level stake field. */
 export interface PlaceParlayInput {
-  legs: { game_id: string; bet_question_id: string; selected_outcome: string; odds: number }[];
-  stake: number;
+  legs: { game_id: string; bet_question_id: string; selected_outcome: string; odds: number; stake: number }[];
 }
 
 export interface LeaderboardEntry {

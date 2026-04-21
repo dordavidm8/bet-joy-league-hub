@@ -62,11 +62,13 @@ router.get('/me/bets', authenticate, async (req, res, next) => {
     const where = conditions.join(' AND ');
     const result = await pool.query(
       `SELECT b.*, g.home_team, g.away_team, g.start_time, g.score_home, g.score_away,
-              bq.question_text, c.name AS competition_name
+              bq.question_text, c.name AS competition_name,
+              p.parlay_number, p.status AS parlay_status, p.potential_payout AS parlay_potential_payout
        FROM bets b
        JOIN games g ON g.id = b.game_id
        JOIN bet_questions bq ON bq.id = b.bet_question_id
        LEFT JOIN competitions c ON c.id = g.competition_id
+       LEFT JOIN parlays p ON p.id = b.parlay_id
        WHERE ${where}
        ORDER BY b.placed_at DESC LIMIT $2 OFFSET $3`,
       params
@@ -76,10 +78,10 @@ router.get('/me/bets', authenticate, async (req, res, next) => {
        WHERE ${where.replace(/\$2|\$3/g, '')}`,
       params.slice(0, params.length - 2) // without limit/offset
     );
-    // Actually simpler: just return rows and let frontend know if more exist
     res.json({ bets: result.rows, total: parseInt(countRes.rows[0].count) });
   } catch (err) { next(err); }
 });
+
 
 // GET /api/users/me/detailed-stats
 router.get('/me/detailed-stats', authenticate, async (req, res, next) => {

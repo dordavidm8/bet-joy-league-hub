@@ -6,25 +6,28 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 const STATUS_TABS = [
-  { value: "",          label: "הכל" },
-  { value: "pending",   label: "ממתין" },
-  { value: "won",       label: "זכיתי" },
-  { value: "lost",      label: "הפסדתי" },
-  { value: "cancelled", label: "בוטל" },
+  { value: "",              label: "הכל" },
+  { value: "pending",       label: "ממתין" },
+  { value: "won",           label: "זכיתי" },
+  { value: "lost",          label: "הפסדתי" },
+  { value: "parlay_failed", label: "פרליי נכשל" },
+  { value: "cancelled",     label: "בוטל" },
 ];
 
 const STATUS_COLOR: Record<string, string> = {
-  won:       "text-primary",
-  lost:      "text-destructive",
-  pending:   "text-muted-foreground",
-  cancelled: "text-muted-foreground",
+  won:           "text-primary",
+  lost:          "text-destructive",
+  pending:       "text-muted-foreground",
+  cancelled:     "text-muted-foreground",
+  parlay_failed: "text-amber-600",
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  won:       "ניצחון",
-  lost:      "הפסד",
-  pending:   "ממתין",
-  cancelled: "בוטל",
+  won:           "ניצחון",
+  lost:          "הפסד",
+  pending:       "ממתין",
+  cancelled:     "בוטל",
+  parlay_failed: "פרליי נכשל",
 };
 
 const PAGE_SIZE = 20;
@@ -116,12 +119,19 @@ const BetHistoryPage = () => {
               transition={{ delay: i * 0.02 }}
               className="card-kickoff flex flex-col gap-2"
             >
-              {/* Competition + date */}
+              {/* Competition + date + parlay badge */}
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-muted-foreground">{bet.competition_name ?? "כדורגל"}</span>
-                <span className="text-[11px] text-muted-foreground">
-                  {new Date(bet.placed_at).toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit" })}
-                </span>
+                <div className="flex items-center gap-2">
+                  {bet.parlay_number && (
+                    <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
+                      🔗 פרליי #{bet.parlay_number}
+                    </span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">
+                    {new Date(bet.placed_at).toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit" })}
+                  </span>
+                </div>
               </div>
 
               {/* Teams */}

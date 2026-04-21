@@ -104,11 +104,13 @@ async function sendMyBets(msg, user) {
   const betsRes = await pool.query(
     `SELECT b.*, g.home_team, g.away_team, g.score_home, g.score_away, g.status AS game_status, bq.type AS bet_type, bq.question_text,
             l.name AS league_name,
+            p.parlay_number, p.status AS parlay_status,
             t1.name_he as home_he_db, t2.name_he as away_he_db
      FROM bets b
      JOIN games g ON g.id = b.game_id
      JOIN bet_questions bq ON bq.id = b.bet_question_id
      LEFT JOIN leagues l ON l.id = b.league_id
+     LEFT JOIN parlays p ON p.id = b.parlay_id
      LEFT JOIN team_name_translations t1 ON t1.name_en = g.home_team
      LEFT JOIN team_name_translations t2 ON t2.name_en = g.away_team
      WHERE b.user_id = $1
@@ -162,7 +164,11 @@ async function sendMyBets(msg, user) {
   });
 
   const formatBetLine = (b) => {
-    const statusIcon = b.status === 'won' ? '✅' : b.status === 'lost' ? '❌' : '⏳';
+    let statusIcon;
+    if (b.status === 'won') statusIcon = '✅';
+    else if (b.status === 'lost' || b.status === 'parlay_failed') statusIcon = '❌';
+    else statusIcon = '⏳';
+
     const label = typeLabels[b.bet_type] || 'הימור';
     
     let outcome = b.selected_outcome;
@@ -178,12 +184,23 @@ async function sendMyBets(msg, user) {
     if (b.exact_score_prediction) {
       betDetail += ` (תוצאה: ${b.exact_score_prediction})`;
     }
-    
-    const leagueLabel = b.league_name ? `🏆 ליגת ${b.league_name}` : `✉️ הימור חופשי`;
-    const payoutInfo = b.status === 'won' ? ` | זכייה: *${b.actual_payout}*` : 
-                       b.status === 'pending' ? ` | זכייה אפשרית: *${b.potential_payout}*` : '';
 
-    return `${statusIcon} ${betDetail} | ${leagueLabel} | ${b.stake} נק'${payoutInfo}\n`;
+    let contextLabel;
+    if (b.parlay_number) {
+      const parlayStatusLabel = b.parlay_status === 'lost' ? ' ❌ נכשל' : b.parlay_status === 'won' ? ' ✅ ניצח' : '';
+      contextLabel = `🔗 פרליי #${b.parlay_number}${parlayStatusLabel}`;
+    } else if (b.league_name) {
+      contextLabel = `🏆 ליגת ${b.league_name}`;
+    } else {
+      contextLabel = `✉️ הימור חופשי`;
+    }
+
+    const stakeDisplay = b.stake > 0 ? `${b.stake} נק'` : 'ניקוד';
+    const payoutInfo = b.status === 'won' && b.actual_payout ? ` | זכייה: *${b.actual_payout}*` :
+                       b.status === 'pending' ? ` | אפשרי: *${b.potential_payout}*` :
+                       b.status === 'parlay_failed' ? ` | נכשל במסגרת פרליי` : '';
+
+    return `${statusIcon} ${betDetail} | ${contextLabel} | ${stakeDisplay}${payoutInfo}\n`;
   };
 
   let text = `🎯 *ההימורים שלי:*\n\n`;
