@@ -65,7 +65,7 @@ function parseBetMessage(body) {
   let scoreLine = lines[1] || parts[1] || null;
 
   // Validate resultLine early to avoid false positives for regular conversation
-  if (!['1', 'X', '2'].includes(resultLine)) return null;
+  if (!['1', 'X', '2', 'תיקו'].includes(resultLine)) return null;
 
   return { resultLine, scoreLine };
 }
@@ -147,12 +147,12 @@ async function handleGroupMessage(client, msg, chat) {
     const betDetail = lines[1]; // e.g. "1 2-1"
     const [resultPart, scorePart] = betDetail.split(/\s+/);
     
-    if (!resultPart || !['1', 'x', '2'].includes(resultPart.toLowerCase())) {
+    if (!resultPart || !['1', 'x', '2', 'תיקו'].includes(resultPart.toLowerCase())) {
       await msg.reply('❌ המנצחת חייבת להיות 1 (בית), X (תיקו) או 2 (חוץ)');
       return;
     }
 
-    const outcomeMap = { '1': bet.home_team, 'x': 'Draw', '2': bet.away_team };
+    const outcomeMap = { '1': bet.home_team, 'x': 'Draw', 'תיקו': 'Draw', '2': bet.away_team };
     const newOutcome = outcomeMap[resultPart.toLowerCase()];
     
     let newScore = null;
@@ -175,7 +175,7 @@ async function handleGroupMessage(client, msg, chat) {
 
     // 4. Update the bet
     await pool.query(
-      `UPDATE bets SET selected_outcome = $1, exact_score = $2, updated_at = NOW() WHERE id = $3`,
+      `UPDATE bets SET selected_outcome = $1, exact_score_prediction = $2, updated_at = NOW() WHERE id = $3`,
       [newOutcome, newScore, bet.id]
     );
 
@@ -251,7 +251,7 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
   const { resultLine, scoreLine: rawScore } = parsed;
 
   // Validate result line
-  if (!['1', 'X', '2'].includes(resultLine)) {
+  if (!['1', 'X', '2', 'תיקו'].includes(resultLine)) {
     // Silently ignore — probably just a regular reply unrelated to betting
     return;
   }
@@ -274,9 +274,9 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
   const game = gameRes.rows[0];
   console.log(`[WA-DEBUG] Processing bet for Game: ${game.home_team} vs ${game.away_team} (ID: ${game.id})`);
 
-  // Map 1/X/2 to outcome
-  const outcomeMap = { '1': game.home_team, 'X': 'Draw', '2': game.away_team };
-  const selectedOutcome = outcomeMap[resultLine];
+  // Map 1/X/2/תיקו to outcome
+  const outcomeMap = { '1': game.home_team, 'X': 'Draw', 'תיקו': 'Draw', '2': game.away_team };
+  const selectedOutcome = outcomeMap[resultLine] || 'Draw';
 
   // Parse & validate exact score if provided
   let normalizedScore = null;
@@ -353,30 +353,13 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
 
   const payout = (isFree ? 1 : stake) * odds;
 
-  // Save match_winner bet
+  // Save match_winner bet with exact score if provided
   await pool.query(
-    `INSERT INTO bets (user_id, bet_question_id, game_id, league_id, selected_outcome, odds, stake, potential_payout, is_free_bet, wa_bet, wa_source, wa_bet_message_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,$10,$11)`,
-    [user.id, question.id, game.id, gameMsg.league_id, selectedOutcome, odds, stake, payout, isFree, source, msg.id._serialized]
+    `INSERT INTO bets (user_id, bet_question_id, game_id, league_id, selected_outcome, odds, stake, potential_payout, is_free_bet, wa_bet, wa_source, wa_bet_message_id, exact_score_prediction)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,$10,$11,$12)`,
+    [user.id, question.id, game.id, gameMsg.league_id, selectedOutcome, odds, stake, payout, isFree, source, msg.id._serialized, normalizedScore]
   );
-  console.log(`[WA-DEBUG] Main bet inserted successfully for user ${user.id}`);
-
-  // Save exact_score bet if provided and enabled
-  if (normalizedScore && game.exact_score_enabled) {
-    const exactQuestion = await pool.query(
-      `SELECT id FROM bet_questions WHERE game_id = $1 AND type = 'exact_score' LIMIT 1`,
-      [game.id]
-    );
-    if (exactQuestion.rows[0]) {
-      const exactOdds = odds * 3;
-      const exactPayout = (isFree ? 1 : stake) * exactOdds;
-      await pool.query(
-        `INSERT INTO bets (user_id, bet_question_id, game_id, league_id, selected_outcome, odds, stake, potential_payout, is_free_bet, wa_bet, wa_source, wa_bet_message_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,$10,$11)`,
-        [user.id, exactQuestion.rows[0].id, game.id, gameMsg.league_id, normalizedScore, exactOdds, stake, exactPayout, isFree, source, msg.id._serialized]
-      );
-    }
-  }
+  console.log(`[WA-DEBUG] Main bet inserted successfully for user ${user.id} with exact score: ${normalizedScore}`);
 
   // React 👍 and confirm
   try { await msg.react('👍'); } catch {}
@@ -388,7 +371,7 @@ async function processBetCorrection(client, msg, senderPhone, prevBet) {
   if (!parsed) return;
 
   const { resultLine } = parsed;
-  if (!['1', 'X', '2'].includes(resultLine)) return; // silent ignore
+  if (!['1', 'X', '2', 'תיקו'].includes(resultLine)) return; // silent ignore
 
   // Refund stake on old match_winner bet
   if (!prevBet.is_free_bet && prevBet.stake > 0) {

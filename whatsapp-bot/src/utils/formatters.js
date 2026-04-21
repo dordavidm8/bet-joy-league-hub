@@ -36,7 +36,7 @@ function buildGameMessage(game, leagueSettings) {
   msg += `• *X* — תיקו (יחס: ${getOdds('תיקו')})\n`;
   msg += `• *2* — ${awayName} (יחס: ${getOdds(awayName)})\n\n`;
   msg += `🎯 *ניתן להמר גם על תוצאה מדויקת!* (בונוס x3)\n`;
-  msg += `פשוט הוסף את התוצאה לאחר ה-1,X,2.\n`;
+  msg += `פשוט הוסף את התוצאה לאחר ה-1, X (או המילה "תיקו"), 2.\n`;
   msg += `דוגמה: *1 2-1* (ניצחון לבית בתוצאה 2-1)`;
 
   return msg;
