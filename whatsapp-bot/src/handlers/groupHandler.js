@@ -322,7 +322,7 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
 
   // Get odds from JSONB outcomes
   const outcomes = question.outcomes || [];
-  const matched = outcomes.find(o => o.outcome === selectedOutcome);
+  const matched = outcomes.find(o => o.label === selectedOutcome);
   const odds = matched?.odds || 2.0;
   console.log(`[WA-DEBUG] Odds for ${selectedOutcome}: ${odds}`);
 

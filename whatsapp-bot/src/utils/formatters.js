@@ -20,7 +20,7 @@ function buildGameMessage(game, leagueSettings) {
   const outcomes = game.outcomes || [];
   
   const getOdds = (outcome) => {
-    const found = outcomes.find(o => o.outcome === outcome);
+    const found = outcomes.find(o => o.label === outcome);
     return found ? found.odds.toFixed(2) : '2.00';
   };
 
