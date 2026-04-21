@@ -190,6 +190,30 @@ function startInternalApi(client) {
     }
   });
 
+  // POST /internal/broadcast-league — manually trigger morning broadcast for a league
+  app.post('/internal/broadcast-league', auth, async (req, res) => {
+    const { leagueId } = req.body;
+    if (!leagueId) return res.status(400).json({ error: 'leagueId required' });
+    try {
+      const { sendMorningMessages } = require('./notifications/morningMessages');
+      const leagueRes = await pool.query(
+        `SELECT wls.*, wg.wa_group_id, l.name AS league_name, l.id AS league_id_val, l.is_tournament, l.tournament_slug
+         FROM wa_league_settings wls
+         JOIN wa_groups wg ON wg.league_id = wls.league_id AND wg.is_active = true
+         JOIN leagues l ON l.id = wls.league_id
+         WHERE l.id = $1`,
+        [leagueId]
+      );
+      if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not connected to WA' });
+      
+      await sendMorningMessages(client, leagueRes.rows[0]);
+      res.json({ ok: true, message: 'Broadcast triggered' });
+    } catch (err) {
+      console.error('[internal/broadcast-league]', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.listen(PORT, () => {
     console.log(`[WA] Internal API מאזין על port ${PORT}`);
   });

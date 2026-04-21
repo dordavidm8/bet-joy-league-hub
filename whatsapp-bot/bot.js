@@ -41,6 +41,11 @@ client.on('ready', async () => {
   startInternalApi(client);
   startScheduledJobs(client);
   startHealthChecks(client);
+
+  // Auto-migration
+  pool.query('ALTER TABLE bets ADD COLUMN IF NOT EXISTS wa_confirmation_message_id TEXT').catch(e => {
+    console.error('[WA-DB] Migration error:', e.message);
+  });
   
   // Notify developer of startup
   try {

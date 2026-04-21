@@ -26,12 +26,10 @@ function buildGameMessage(game, leagueSettings) {
   msg += `הגב להודעה זו עם ההימור שלך:\n`;
   msg += `• *1* — ניצחון ${homeName}\n`;
   msg += `• *X* — תיקו\n`;
-  msg += `• *2* — ניצחון ${awayName}\n`;
-
-  if (leagueSettings?.exact_score_enabled) {
-    msg += `\nלהימור על *תוצאה מדויקת* (x3), הוסף שורה שנייה:\n`;
-    msg += `  1\n  2-0`;
-  }
+  msg += `• *2* — ניצחון ${awayName}\n\n`;
+  msg += `🎯 *ניתן להמר גם על תוצאה מדויקת!* (בונוס x3)\n`;
+  msg += `פשוט הוסף את התוצאה לאחר ה-1,X,2.\n`;
+  msg += `דוגמה: *1 2-1* (ניצחון לבית בתוצאה 2-1)`;
 
   return msg;
 }

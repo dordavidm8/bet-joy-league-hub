@@ -4,21 +4,33 @@ const { pool } = require('../utils/db');
 const { buildGameMessage } = require('../utils/formatters');
 
 async function sendMorningMessages(client, league) {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0)).toISOString();
-  const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999)).toISOString();
+  const now = new Date();
+  const todayStart = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+  const todayEnd = new Date(now.setHours(23, 59, 59, 999)).toISOString();
 
-  // Fetch games for tomorrow that belong to leagues this league cares about
-  // (all games — league filtering happens through league_members / bets context)
-  const gamesRes = await pool.query(
-    `SELECT g.id, g.home_team, g.away_team, g.start_time
-     FROM games g
-     WHERE g.status = 'scheduled'
-       AND g.start_time BETWEEN $1 AND $2
-     ORDER BY g.start_time`,
-    [tomorrowStart, tomorrowEnd]
-  );
+  let gamesQuery = `
+    SELECT g.id, g.home_team, g.away_team, g.home_team_he, g.away_team_he, g.start_time
+    FROM games g
+  `;
+  const params = [todayStart, todayEnd];
+
+  if (league.is_tournament && league.tournament_slug) {
+    gamesQuery += `
+      JOIN competitions c ON c.id = g.competition_id
+      WHERE g.status = 'scheduled'
+        AND g.start_time BETWEEN $1 AND $2
+        AND c.slug = $3
+    `;
+    params.push(league.tournament_slug);
+  } else {
+    gamesQuery += `
+      WHERE g.status = 'scheduled'
+        AND g.start_time BETWEEN $1 AND $2
+    `;
+  }
+  gamesQuery += ` ORDER BY g.start_time`;
+
+  const gamesRes = await pool.query(gamesQuery, params);
 
   if (gamesRes.rows.length === 0) return;
 
@@ -27,7 +39,7 @@ async function sendMorningMessages(client, league) {
     const existing = await pool.query(
       `SELECT id FROM wa_game_messages
        WHERE league_id = $1 AND game_id = $2 AND group_jid IS NOT NULL`,
-      [league.league_id, game.id]
+      [league.league_id_val || league.league_id, game.id]
     );
     if (existing.rows.length > 0) continue;
 
@@ -40,11 +52,8 @@ async function sendMorningMessages(client, league) {
     await pool.query(
       `INSERT INTO wa_game_messages (league_id, game_id, wa_message_id, group_jid, sent_at)
        VALUES ($1, $2, $3, $4, NOW())`,
-      [league.league_id, game.id, groupMsg.id._serialized, league.wa_group_id]
+      [league.league_id_val || league.league_id, game.id, groupMsg.id._serialized, league.wa_group_id]
     );
-
-    // Send DM to all opted-in members
-    await sendGameMessageToDMs(client, league, game, text);
   }
 }
 

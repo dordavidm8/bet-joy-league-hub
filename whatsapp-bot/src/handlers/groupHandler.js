@@ -58,8 +58,15 @@ function validateAndNormalizeScore(score, outcome, homeTeam, awayTeam) {
 function parseBetMessage(body) {
   const lines = body.trim().split('\n').map(l => l.trim()).filter(Boolean);
   if (!lines.length) return null;
-  const resultLine = lines[0].toUpperCase();
-  const scoreLine = lines[1] || null;
+
+  const firstLine = lines[0].toUpperCase();
+  const parts = firstLine.split(/\s+/);
+  const resultLine = parts[0];
+  let scoreLine = lines[1] || parts[1] || null;
+
+  // Validate resultLine early to avoid false positives for regular conversation
+  if (!['1', 'X', '2'].includes(resultLine)) return null;
+
   return { resultLine, scoreLine };
 }
 
@@ -99,7 +106,7 @@ async function handleGroupMessage(client, msg, chat) {
     const senderPhone = extractNumber(msg.from);
 
     // 1. Resolve user
-    const userRes = await pool.query(`SELECT id FROM users WHERE phone = $1`, [senderPhone]);
+    const userRes = await pool.query(`SELECT id FROM users WHERE phone_number = $1`, [senderPhone]);
     if (!userRes.rows[0]) return;
     const user = userRes.rows[0];
 
@@ -201,16 +208,18 @@ async function handleGroupMessage(client, msg, chat) {
     return;
   }
 
-  // Check if reply is to user's own bet message (correction)
-  const prevBetRes = await pool.query(
-    `SELECT b.*, u.id AS user_id_val FROM bets b
-     JOIN users u ON u.id = b.user_id
-     WHERE b.wa_bet_message_id = $1 AND u.phone_number = $2
+    // 2. Find the bet associated with the quoted message
+    // Users might reply to the BOT's confirmation message or their own original bet.
+    const betRes = await pool.query(
+      `SELECT b.*, g.status as game_status, g.home_team, g.away_team
+       FROM bets b
+       JOIN games g ON g.id = b.game_id
+       WHERE b.user_id = $1 
+       AND (b.wa_bet_message_id = $2 OR b.wa_source_message_id = $2 OR b.wa_confirmation_message_id = $2)
        AND b.status = 'pending'
-     ORDER BY b.placed_at DESC
-     LIMIT 1`,
-    [quotedId, senderPhone]
-  );
+       ORDER BY b.placed_at DESC LIMIT 1`,
+      [user.id, quotedId]
+    );
 
   if (prevBetRes.rows[0]) {
     await processBetCorrection(client, msg, senderPhone, prevBetRes.rows[0]);
@@ -352,7 +361,13 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
 
   const outcomeLabel = resultLine === 'X' ? 'תיקו' : resultLine === '1' ? game.home_team : game.away_team;
   const scoreInfo = normalizedScore ? ` | תוצאה מדויקת: *${normalizedScore}*` : '';
-  await msg.reply(`✅ הימור נשמר!\n*${outcomeLabel}*${scoreInfo}\nרווח פוטנציאלי: *${payout} נקודות*`);
+  const confMsg = await msg.reply(`✅ הימור נשמר!\n*${outcomeLabel}*${scoreInfo}\nרווח פוטנציאלי: *${payout} נקודות*`);
+
+  // Save confirmation ID to ALL bets created for this message
+  await pool.query(
+    `UPDATE bets SET wa_confirmation_message_id = $1 WHERE wa_bet_message_id = $2`,
+    [confMsg.id._serialized, msg.id._serialized]
+  );
 }
 
 // ── Process a bet correction (reply to own bet message) ──────────────────────

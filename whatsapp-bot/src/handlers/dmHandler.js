@@ -62,11 +62,13 @@ async function handleDmMessage(client, msg) {
       return;
     }
 
-    // Reply to own bet message = correction
     const prevBetRes = await pool.query(
       `SELECT b.* FROM bets b
        JOIN users u ON u.id = b.user_id
-       WHERE b.wa_bet_message_id = $1 AND u.phone_number = $2`,
+       WHERE u.phone_number = $2 
+       AND (b.wa_bet_message_id = $1 OR b.wa_confirmation_message_id = $1)
+       AND b.status = 'pending'
+       ORDER BY b.placed_at DESC LIMIT 1`,
       [quotedId, phone]
     );
     if (prevBetRes.rows[0]) {
