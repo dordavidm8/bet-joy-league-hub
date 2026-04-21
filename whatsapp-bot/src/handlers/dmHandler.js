@@ -110,8 +110,8 @@ async function sendMyBets(msg, user) {
      LEFT JOIN leagues l ON l.id = b.league_id
      WHERE b.user_id = $1
        AND b.status != 'cancelled'
-       AND (b.status = 'pending' OR (b.status != 'pending' AND g.start_time > NOW() - INTERVAL '36 hours'))
-     ORDER BY (b.status = 'pending') DESC, g.start_time DESC, g.id, b.placed_at ASC`,
+       AND (b.status = 'pending' OR (b.status != 'pending' AND g.start_time > NOW() - INTERVAL '24 hours'))
+     ORDER BY g.start_time ASC, g.id, b.placed_at ASC`,
     [user.id]
   );
 
@@ -128,11 +128,17 @@ async function sendMyBets(msg, user) {
     'btts': 'שתי הקבוצות יבקיעו'
   };
 
-  const groups = {}; // Use gameId as key to keep order from SQL
-  const groupOrder = []; 
+  const finishedGroups = {};
+  const pendingGroups = {};
+  const finishedOrder = [];
+  const pendingOrder = [];
 
   betsRes.rows.forEach(b => {
-    if (!groups[b.game_id]) {
+    const isFinished = b.status !== 'pending';
+    const targetGroups = isFinished ? finishedGroups : pendingGroups;
+    const targetOrder = isFinished ? finishedOrder : pendingOrder;
+
+    if (!targetGroups[b.game_id]) {
       const home = translateTeam(b.home_team);
       const away = translateTeam(b.away_team);
       
@@ -143,47 +149,66 @@ async function sendMyBets(msg, user) {
         teamsDisplay = `⚽ *${home} - ${away}*`;
       }
       
-      groups[b.game_id] = {
+      targetGroups[b.game_id] = {
         teams: teamsDisplay,
         bets: []
       };
-      groupOrder.push(b.game_id);
+      targetOrder.push(b.game_id);
     }
-    groups[b.game_id].bets.push(b);
+    targetGroups[b.game_id].bets.push(b);
   });
 
-  let text = `🎯 *ההימורים שלי:*\n\n`;
-  
-  for (const gameId of groupOrder) {
-    const g = groups[gameId];
-    text += `${g.teams}\n`;
+  const formatBetLine = (b) => {
+    const statusIcon = b.status === 'won' ? '✅' : b.status === 'lost' ? '❌' : '⏳';
+    const label = typeLabels[b.bet_type] || 'הימור';
     
-    g.bets.forEach(b => {
-      const statusIcon = b.status === 'won' ? '✅' : b.status === 'lost' ? '❌' : '⏳';
-      const label = typeLabels[b.bet_type] || 'הימור';
-      
-      // Translate outcome
-      let outcome = b.selected_outcome;
-      if (outcome === 'Draw') outcome = 'תיקו';
-      else if (outcome === b.home_team) outcome = translateTeam(b.home_team);
-      else if (outcome === b.away_team) outcome = translateTeam(b.away_team);
-      else if (outcome === 'Yes') outcome = 'כן';
-      else if (outcome === 'No') outcome = 'לא';
-      else if (outcome === 'Over 2.5') outcome = 'מעל 2.5';
-      else if (outcome === 'Under 2.5') outcome = 'מתחת 2.5';
-      
-      let betDetail = `${label}: *${outcome}*`;
-      if (b.exact_score_prediction) {
-        betDetail += ` (תוצאה: ${b.exact_score_prediction})`;
-      }
-      
-      const leagueLabel = b.league_name ? `🏆 ליגת ${b.league_name}` : `✉️ הימור חופשי`;
-      const payoutInfo = b.status === 'won' ? ` | זכייה: *${b.actual_payout}*` : 
-                         b.status === 'pending' ? ` | זכייה אפשרית: *${b.potential_payout}*` : '';
+    let outcome = b.selected_outcome;
+    if (outcome === 'Draw') outcome = 'תיקו';
+    else if (outcome === b.home_team) outcome = translateTeam(b.home_team);
+    else if (outcome === b.away_team) outcome = translateTeam(b.away_team);
+    else if (outcome === 'Yes') outcome = 'כן';
+    else if (outcome === 'No') outcome = 'לא';
+    else if (outcome === 'Over 2.5') outcome = 'מעל 2.5';
+    else if (outcome === 'Under 2.5') outcome = 'מתחת 2.5';
+    
+    let betDetail = `${label}: *${outcome}*`;
+    if (b.exact_score_prediction) {
+      betDetail += ` (תוצאה: ${b.exact_score_prediction})`;
+    }
+    
+    const leagueLabel = b.league_name ? `🏆 ליגת ${b.league_name}` : `✉️ הימור חופשי`;
+    const payoutInfo = b.status === 'won' ? ` | זכייה: *${b.actual_payout}*` : 
+                       b.status === 'pending' ? ` | זכייה אפשרית: *${b.potential_payout}*` : '';
 
-      text += `${statusIcon} ${betDetail} | ${leagueLabel} | ${b.stake} נק'${payoutInfo}\n`;
-    });
-    text += `\n`;
+    return `${statusIcon} ${betDetail} | ${leagueLabel} | ${b.stake} נק'${payoutInfo}\n`;
+  };
+
+  let text = `🎯 *ההימורים שלי:*\n\n`;
+
+  if (finishedOrder.length > 0) {
+    text += `*הסתיימו (24 שעות אחרונות)*\n`;
+    text += `–––––––––––––––––––––––––––\n\n`;
+    for (const gameId of finishedOrder) {
+      const g = finishedGroups[gameId];
+      text += `${g.teams}\n`;
+      g.bets.forEach(b => {
+        text += formatBetLine(b);
+      });
+      text += `\n`;
+    }
+  }
+
+  if (pendingOrder.length > 0) {
+    text += `*הימורים פתוחים*\n`;
+    text += `–––––––––––––––––––––––––––\n\n`;
+    for (const gameId of pendingOrder) {
+      const g = pendingGroups[gameId];
+      text += `${g.teams}\n`;
+      g.bets.forEach(b => {
+        text += formatBetLine(b);
+      });
+      text += `\n`;
+    }
   }
 
   await msg.reply(text.trim());
