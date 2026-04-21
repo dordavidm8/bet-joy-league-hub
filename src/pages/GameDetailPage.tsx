@@ -107,8 +107,18 @@ const GameDetailPage = () => {
     setSelections((prev) => ({ ...prev, [questionId]: label }));
     // On first selection: pre-select originating league (if came from league page) or global
     if (!betContexts[questionId]) {
+      const q = bet_questions.find((bq: any) => bq.id === questionId);
+      let defaultLeague = preselectedLeagueId;
+      
+      if (defaultLeague && q && (q.type === 'over_under' || q.type === 'both_teams_score' || q.type === 'btts')) {
+        const league = activeLeagues.find(al => al.id === defaultLeague);
+        if (league?.is_tournament) {
+          defaultLeague = null; // Cannot bet on these types in tournament
+        }
+      }
+
       const initial = new Set<string>(
-        preselectedLeagueId ? [preselectedLeagueId] : ["global"]
+        defaultLeague ? [defaultLeague] : ["global"]
       );
       setBetContexts((prev) => ({ ...prev, [questionId]: initial }));
     }
@@ -359,22 +369,27 @@ const GameDetailPage = () => {
                               </button>
 
                               {/* League chips */}
-                              {activeLeagues.map((league) => (
-                                <button
-                                  key={league.id}
-                                  onClick={() => toggleContext(q.id, league.id)}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
-                                    contexts.has(league.id)
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : "bg-secondary border-border"
-                                  }`}
-                                >
-                                  {league.name}
-                                  {league.bet_mode === "initial_balance" && (
-                                    <span className="mr-1 opacity-60">· ניקוד</span>
-                                  )}
-                                </button>
-                              ))}
+                              {activeLeagues.map((league) => {
+                                if (league.is_tournament && (q.type === 'over_under' || q.type === 'both_teams_score' || q.type === 'btts')) {
+                                  return null;
+                                }
+                                return (
+                                  <button
+                                    key={league.id}
+                                    onClick={() => toggleContext(q.id, league.id)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+                                      contexts.has(league.id)
+                                        ? "bg-primary text-primary-foreground border-primary"
+                                        : "bg-secondary border-border"
+                                    }`}
+                                  >
+                                    {league.name}
+                                    {league.bet_mode === "initial_balance" && (
+                                      <span className="mr-1 opacity-60">· ניקוד</span>
+                                    )}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         )}

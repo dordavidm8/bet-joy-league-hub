@@ -101,7 +101,7 @@ router.post('/', authenticate, async (req, res, next) => {
     for (const lid of targets) {
       if (lid === null) continue;
       const lRes = await client.query(
-        `SELECT lm.is_active, l.bet_mode, l.min_bet, l.name, l.status
+        `SELECT lm.is_active, l.bet_mode, l.min_bet, l.name, l.status, l.is_tournament
          FROM league_members lm JOIN leagues l ON l.id = lm.league_id
          WHERE lm.league_id = $1 AND lm.user_id = $2`,
         [lid, req.user.id]
@@ -109,6 +109,9 @@ router.post('/', authenticate, async (req, res, next) => {
       const row = lRes.rows[0];
       if (!row || !row.is_active) throw Object.assign(new Error('לא חבר בליגה'), { status: 403 });
       if (row.status !== 'active') throw Object.assign(new Error('הליגה לא פעילה'), { status: 400 });
+      if (row.is_tournament && (question.type === 'over_under' || question.type === 'both_teams_score' || question.type === 'btts')) {
+        throw Object.assign(new Error(`לא ניתן להמר על סוג שאלה זה בליגת טורניר (${row.name})`), { status: 400 });
+      }
       leagueData[lid] = row;
     }
 
