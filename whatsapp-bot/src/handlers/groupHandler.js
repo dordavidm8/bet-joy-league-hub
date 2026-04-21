@@ -208,21 +208,24 @@ async function handleGroupMessage(client, msg, chat) {
     return;
   }
 
-    // 2. Find the bet associated with the quoted message
-    // Users might reply to the BOT's confirmation message or their own original bet.
-    const betRes = await pool.query(
-      `SELECT b.*, g.status as game_status, g.home_team, g.away_team
-       FROM bets b
-       JOIN games g ON g.id = b.game_id
-       WHERE b.user_id = $1 
-       AND (b.wa_bet_message_id = $2 OR b.wa_source_message_id = $2 OR b.wa_confirmation_message_id = $2)
-       AND b.status = 'pending'
-       ORDER BY b.placed_at DESC LIMIT 1`,
-      [user.id, quotedId]
-    );
+  // Check if reply is to user's own bet message (correction)
+  const userRes = await pool.query(`SELECT id FROM users WHERE phone_number = $1`, [senderPhone]);
+  if (!userRes.rows[0]) return;
+  const user = userRes.rows[0];
 
-  if (prevBetRes.rows[0]) {
-    await processBetCorrection(client, msg, senderPhone, prevBetRes.rows[0]);
+  const betRes = await pool.query(
+    `SELECT b.*, g.status as game_status, g.home_team, g.away_team
+     FROM bets b
+     JOIN games g ON g.id = b.game_id
+     WHERE b.user_id = $1 
+     AND (b.wa_bet_message_id = $2 OR b.wa_source_message_id = $2 OR b.wa_confirmation_message_id = $2)
+     AND b.status = 'pending'
+     ORDER BY b.placed_at DESC LIMIT 1`,
+    [user.id, quotedId]
+  );
+
+  if (betRes.rows[0]) {
+    await processBetCorrection(client, msg, senderPhone, betRes.rows[0]);
   }
   // If none of the above matched — silently ignore (it's just a regular reply in the group)
 }

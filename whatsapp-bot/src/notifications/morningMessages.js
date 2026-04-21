@@ -4,15 +4,16 @@ const { pool } = require('../utils/db');
 const { buildGameMessage } = require('../utils/formatters');
 
 async function sendMorningMessages(client, league) {
-  const now = new Date();
-  const todayStart = new Date(now.setHours(0, 0, 0, 0)).toISOString();
-  const todayEnd = new Date(now.setHours(23, 59, 59, 999)).toISOString();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0)).toISOString();
+  const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999)).toISOString();
 
   let gamesQuery = `
     SELECT g.id, g.home_team, g.away_team, g.start_time
     FROM games g
   `;
-  const params = [todayStart, todayEnd];
+  const params = [tomorrowStart, tomorrowEnd];
 
   if (league.is_tournament && league.tournament_slug) {
     gamesQuery += `
