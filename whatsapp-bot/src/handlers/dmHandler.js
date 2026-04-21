@@ -103,11 +103,14 @@ async function sendMyBets(msg, user) {
   const { translateTeam } = require('../utils/teamNames');
   const betsRes = await pool.query(
     `SELECT b.*, g.home_team, g.away_team, g.score_home, g.score_away, g.status AS game_status, bq.type AS bet_type, bq.question_text,
-            l.name AS league_name
+            l.name AS league_name,
+            t1.name_he as home_he_db, t2.name_he as away_he_db
      FROM bets b
      JOIN games g ON g.id = b.game_id
      JOIN bet_questions bq ON bq.id = b.bet_question_id
      LEFT JOIN leagues l ON l.id = b.league_id
+     LEFT JOIN team_name_translations t1 ON t1.name_en = g.home_team
+     LEFT JOIN team_name_translations t2 ON t2.name_en = g.away_team
      WHERE b.user_id = $1
        AND b.status != 'cancelled'
        AND (b.status = 'pending' OR (b.status != 'pending' AND g.start_time > NOW() - INTERVAL '24 hours'))
@@ -139,8 +142,8 @@ async function sendMyBets(msg, user) {
     const targetOrder = isFinished ? finishedOrder : pendingOrder;
 
     if (!targetGroups[b.game_id]) {
-      const home = translateTeam(b.home_team);
-      const away = translateTeam(b.away_team);
+      const home = b.home_he_db || translateTeam(b.home_team);
+      const away = b.away_he_db || translateTeam(b.away_team);
       
       let teamsDisplay;
       if (b.game_status === 'finished' && b.score_home !== null) {
@@ -164,8 +167,8 @@ async function sendMyBets(msg, user) {
     
     let outcome = b.selected_outcome;
     if (outcome === 'Draw') outcome = 'תיקו';
-    else if (outcome === b.home_team) outcome = translateTeam(b.home_team);
-    else if (outcome === b.away_team) outcome = translateTeam(b.away_team);
+    else if (outcome === b.home_team) outcome = b.home_he_db || translateTeam(b.home_team);
+    else if (outcome === b.away_team) outcome = b.away_he_db || translateTeam(b.away_team);
     else if (outcome === 'Yes') outcome = 'כן';
     else if (outcome === 'No') outcome = 'לא';
     else if (outcome === 'Over 2.5') outcome = 'מעל 2.5';
