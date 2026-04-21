@@ -23,7 +23,7 @@ router.get('/', authenticate, async (req, res, next) => {
          FROM point_transactions pt
          JOIN users u ON u.id = pt.user_id
          WHERE pt.type IN ('bet_won', 'league_payout', 'weekly_bonus')
-           AND pt.amount >= 100
+           AND pt.amount > 0
            AND pt.created_at >= NOW() - INTERVAL '48 hours'
            ${followingSubquery}
          ORDER BY pt.created_at DESC

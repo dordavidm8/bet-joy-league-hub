@@ -29,7 +29,7 @@ const GameCard = ({ game, index }: GameCardProps) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.05, ease: [0.32, 0.72, 0, 1] }}
-      className="card-kickoff min-w-[280px] flex flex-col gap-4 snap-center"
+      className="card-kickoff min-w-[280px] flex flex-col gap-4 snap-center h-full"
     >
       {/* Competition + Live badge */}
       <div className="flex items-center justify-between">
@@ -78,7 +78,7 @@ const GameCard = ({ game, index }: GameCardProps) => {
         variant={canBet ? "cta" : "outline"}
         size="default"
         onClick={() => navigate(`/game/${game.id}`)}
-        className="w-full"
+        className="w-full mt-auto"
         disabled={!canBet && !isLive && !isFinished}
       >
         {isFinished ? "הסתיים" : isLive ? "לייב" : isTooLate ? "התחיל" : "המר עכשיו"}
