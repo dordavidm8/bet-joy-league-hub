@@ -1535,9 +1535,10 @@ const NotificationsTab = () => {
         {result && <p className={`text-sm ${result.ok ? "text-green-600" : "text-destructive"}`}>{result.text}</p>}
         <Button onClick={() => { setResult(null); sendMutation.mutate(); }} disabled={!title || sendMutation.isPending}>
           <Send size={15} className="ml-2" />
-          {sendMutation.isPending ? "שולח..." : 
-            selectedLeagueName ? `שלח לחברי הליגה: ${selectedLeagueName}` :
-            `שלח ${target === "all" ? "לכולם" : `ל-${Array.isArray(target) ? target.length : 1} משתמשים`}`}
+          {sendMutation.isPending ? "שולח..." :
+            selectedLeagueIds.length > 0
+              ? `שלח לחברי ${selectedLeagueIds.length === 1 ? leaguesData?.leagues?.find(l => l.id === selectedLeagueIds[0])?.name ?? 'הליגה' : `${selectedLeagueIds.length} ליגות`}`
+              : `שלח ${target === "all" ? "לכולם" : `ל-${Array.isArray(target) ? target.length : 1} משתמשים`}`}
         </Button>
       </div>
       <div className="bg-muted/30 rounded-xl p-3 text-xs text-muted-foreground">
