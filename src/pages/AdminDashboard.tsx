@@ -903,12 +903,15 @@ const LeaguesTab = () => {
     onError: (e: any) => setPauseMsg(`❌ ${e.message}`),
   });
 
+  const [customPool, setCustomPool] = useState("");
+  const [customDist, setCustomDist] = useState("");
+
   const stopMutation = useMutation({
-    mutationFn: ({ id, distribute }: { id: string; distribute: boolean }) => adminStopLeague(id, distribute),
+    mutationFn: ({ id, distribute, pool, dist }: { id: string; distribute: boolean; pool?: number; dist?: number[] }) => adminStopLeague(id, distribute, pool, dist),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
       setStopMsg(`✅ ${res.message}`);
-      setTimeout(() => { setStopConfirm(null); setStopMsg(""); }, 2000);
+      setTimeout(() => { setStopConfirm(null); setStopMsg(""); setCustomPool(""); setCustomDist(""); }, 2000);
     },
     onError: (e: any) => setStopMsg(`❌ ${e.message}`),
   });
@@ -1081,19 +1084,33 @@ const LeaguesTab = () => {
       )}
 
       {stopConfirm && (
-        <Modal onClose={() => setStopConfirm(null)} title={`⛔ עצירת ליגה: ${stopConfirm.name}`}>
+        <Modal onClose={() => { setStopConfirm(null); setCustomPool(""); setCustomDist(""); }} title={`⛔ עצירת ליגה: ${stopConfirm.name}`}>
           <p className="text-sm text-muted-foreground mb-1">
             פעולה זו תסגור את הליגה לצמיתות. לא ניתן לבטל.
           </p>
-          <p className="text-xs bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3 text-amber-800">
-            קופה נוכחית: <b>{fmt(stopConfirm.pool_total)} נק׳</b>
-            {stopConfirm.distribution ? ` • חלוקה מוגדרת: ${stopConfirm.distribution}` : " • אין חלוקת פרסים מוגדרת"}
-          </p>
+          <div className="text-xs bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3 text-amber-800 flex flex-col gap-1">
+            <p>
+              קופה נוכחית: <b>{fmt(stopConfirm.pool_total)} נק׳</b>
+              {stopConfirm.distribution ? ` • חלוקה מוגדרת: ${stopConfirm.distribution}` : " • אין חלוקת פרסים מוגדרת"}
+            </p>
+            {(!stopConfirm.distribution || stopConfirm.pool_total === 0) && (
+              <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-amber-200">
+                <p className="font-bold">חלוקת פרסים מותאמת אישית (אופציונלי):</p>
+                <input placeholder="סך כל הקופה לפרסים (למשל 5000)" value={customPool} onChange={e => setCustomPool(e.target.value)}
+                  className="bg-background rounded-md px-2 py-1 text-xs border" type="number" />
+                <input placeholder="חלוקה באחוזים, למשל 50,30,20" value={customDist} onChange={e => setCustomDist(e.target.value)}
+                  className="bg-background rounded-md px-2 py-1 text-xs border" />
+              </div>
+            )}
+          </div>
           {stopMsg && <p className="text-sm mb-3">{stopMsg}</p>}
           <div className="flex flex-col gap-2">
             <Button variant="destructive" className="flex-1"
-              onClick={() => stopMutation.mutate({ id: stopConfirm.id, distribute: true })}
-              disabled={stopMutation.isPending || !stopConfirm.distribution}>
+              onClick={() => {
+                const distArray = customDist ? customDist.split(',').map(s => parseFloat(s.trim())) : undefined;
+                stopMutation.mutate({ id: stopConfirm.id, distribute: true, pool: customPool ? parseFloat(customPool) : undefined, dist: distArray });
+              }}
+              disabled={stopMutation.isPending || (!stopConfirm.distribution && !customDist)}>
               {stopMutation.isPending ? "מעצור..." : "עצור וחלק פרסים לפי דירוג"}
             </Button>
             <Button className="flex-1 bg-gray-700 hover:bg-gray-800 text-white"
@@ -1101,7 +1118,7 @@ const LeaguesTab = () => {
               disabled={stopMutation.isPending}>
               {stopMutation.isPending ? "מעצור..." : "עצור ללא חלוקת פרסים"}
             </Button>
-            <Button variant="outline" onClick={() => setStopConfirm(null)}>ביטול</Button>
+            <Button variant="outline" onClick={() => { setStopConfirm(null); setCustomPool(""); setCustomDist(""); }}>ביטול</Button>
           </div>
         </Modal>
       )}

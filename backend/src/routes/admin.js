@@ -358,7 +358,7 @@ router.post('/leagues/:id/pause', async (req, res, next) => {
 
 // POST /api/admin/leagues/:id/stop — terminate league with optional prize distribution
 router.post('/leagues/:id/stop', async (req, res, next) => {
-  const { distribute_prizes } = req.body; // boolean
+  const { distribute_prizes, custom_pool_total, custom_distribution } = req.body; // boolean
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -367,7 +367,10 @@ router.post('/leagues/:id/stop', async (req, res, next) => {
     if (!league) return res.status(404).json({ error: 'League not found' });
     if (league.status === 'finished') return res.status(400).json({ error: 'League already finished' });
 
-    if (distribute_prizes && league.pool_total > 0 && league.distribution) {
+    const poolAmount = custom_pool_total !== undefined ? parseFloat(custom_pool_total) : parseFloat(league.pool_total);
+    const distData = custom_distribution ? custom_distribution : league.distribution;
+
+    if (distribute_prizes && poolAmount > 0 && distData) {
       const membersRes = await client.query(
         `SELECT lm.user_id, COALESCE(SUM(b.payout), 0) AS total_payout
          FROM league_members lm
@@ -378,11 +381,11 @@ router.post('/leagues/:id/stop', async (req, res, next) => {
         [league.id]
       );
       const members = membersRes.rows;
-      const distribution = league.distribution;
-      const pool = parseFloat(league.pool_total);
+      const distribution = typeof distData === 'string' ? JSON.parse(distData) : distData;
+      
       for (let i = 0; i < members.length && i < distribution.length; i++) {
         const pct = parseFloat(distribution[i]) / 100;
-        const prize = Math.floor(pool * pct);
+        const prize = Math.floor(poolAmount * pct);
         if (prize <= 0) continue;
         await client.query(
           `UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`,
@@ -397,11 +400,11 @@ router.post('/leagues/:id/stop', async (req, res, next) => {
     }
 
     await client.query(
-      `UPDATE leagues SET status = 'finished', settled_at = NOW() WHERE id = $1`,
+      `UPDATE leagues SET status = 'finished' WHERE id = $1`,
       [league.id]
     );
     await client.query('COMMIT');
-    await logAdminAction(req.user.email, 'stop_league', 'league', league.id, { name: league.name, distribute_prizes: !!distribute_prizes });
+    await logAdminAction(req.user.email, 'stop_league', 'league', league.id, { name: league.name, distribute_prizes: !!distribute_prizes, pool: poolAmount });
     res.json({ message: distribute_prizes ? 'ליגה נסגרה ופרסים חולקו' : 'ליגה נסגרה ללא חלוקת פרסים' });
   } catch (err) {
     await client.query('ROLLBACK');

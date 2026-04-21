@@ -217,8 +217,10 @@ export const adminGetGames = (all = false) =>
 export const adminGetLeagues = () => request<{ leagues: AdminLeague[] }>('/admin/leagues');
 export const adminPauseLeague = (id: string) =>
   request<{ message: string }>(`/admin/leagues/${id}/pause`, { method: 'POST' });
-export const adminStopLeague = (id: string, distribute_prizes: boolean) =>
-  request<{ message: string }>(`/admin/leagues/${id}/stop`, { method: 'POST', body: JSON.stringify({ distribute_prizes }) });
+export const adminStopLeague = (id: string, distribute_prizes: boolean, custom_pool_total?: number, custom_distribution?: number[]) =>
+  request<{ message: string }>(`/admin/leagues/${id}/stop`, {
+    method: 'POST', body: JSON.stringify({ distribute_prizes, custom_pool_total, custom_distribution }),
+  });
 export const adminRemoveWaGroup = (id: string) =>
   request<{ message: string }>(`/admin/leagues/${id}/wa-group`, { method: 'DELETE' });
 export const adminSetWaInviteLink = (id: string, invite_link: string) =>
