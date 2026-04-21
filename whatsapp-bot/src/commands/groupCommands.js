@@ -21,7 +21,7 @@ async function handleSetupCommand(client, msg, groupJid, inviteCode) {
     `SELECT u.phone_number FROM users u WHERE u.id = $1`, [league.creator_id]
   );
   if (creatorRes.rows[0]?.phone_number !== senderPhone) {
-    await msg.reply('❌ רק מנהל הליגה יכול לחבר את הקבוצה.');
+    await msg.reply(`❌ רק מנהל הליגה יכול לחבר את הקבוצה.\nהטלפון שזוהה: ${senderPhone}\nטלפון המנהל במערכת: ${creatorRes.rows[0]?.phone_number || 'לא נמצא'}`);
     return;
   }
 
