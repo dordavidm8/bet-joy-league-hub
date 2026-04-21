@@ -7,6 +7,7 @@ const { startInternalApi } = require('./src/internalApi');
 const { startScheduledJobs } = require('./src/scheduledJobs');
 const { handleGroupMessage } = require('./src/handlers/groupHandler');
 const { handleDmMessage } = require('./src/handlers/dmHandler');
+const { pool } = require('./src/utils/db');
 const { startHealthChecks, DEVELOPER_NUMBER } = require('./src/health');
 
 const fs = require('fs');
