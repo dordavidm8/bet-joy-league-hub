@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, searchUsers, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, refreshWaInviteLink, setWaInviteLink, TournamentMatch } from "@/lib/api";
+import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, searchUsers, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, refreshWaInviteLink, setWaInviteLink, broadcastToLeague, TournamentMatch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone } from "lucide-react";
