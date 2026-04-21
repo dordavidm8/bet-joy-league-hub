@@ -109,8 +109,9 @@ async function sendMyBets(msg, user) {
      JOIN bet_questions bq ON bq.id = b.bet_question_id
      LEFT JOIN leagues l ON l.id = b.league_id
      WHERE b.user_id = $1
+       AND b.status != 'cancelled'
        AND (b.status = 'pending' OR (b.status != 'pending' AND g.start_time > NOW() - INTERVAL '36 hours'))
-     ORDER BY (b.status = 'pending') ASC, g.start_time DESC, g.id, b.placed_at ASC`,
+     ORDER BY (b.status = 'pending') DESC, g.start_time DESC, g.id, b.placed_at ASC`,
     [user.id]
   );
 
