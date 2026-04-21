@@ -25,13 +25,13 @@ const BottomTabBar = () => {
           const isActive = location.pathname === tab.path;
           const Icon = tab.icon;
           const hasBadge = tab.path === "/betslip" && betSlip.length > 0;
-          const isLocked = tab.path === "/expert" && !backendUser?.is_admin;
+          const isAiLocked = tab.path === "/expert" && !['nirdahan', 'dordavidm8'].includes(backendUser?.username);
 
           return (
             <button
               key={tab.path}
               onClick={() => {
-                if (isLocked) {
+                if (isAiLocked) {
                   alert("תכונה זו בשלבי הרצה וזמינה כרגע למנהלים בלבד.");
                   return;
                 }
@@ -39,7 +39,7 @@ const BottomTabBar = () => {
               }}
               className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors duration-200 relative ${
                 isActive ? "text-primary" : "text-muted-foreground"
-              } ${isLocked ? "opacity-50 grayscale" : ""}`}
+              } ${isAiLocked ? "opacity-50 grayscale" : ""}`}
             >
               <div className="relative">
                 <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
@@ -48,7 +48,7 @@ const BottomTabBar = () => {
                     {betSlip.length}
                   </span>
                 )}
-                {isLocked && (
+                {isAiLocked && (
                   <span className="absolute -top-1 -left-2 text-[10px]">🔒</span>
                 )}
               </div>

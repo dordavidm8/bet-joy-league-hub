@@ -468,7 +468,7 @@ const GameDetailPage = () => {
 
       {/* AI Button */}
       {!isFinished && !isLive && (() => {
-        const isAiLocked = !backendUser?.is_admin;
+        const isAiLocked = !['nirdahan', 'dordavidm8'].includes(backendUser?.username);
         return (
           <button
             onClick={() => {
@@ -478,7 +478,7 @@ const GameDetailPage = () => {
               }
               setShowAi(true);
             }}
-            className={`fixed bottom-24 left-6 w-14 h-14 rounded-full shadow-elevated flex items-center justify-center transition-transform z-40 relative
+            className={`fixed bottom-24 left-6 w-14 h-14 rounded-full shadow-elevated flex items-center justify-center transition-transform z-40
               ${isAiLocked ? 'bg-secondary text-muted-foreground opacity-80' : 'bg-primary text-primary-foreground hover:scale-110 active:scale-95'}
             `}
           >
