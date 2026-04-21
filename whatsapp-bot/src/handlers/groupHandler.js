@@ -192,10 +192,13 @@ async function handleGroupMessage(client, msg, chat) {
   // Only handle replies for betting — ignore all other group messages silently
   if (!msg.hasQuotedMsg) return;
 
-  console.log(`[WA-DEBUG] Processing potential bet message...`);
+  console.log(`[WA-DEBUG] Processing message from ${msg.author || msg.from} | body: ${body}`);
   const quoted = await msg.getQuotedMessage();
+  if (!quoted) return;
+  
   const quotedId = quoted.id._serialized;
   const senderPhone = extractNumber(msg.author || msg.from);
+  console.log(`[WA-DEBUG] Quoted message ID: ${quotedId} | SenderPhone: ${senderPhone}`);
 
   // Check if reply is to one of our game messages
   const gameMsgRes = await pool.query(

@@ -2,7 +2,9 @@
 
 // '972501234567@c.us' → '972501234567'
 function extractNumber(jid) {
-  return jid.split('@')[0];
+  if (!jid) return '';
+  const raw = typeof jid === 'string' ? jid : (jid._serialized || jid.id || jid.toString() || '');
+  return raw.split('@')[0];
 }
 
 // '050-123-4567' / '0501234567' / '+972501234567' → '972501234567'
