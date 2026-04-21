@@ -93,18 +93,19 @@ async function handleGroupMessage(client, msg, chat) {
       `SELECT g.league_id, g.is_active, l.name as league_name 
        FROM wa_groups g
        JOIN leagues l ON l.id = g.league_id
-       WHERE g.wa_group_id = $1`,
+       WHERE g.wa_group_id = $1 AND g.is_active = true`,
       [groupJid]
     );
     
-    const groupFound = groupRes.rows[0];
-    if (groupFound && groupFound.is_active) {
+    if (groupRes.rows.length > 0) {
       const { sendLeaderboard } = require('../notifications/leaderboardNotifier');
-      await sendLeaderboard(client, {
-        league_id: groupFound.league_id,
-        league_name: groupFound.league_name,
-        wa_group_id: groupJid
-      }).catch(e => console.error('[command] leaderboard error:', e.message));
+      for (const groupFound of groupRes.rows) {
+        await sendLeaderboard(client, {
+          league_id: groupFound.league_id,
+          league_name: groupFound.league_name,
+          wa_group_id: groupJid
+        }).catch(e => console.error('[command] leaderboard error:', e.message));
+      }
       return;
     }
   }

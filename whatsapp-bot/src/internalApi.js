@@ -139,6 +139,27 @@ function startInternalApi(client) {
     }
   });
 
+  // POST /internal/join-group-by-link — bot joins via link
+  app.post('/internal/join-group-by-link', auth, async (req, res) => {
+    const { link, leagueId, inviteCode } = req.body;
+    if (!link || !leagueId) return res.status(400).json({ error: 'link and leagueId required' });
+    try {
+      const inviteCodeWA = link.replace('https://chat.whatsapp.com/', '').split('?')[0].trim();
+      const groupJid = await client.acceptInvite(inviteCodeWA);
+      console.log(`[WA] Joined group via link: ${groupJid}`);
+      
+      await new Promise(r => setTimeout(r, 2000)); // allow chat sync
+      
+      res.json({ wa_group_id: groupJid });
+      
+      // Send welcome message
+      await client.sendMessage(groupJid, `⚽ בוט Kickoff חובר לליגה בהצלחה!`);
+    } catch (err) {
+      console.error('[internal/join-group-by-link]', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // POST /internal/add-member — add participant to group
   app.post('/internal/add-member', auth, async (req, res) => {
     const { groupJid, phone } = req.body;

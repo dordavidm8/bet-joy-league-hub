@@ -243,10 +243,38 @@ router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
     if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not found' });
     if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
 
-    await pool.query(
-      `UPDATE wa_groups SET invite_link = $1 WHERE league_id = $2 AND is_active = true`,
-      [invite_link || null, leagueId]
-    );
+    if (invite_link) {
+      // Ask bot to join the group
+      const joinRes = await callBot('/internal/join-group-by-link', { link: invite_link, leagueId });
+      if (joinRes && joinRes.wa_group_id) {
+        // Upsert group tracking
+        await pool.query(
+          `INSERT INTO wa_groups (wa_group_id, league_id, is_active, invite_link)
+           VALUES ($1,$2,true,$3) ON CONFLICT (wa_group_id, league_id) DO UPDATE SET is_active=true, invite_link=$3`,
+          [joinRes.wa_group_id, leagueId, invite_link]
+        );
+        
+        await pool.query(
+          `INSERT INTO wa_league_settings (league_id, bet_mode, stake_amount, exact_score_enabled, morning_message_time, leaderboard_frequency, leaderboard_time, leaderboard_day)
+           VALUES ($1, 'prediction', 0, false, '09:00', 'weekly', '10:00', 0)
+           ON CONFLICT (league_id) DO NOTHING`,
+          [leagueId]
+        );
+        await pool.query(`UPDATE leagues SET wa_enabled = true WHERE id = $1`, [leagueId]);
+      } else {
+        // fallback if bot is down or failed, just save the link
+        await pool.query(
+          `UPDATE wa_groups SET invite_link = $1 WHERE league_id = $2 AND is_active = true`,
+          [invite_link, leagueId]
+        );
+      }
+    } else {
+      await pool.query(
+        `UPDATE wa_groups SET invite_link = $1 WHERE league_id = $2 AND is_active = true`,
+        [null, leagueId]
+      );
+    }
+    
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -259,8 +287,27 @@ router.delete('/leagues/:id/group', authenticate, async (req, res, next) => {
     if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not found' });
     if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
 
+    // Find the group we're disconnecting from
+    const groupRes = await pool.query(
+      `SELECT wa_group_id FROM wa_groups WHERE league_id = $1 AND is_active = true`, [leagueId]
+    );
+
     await pool.query(`UPDATE wa_groups SET is_active = false WHERE league_id = $1`, [leagueId]);
     await pool.query(`UPDATE leagues SET wa_enabled = false WHERE id = $1`, [leagueId]);
+
+    // Check if this group is still active in any OTHER league
+    if (groupRes.rows.length > 0) {
+      const waGroupId = groupRes.rows[0].wa_group_id;
+      const otherRes = await pool.query(
+        `SELECT id FROM wa_groups WHERE wa_group_id = $1 AND is_active = true LIMIT 1`, [waGroupId]
+      );
+      if (otherRes.rows.length === 0) {
+        // Leave group
+        setTimeout(() => {
+          callBot('/internal/leave-group', { groupJid: waGroupId }).catch(e => console.error('[wa/leave] error:', e.message));
+        }, 5000); // leave after 5 seconds
+      }
+    }
 
     res.json({ message: 'קבוצה נותקה' });
   } catch (err) { next(err); }

@@ -20,10 +20,20 @@ async function handleSetupCommand(client, msg, groupJid, inviteCode) {
   const senderPhone = extractNumber(msg.author || msg.from);
   console.log(`[WA] Linking group ${groupJid} with invite code ${inviteCode}. Sender: ${senderPhone}`);
 
+  // Check if ALREADY connected
+  const existingRes = await pool.query(
+    `SELECT * FROM wa_groups WHERE wa_group_id = $1 AND league_id = $2 AND is_active = true`,
+    [groupJid, league.id]
+  );
+  if (existingRes.rows.length > 0) {
+    await msg.reply(`✅ הקבוצה כבר מחוברת לליגה "${league.name}".`);
+    return;
+  }
+
   // Register group
   await pool.query(
-    `INSERT INTO wa_groups (wa_group_id, league_id) VALUES ($1,$2)
-     ON CONFLICT (wa_group_id) DO UPDATE SET league_id = $2, is_active = true`,
+    `INSERT INTO wa_groups (wa_group_id, league_id, is_active) VALUES ($1,$2,true)
+     ON CONFLICT (wa_group_id, league_id) DO UPDATE SET is_active = true`,
     [groupJid, league.id]
   );
   await pool.query(`UPDATE leagues SET wa_enabled = true WHERE id = $1`, [league.id]);
