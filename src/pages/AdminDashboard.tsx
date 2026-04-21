@@ -1348,148 +1348,185 @@ const LeaguesTab = () => {
 };
 
 // ── Notifications Tab ─────────────────────────────────────────────────────────
-1312: const NotificationsTab = () => {
-1313:   const [type, setType] = useState<"special_offer" | "admin_message">("admin_message");
-1314:   const [title, setTitle] = useState("");
-1315:   const [body, setBody] = useState("");
-1316:   const [target, setTarget] = useState<string | string[] | { league_id: string }>("all");
-1317:   const [userSearch, setUserSearch] = useState("");
-1318:   const [userSearchQuery, setUserSearchQuery] = useState("");
-1319:   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
-1320: 
-1321:   const { data: userSearchData } = useQuery({
-1322:     queryKey: ["notif-user-search", userSearchQuery],
-1323:     queryFn: () => adminGetUsers(userSearchQuery),
-1324:     enabled: userSearchQuery.length >= 2,
-1325:     staleTime: 10_000,
-1326:   });
-1327: 
-1328:   const { data: leaguesData } = useQuery({
-1329:     queryKey: ["admin-leagues"],
-1330:     queryFn: adminGetLeagues,
-1331:     staleTime: 30_000,
-1332:   });
-1333: 
-1334:   const sendMutation = useMutation({
-1335:     mutationFn: () => adminSendNotification({ type, title, body, target: target as any }),
-1336:     onSuccess: (res) => { 
-1337:       setResult({ ok: true, text: `✅ נשלח ל-${res.sent_to} משתמשים` }); 
-1338:       setTitle(""); 
-1339:       setBody(""); 
-1340:       setTarget("all"); 
-1341:       setUserSearch(""); 
-1342:     },
-1343:     onError: (e: any) => setResult({ ok: false, text: `❌ ${e.message}` }),
-1344:   });
-1345: 
-1346:   const toggleUserSelection = (username: string) => {
-1347:     setTarget(prev => {
-1348:       if (typeof prev === 'object' && 'league_id' in prev) return [username];
-1349:       if (prev === "all") return [username];
-1350:       const list = [...(prev as string[])];
-1351:       if (list.includes(username)) {
-1352:         const filtered = list.filter(u => u !== username);
-1353:         return filtered.length === 0 ? "all" : filtered;
-1354:       }
-1355:       return [...list, username];
-1356:     });
-1357:     setUserSearch("");
-1358:     setUserSearchQuery("");
-1359:   };
-1360: 
-1361:   const selectedLeagueName = (typeof target === 'object' && 'league_id' in target)
-1362:     ? (leaguesData?.leagues?.find(l => l.id === target.league_id)?.name || "ליגה")
-1363:     : null;
-1364: 
-1365:   return (
-1366:     <div className="flex flex-col gap-5">
-1367:       <div className="border rounded-2xl p-4 flex flex-col gap-4">
-1368:         <h3 className="font-bold text-sm">שליחת התראה</h3>
-1369:         <div className="flex gap-2">
-1370:           {(["admin_message", "special_offer"] as const).map(t => (
-1371:             <button key={t} onClick={() => setType(t)}
-1372:               className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${type === t ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
-1373:               {t === "admin_message" ? "📢 הודעת מנהל" : "🎁 הצעה מיוחדת"}
-1374:             </button>
-1375:           ))}
-1376:         </div>
-1377: 
-1378:         {/* Target selector with user search */}
-1379:         <div className="flex flex-col gap-3">
-1380:           <p className="text-xs font-bold text-muted-foreground mr-1">יעד:</p>
-1381:           <div className="flex flex-wrap gap-2 items-center">
-1382:             <button 
-1383:               onClick={() => { setTarget("all"); setUserSearch(""); setUserSearchQuery(""); }}
-1384:               className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${target === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}
-1385:             >
-1386:               כולם
-1387:             </button>
-1388: 
-1389:             <div className="w-40">
-1390:               <Select value={(target as any).league_id || "none"} onValueChange={(val) => {
-1391:                 if (val === "none") setTarget("all");
-1392:                 else setTarget({ league_id: val });
-1393:               }}>
-1394:                 <SelectTrigger className="h-8 text-xs font-bold bg-secondary border-none rounded-xl">
-1395:                   <SelectValue placeholder="בחר ליגה..." />
-1396:                 </SelectTrigger>
-1397:                 <SelectContent dir="rtl">
-1398:                   <SelectItem value="none">-- בחר ליגה --</SelectItem>
-1399:                   {leaguesData?.leagues?.map(l => (
-1400:                     <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-1401:                   ))}
-1402:                 </SelectContent>
-1403:               </Select>
-1404:             </div>
-1405:             
-1406:             {selectedLeagueName && (
-1407:               <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-amber-200">
-1408:                 🏆 {selectedLeagueName}
-1409:                 <button onClick={() => setTarget("all")} className="hover:text-destructive transition-colors">
-1410:                   <X size={14} />
-1411:                 </button>
-1412:               </div>
-1413:             )}
-1414: 
-1415:             {Array.isArray(target) && target.map(u => (
-1416:               <div key={u} className="flex items-center gap-1 bg-primary/10 text-primary px-2.5 py-1.5 rounded-xl text-xs font-bold border border-primary/20">
-1417:                 @{u}
-1418:                 <button onClick={() => toggleUserSelection(u)} className="hover:text-destructive transition-colors">
-1419:                   <X size={14} />
-1420:                 </button>
-1421:               </div>
-1422:             ))}
-1423: 
-1424:             <div className="flex-1 min-w-[150px] relative">
-1425:               <input
-1426:                 value={userSearch}
-1427:                 onChange={e => { setUserSearch(e.target.value); setUserSearchQuery(e.target.value); }}
-1428:                 placeholder="הוסף משתמש..."
-1429:                 className="w-full bg-secondary rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary/30 transition-all font-medium"
-1430:               />
-1431:               {userSearchData?.users && userSearchQuery.length >= 2 && (
-1432:                 <div className="absolute top-full mt-1 left-0 right-0 bg-background border rounded-xl shadow-lg z-20 max-h-40 overflow-y-auto">
-1433:                   {userSearchData.users.slice(0, 8).map((u: AdminUser) => (
-1434:                     <button 
-1435:                       key={u.id} 
-1436:                       onClick={() => toggleUserSelection(u.username)}
-1437:                       className="w-full text-right px-3 py-2 text-xs hover:bg-secondary flex items-center justify-between gap-2"
-1438:                     >
-1439:                       <div className="flex flex-col items-start">
-1440:                         <span className="font-bold text-foreground">@{u.username}</span>
-1441:                         <span className="text-[10px] text-muted-foreground">{u.display_name}</span>
-1442:                       </div>
-1443:                       {Array.isArray(target) && target.includes(u.username) && (
-1444:                         <Check size={14} className="text-primary" />
-1445:                       )}
-1446:                     </button>
-1447:                   ))}
-1448:                   {userSearchData.users.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">לא נמצאו משתמשים</p>}
-1449:                 </div>
-1450:               )}
-1451:             </div>
-1452:           </div>
-1453:         </div>
+const NotificationsTab = () => {
+  const [type, setType] = useState<"special_offer" | "admin_message">("admin_message");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [target, setTarget] = useState<string | string[]>("all");
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<string[]>([]);
+  const [leagueSearch, setLeagueSearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const { data: userSearchData } = useQuery({
+    queryKey: ["notif-user-search", userSearchQuery],
+    queryFn: () => adminGetUsers(userSearchQuery),
+    enabled: userSearchQuery.length >= 2,
+    staleTime: 10_000,
+  });
+
+  const { data: leaguesData } = useQuery({
+    queryKey: ["admin-leagues"],
+    queryFn: adminGetLeagues,
+    staleTime: 30_000,
+  });
+
+  // Compute the effective target for the API call
+  const effectiveTarget: any = selectedLeagueIds.length > 0
+    ? { league_ids: selectedLeagueIds }
+    : target;
+
+  const sendMutation = useMutation({
+    mutationFn: () => adminSendNotification({ type, title, body, target: effectiveTarget }),
+    onSuccess: (res) => {
+      setResult({ ok: true, text: `✅ נשלח ל-${res.sent_to} משתמשים` });
+      setTitle(""); setBody(""); setTarget("all");
+      setSelectedLeagueIds([]); setUserSearch("");
+    },
+    onError: (e: any) => setResult({ ok: false, text: `❌ ${e.message}` }),
+  });
+
+  const toggleUserSelection = (username: string) => {
+    setSelectedLeagueIds([]);
+    setTarget(prev => {
+      if (prev === "all") return [username];
+      const list = [...(prev as string[])];
+      if (list.includes(username)) {
+        const filtered = list.filter(u => u !== username);
+        return filtered.length === 0 ? "all" : filtered;
+      }
+      return [...list, username];
+    });
+    setUserSearch("");
+    setUserSearchQuery("");
+  };
+
+  const toggleLeagueSelection = (id: string) => {
+    setTarget("all");
+    setSelectedLeagueIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+    setLeagueSearch("");
+  };
+
+  const filteredLeagues = (leaguesData?.leagues ?? []).filter(l =>
+    l.status === 'active' &&
+    (leagueSearch === '' || l.name.toLowerCase().includes(leagueSearch.toLowerCase()) ||
+      (l.creator_username ?? '').toLowerCase().includes(leagueSearch.toLowerCase()))
+  );
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="border rounded-2xl p-4 flex flex-col gap-4">
+        <h3 className="font-bold text-sm">שליחת התראה</h3>
+        <div className="flex gap-2">
+          {(["admin_message", "special_offer"] as const).map(t => (
+            <button key={t} onClick={() => setType(t)}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${type === t ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
+              {t === "admin_message" ? "📢 הודעת מנהל" : "🎁 הצעה מיוחדת"}
+            </button>
+          ))}
+        </div>
+
+        {/* Target selector */}
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-bold text-muted-foreground mr-1">יעד:</p>
+
+          {/* Row 1: כולם + league search */}
+          <div className="flex flex-wrap gap-2 items-start">
+            <button
+              onClick={() => { setTarget("all"); setSelectedLeagueIds([]); setUserSearch(""); setUserSearchQuery(""); setLeagueSearch(""); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors shrink-0 ${target === "all" && selectedLeagueIds.length === 0 ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}
+            >
+              כולם
+            </button>
+
+            {/* League search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <input
+                value={leagueSearch}
+                onChange={e => setLeagueSearch(e.target.value)}
+                placeholder="חפש ליגה לפי שם..."
+                className="w-full bg-secondary rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-amber-400/50 transition-all font-medium"
+              />
+              {leagueSearch.length >= 1 && (
+                <div className="absolute top-full mt-1 left-0 right-0 bg-background border rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto">
+                  {filteredLeagues.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-muted-foreground">לא נמצאו ליגות פעילות</p>
+                  ) : filteredLeagues.slice(0, 12).map(l => (
+                    <button key={l.id} onClick={() => toggleLeagueSelection(l.id)}
+                      className="w-full text-right px-3 py-2 text-xs hover:bg-secondary flex items-center gap-2 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold truncate">{l.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{l.member_count} חברים · {l.access_type === 'public' ? 'ציבורית' : 'פרטית'} · {l.creator_username}</p>
+                      </div>
+                      {selectedLeagueIds.includes(l.id)
+                        ? <Check size={14} className="text-primary shrink-0" />
+                        : <Plus size={14} className="text-muted-foreground/50 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Selected league tags */}
+          {selectedLeagueIds.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedLeagueIds.map(id => {
+                const l = leaguesData?.leagues?.find(x => x.id === id);
+                return l ? (
+                  <div key={id} className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-amber-200">
+                    🏆 {l.name}
+                    <button onClick={() => toggleLeagueSelection(id)} className="hover:text-destructive transition-colors"><X size={13} /></button>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          )}
+
+          {/* Selected user tags + user search */}
+          <div className="flex flex-wrap gap-2 items-center">
+            {Array.isArray(target) && target.map(u => (
+              <div key={u} className="flex items-center gap-1 bg-primary/10 text-primary px-2.5 py-1.5 rounded-xl text-xs font-bold border border-primary/20">
+                @{u}
+                <button onClick={() => toggleUserSelection(u)} className="hover:text-destructive transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+
+            <div className="flex-1 min-w-[150px] relative">
+              <input
+                value={userSearch}
+                onChange={e => { setUserSearch(e.target.value); setUserSearchQuery(e.target.value); }}
+                placeholder="הוסף משתמש..."
+                className="w-full bg-secondary rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary/30 transition-all font-medium"
+              />
+              {userSearchData?.users && userSearchQuery.length >= 2 && (
+                <div className="absolute top-full mt-1 left-0 right-0 bg-background border rounded-xl shadow-lg z-20 max-h-40 overflow-y-auto">
+                  {userSearchData.users.slice(0, 8).map((u: AdminUser) => (
+                    <button 
+                      key={u.id} 
+                      onClick={() => toggleUserSelection(u.username)}
+                      className="w-full text-right px-3 py-2 text-xs hover:bg-secondary flex items-center justify-between gap-2"
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-bold text-foreground">@{u.username}</span>
+                        <span className="text-[10px] text-muted-foreground">{u.display_name}</span>
+                      </div>
+                      {Array.isArray(target) && target.includes(u.username) && (
+                        <Check size={14} className="text-primary" />
+                      )}
+                    </button>
+                  ))}
+                  {userSearchData.users.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">לא נמצאו משתמשים</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="כותרת"
           className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none" />

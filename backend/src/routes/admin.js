@@ -453,15 +453,16 @@ router.post('/notify', async (req, res, next) => {
     if (!target || target === 'all') {
       const result = await pool.query(`SELECT id, phone_number, phone_verified, wa_opt_in FROM users`);
       users = result.rows;
-    } else if (typeof target === 'object' && target.league_id) {
+    } else if (typeof target === 'object' && (target.league_id || target.league_ids)) {
+      const ids = target.league_ids ?? [target.league_id];
       const result = await pool.query(
-        `SELECT u.id, u.phone_number, u.phone_verified, u.wa_opt_in
+        `SELECT DISTINCT u.id, u.phone_number, u.phone_verified, u.wa_opt_in
          FROM users u
          JOIN league_members lm ON lm.user_id = u.id
-         WHERE lm.league_id = $1 AND lm.is_active = true`,
-        [target.league_id]
+         WHERE lm.league_id = ANY($1) AND lm.is_active = true`,
+        [ids]
       );
-      if (result.rows.length === 0) return res.status(404).json({ error: 'לא נמצאו חברים בליגה זו' });
+      if (result.rows.length === 0) return res.status(404).json({ error: 'לא נמצאו חברים בליגות אלו' });
       users = result.rows;
     } else {
       const targetList = Array.isArray(target) ? target : [target];
