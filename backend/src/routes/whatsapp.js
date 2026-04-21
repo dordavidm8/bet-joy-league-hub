@@ -306,4 +306,19 @@ router.put('/leagues/:id/settings', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/whatsapp/leagues/:id/broadcast — trigger manual broadcast for a league
+router.post('/leagues/:id/broadcast', authenticate, async (req, res, next) => {
+  const { id: leagueId } = req.params;
+  try {
+    const leagueRes = await pool.query(`SELECT creator_id FROM leagues WHERE id = $1`, [leagueId]);
+    if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not found' });
+    if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator can manual broadcast' });
+
+    const result = await callBot('/internal/broadcast-league', { leagueId });
+    if (!result?.ok) return res.status(503).json({ error: 'הבוט אינו זמין לשידור כרגע' });
+
+    res.json({ message: 'השידור הופעל בהצלחה' });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

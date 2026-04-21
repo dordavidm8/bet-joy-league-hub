@@ -130,6 +130,15 @@ const LeagueDetailPage = () => {
     staleTime: 10_000,
   });
 
+  const waBroadcastMutation = useMutation({
+    mutationFn: () => broadcastToLeague(leagueId!),
+    onSuccess: (d) => {
+      setWaMsg({ ok: true, text: d.message || 'השידור הופעל בהצלחה ✅' });
+      setTimeout(() => setWaMsg(null), 5000);
+    },
+    onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
+  });
+
   const inviteMutation = useMutation({
     mutationFn: () => inviteToLeague(leagueId!, inviteUsername.trim()),
     onSuccess: (res) => {
@@ -614,6 +623,18 @@ const LeagueDetailPage = () => {
                       className="text-xs text-primary hover:underline self-start flex items-center gap-1"
                     >
                       ⚙️ הגדרות עדכונים
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (confirm('האם לשדר את משחקי מחר לקבוצת ה-WhatsApp כעת?')) {
+                          waBroadcastMutation.mutate();
+                        }
+                      }}
+                      disabled={waBroadcastMutation.isPending}
+                      className="text-xs text-primary hover:underline self-start flex items-center gap-1"
+                    >
+                      📢 {waBroadcastMutation.isPending ? "משדר..." : "שידור ידני של משחקי מחר"}
                     </button>
 
                     {showWaSettings && (

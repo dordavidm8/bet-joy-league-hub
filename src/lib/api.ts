@@ -751,6 +751,9 @@ export const setWaInviteLink = (leagueId: string, invite_link: string) =>
     method: 'PUT', body: JSON.stringify({ invite_link }),
   });
 
+export const broadcastToLeague = (leagueId: string) =>
+  request<{ message: string }>(`/whatsapp/leagues/${leagueId}/broadcast`, { method: 'POST' });
+
 // ── Team name translations ─────────────────────────────────────────────────────
 export const getApprovedTeamTranslations = () =>
   request<{ translations: Record<string, string> }>('/games/team-translations');
