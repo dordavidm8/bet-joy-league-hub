@@ -67,6 +67,8 @@ function parseBetMessage(body) {
 async function handleGroupMessage(client, msg, chat) {
   const groupJid = chat.id._serialized;
   const body = (msg.body || '').toLowerCase();
+  // Ignore help commands in groups explicitly
+  if (body === 'עזרה' || body === '?' || body === '/help' || body === 'תפריט') return;
 
   // ── Command: שלח טבלה גבר ────────────────────────────────────────────────
   if (body.includes('שלח טבלה גבר')) {
