@@ -1411,9 +1411,9 @@ const NotificationsTab = () => {
   };
 
   const filteredLeagues = (leaguesData?.leagues ?? []).filter(l =>
-    l.status === 'active' &&
-    (leagueSearch === '' || l.name.toLowerCase().includes(leagueSearch.toLowerCase()) ||
-      (l.creator_username ?? '').toLowerCase().includes(leagueSearch.toLowerCase()))
+    leagueSearch === '' ||
+    l.name.toLowerCase().includes(leagueSearch.toLowerCase()) ||
+    (l.creator_username ?? '').toLowerCase().includes(leagueSearch.toLowerCase())
   );
 
   return (
@@ -1459,7 +1459,7 @@ const NotificationsTab = () => {
                       className="w-full text-right px-3 py-2 text-xs hover:bg-secondary flex items-center gap-2 transition-colors">
                       <div className="flex-1 min-w-0">
                         <p className="font-bold truncate">{l.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{l.member_count} חברים · {l.access_type === 'public' ? 'ציבורית' : 'פרטית'} · {l.creator_username}</p>
+                        <p className="text-[10px] text-muted-foreground">{l.member_count} חברים · {l.access_type === 'public' ? 'ציבורית' : 'פרטית'} · {l.status === 'active' ? '🟢' : l.status === 'paused' ? '🟡' : '⚫'} {l.creator_username}</p>
                       </div>
                       {selectedLeagueIds.includes(l.id)
                         ? <Check size={14} className="text-primary shrink-0" />
