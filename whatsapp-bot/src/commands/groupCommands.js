@@ -15,15 +15,10 @@ async function handleSetupCommand(client, msg, groupJid, inviteCode) {
     return;
   }
 
-  // Check that sender is the league creator
+  // The invite code is a secret token, so anyone with it can link the group.
+  // We bypass sender verification because Community Groups mask phone numbers (e.g. 12655... instead of 972...).
   const senderPhone = extractNumber(msg.author || msg.from);
-  const creatorRes = await pool.query(
-    `SELECT u.phone_number FROM users u WHERE u.id = $1`, [league.creator_id]
-  );
-  if (creatorRes.rows[0]?.phone_number !== senderPhone) {
-    await msg.reply(`❌ רק מנהל הליגה יכול לחבר את הקבוצה.\nהטלפון שזוהה: ${senderPhone}\nטלפון המנהל במערכת: ${creatorRes.rows[0]?.phone_number || 'לא נמצא'}`);
-    return;
-  }
+  console.log(`[WA] Linking group ${groupJid} with invite code ${inviteCode}. Sender: ${senderPhone}`);
 
   // Register group
   await pool.query(
