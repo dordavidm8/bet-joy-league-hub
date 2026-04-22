@@ -68,6 +68,8 @@ app.use('/api/advisor', advisorRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+const socialRoutes = require('./routes/socialMedia');
+app.use('/api/social', socialRoutes);
 
 app.use(errorHandler);
 

@@ -1049,7 +1049,7 @@ router.patch('/advisor/config', async (req, res, next) => {
 router.get('/advisor/secrets', async (req, res, next) => {
   try {
     const dbRes = await pool.query('SELECT key, preview, updated_at, updated_by FROM encrypted_secrets ORDER BY key');
-    const ENV_KEYS = ['GROQ_API_KEY', 'THE_ODDS_API_KEY', 'FIREBASE_API_KEY', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL', 'WHATSAPP_API_KEY'];
+    const ENV_KEYS = ['GROQ_API_KEY', 'THE_ODDS_API_KEY', 'FIREBASE_API_KEY', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL', 'WHATSAPP_API_KEY', 'ANTHROPIC_API_KEY', 'GEMINI_API_KEY', 'LINKEDIN_ACCESS_TOKEN', 'INSTAGRAM_ACCESS_TOKEN', 'TIKTOK_ACCESS_TOKEN', 'SERPER_API_KEY'];
     const dbKeys = new Set(dbRes.rows.map(r => r.key));
     const all = ENV_KEYS.map(key => {
       if (dbKeys.has(key)) return dbRes.rows.find(r => r.key === key);
@@ -1065,7 +1065,7 @@ router.put('/advisor/secrets/:key', async (req, res, next) => {
   const { key } = req.params;
   const { value } = req.body;
   if (!value || typeof value !== 'string') return res.status(400).json({ error: 'value is required' });
-  const ALLOWED_KEYS = ['GROQ_API_KEY', 'THE_ODDS_API_KEY', 'FIREBASE_API_KEY', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL', 'WHATSAPP_API_KEY'];
+  const ALLOWED_KEYS = ['GROQ_API_KEY', 'THE_ODDS_API_KEY', 'FIREBASE_API_KEY', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL', 'WHATSAPP_API_KEY', 'ANTHROPIC_API_KEY', 'GEMINI_API_KEY', 'LINKEDIN_ACCESS_TOKEN', 'INSTAGRAM_ACCESS_TOKEN', 'TIKTOK_ACCESS_TOKEN', 'SERPER_API_KEY'];
   if (!ALLOWED_KEYS.includes(key)) return res.status(400).json({ error: 'Unknown secret key' });
   try {
     const { value_encrypted, iv, auth_tag } = encrypt(value);
