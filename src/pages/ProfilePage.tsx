@@ -532,6 +532,17 @@ const ProfilePage = () => {
         </section>
       )}
 
+      {/* Sign out */}
+      <button onClick={() => signOut()} className="card-kickoff flex items-center gap-3 text-right text-muted-foreground">
+        <LogOut size={18} />
+        <span className="text-sm font-medium">התנתקות</span>
+      </button>
+
+      {/* Delete account */}
+      <button onClick={() => setShowDeleteConfirm(true)} className="card-kickoff flex items-center gap-3 text-right text-destructive">
+        <span className="text-sm font-medium">מחיקת חשבון</span>
+      </button>
+
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-5" onClick={() => setShowDeleteConfirm(false)}>

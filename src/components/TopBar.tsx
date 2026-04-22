@@ -1,7 +1,7 @@
 import { useAuth } from "@/context/AuthContext";
 import NotificationBell from "@/components/NotificationBell";
-import { useNavigate } from "react-router-dom";
 import { HelpCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const TopBar = () => {
   const { backendUser } = useAuth();
@@ -16,9 +16,9 @@ const TopBar = () => {
           <span className="text-xl font-black tracking-tight leading-none">Kickoff</span>
         </button>
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => navigate("/help")}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-secondary transition-colors"
           >
             <HelpCircle size={20} className="text-muted-foreground" />
           </button>
