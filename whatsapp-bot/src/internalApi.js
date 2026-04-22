@@ -67,6 +67,13 @@ function startInternalApi(client) {
 
     let invite_link = null;
 
+    // 0. Permission check: Can we send messages?
+    const canSend = chat.canSendMessages;
+    if (canSend === false) {
+      console.warn(`[WA] Bot cannot send messages in ${groupJid}`);
+      return { error: 'לבוט אין הרשאות לשליחת הודעות בקבוצה זו. אנא וודאו שהוא מוגדר כמנהל או שהקבוצה פתוחה לכולם.' };
+    }
+
     // 1. Link league in DB immediately
     if (leagueId) {
       try {
@@ -154,7 +161,7 @@ function startInternalApi(client) {
       }
     })();
 
-    return invite_link;
+    return { invite_link, can_send: true };
   }
 
 
@@ -184,8 +191,8 @@ function startInternalApi(client) {
       if (!chat) throw new Error('Could not find created group chat object');
 
       const leagueName = req.body.leagueName;
-      const invite_link = await setupGroup(chat, inviteCode, leagueName, leagueId);
-      res.json({ wa_group_id: groupJid, invite_link });
+      const result_setup = await setupGroup(chat, inviteCode, leagueName, leagueId);
+      res.json({ wa_group_id: groupJid, ...result_setup });
     } catch (err) {
       console.error('[WA] create-group FAIL:', err.message);
       res.status(500).json({ error: err.message });
@@ -217,10 +224,16 @@ function startInternalApi(client) {
       
       await new Promise(r => setTimeout(r, 2000)); // allow chat sync
       
-      res.json({ wa_group_id: groupJid });
+      // Setup
+      const result_setup = await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName, leagueId);
       
-      // Send welcome message
-      await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName, leagueId);
+      // If we joined via link, ensure the link we joined with is saved as the group link
+      if (link && !result_setup.invite_link) {
+        await pool.query(`UPDATE wa_groups SET invite_link = $1 WHERE wa_group_id = $2`, [link, groupJid]);
+        result_setup.invite_link = link;
+      }
+      
+      res.json({ wa_group_id: groupJid, ...result_setup });
     } catch (err) {
       console.error('[internal/join-group-by-link]', err.message);
       res.status(500).json({ error: err.message });

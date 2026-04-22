@@ -158,6 +158,10 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
       return res.json({ status: 'pending', message: 'הבוט אינו זמין כרגע. הקבוצה תיווצר כשיתחבר.' });
     }
 
+    if (result.error) {
+      return res.status(403).json({ error: result.error });
+    }
+
     await pool.query(
       `INSERT INTO wa_groups (wa_group_id, league_id, invite_link)
        VALUES ($1,$2,$3) ON CONFLICT (wa_group_id) DO UPDATE SET 
@@ -245,13 +249,16 @@ router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
     if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
 
     if (invite_link) {
-      // Ask bot to join the group
       const joinRes = await callBot('/internal/join-group-by-link', { 
         link: invite_link, 
         leagueId,
         leagueName: leagueRes.rows[0].name,
         inviteCode: leagueRes.rows[0].invite_code
       });
+
+      if (joinRes?.error) {
+        return res.status(403).json({ error: joinRes.error });
+      }
 
       if (joinRes && joinRes.wa_group_id) {
         // Upsert group tracking

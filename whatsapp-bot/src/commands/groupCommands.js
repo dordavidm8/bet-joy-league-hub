@@ -3,63 +3,88 @@
 const { pool } = require('../utils/db');
 const { extractNumber } = require('../utils/phoneUtils');
 
-// /kickoff setup <invite_code> — links an existing WA group to a Kickoff league
-async function handleSetupCommand(client, msg, groupJid, inviteCode) {
-  const leagueRes = await pool.query(
-    `SELECT * FROM leagues WHERE invite_code = $1 AND status = 'active'`,
-    [inviteCode.toUpperCase()]
-  );
-  const league = leagueRes.rows[0];
-  if (!league) {
-    await msg.reply('❌ קוד ליגה לא נמצא. בדוק שהקוד נכון ושהליגה פעילה.');
-    return;
+/**
+ * /kickoff setup <invite_code> — links an existing WA group to a Kickoff league
+ */
+async function handleSetupCommand(client, msg, chat, parts) {
+  if (!chat.isGroup) {
+    return msg.reply('❌ הפקודה הזו מיועדת לקבוצות בלבד.');
   }
 
-  // The invite code is a secret token, so anyone with it can link the group.
-  // We bypass sender verification because Community Groups mask phone numbers (e.g. 12655... instead of 972...).
-  const senderPhone = extractNumber(msg.author || msg.from);
-  console.log(`[WA] Linking group ${groupJid} with invite code ${inviteCode}. Sender: ${senderPhone}`);
+  const groupJid = chat.id._serialized;
+  const inviteCode = parts[2]?.toUpperCase();
+  if (!inviteCode) {
+    return msg.reply('⚠️ מבנה פקודה לא תקין. השתמש ב: `kickoff setup [קוד-ליגה]`');
+  }
 
-  // Check if ALREADY connected
+  // 0. Permission check: Can we send messages?
+  if (chat.canSendMessages === false) {
+    console.warn(`[WA] setupCommand: Bot might not have permissions to reply in ${groupJid}`);
+    // If we are here, we probably received a message, so we might be able to reply.
+  }
+
+  // 1. Find league
+  const leagueRes = await pool.query(
+    `SELECT * FROM leagues WHERE invite_code = $1 AND status = 'active'`,
+    [inviteCode]
+  );
+  const league = leagueRes.rows[0];
+
+  if (!league) {
+    return msg.reply(`❌ לא נמצאה ליגה פעילה עם הקוד *${inviteCode}*. וודא שהקוד נכון.`);
+  }
+
+  // Check if ALREADY connected to THIS group
   const existingRes = await pool.query(
     `SELECT * FROM wa_groups WHERE wa_group_id = $1 AND league_id = $2 AND is_active = true`,
     [groupJid, league.id]
   );
   if (existingRes.rows.length > 0) {
-    await msg.reply(`✅ הקבוצה כבר מחוברת לליגה "${league.name}".`);
-    return;
+    return msg.reply(`✅ הקבוצה כבר מחוברת לליגה "${league.name}".`);
   }
 
-  // Register group
+  // 2. Link in DB
+  await pool.query('UPDATE leagues SET wa_enabled = true WHERE id = $1', [league.id]);
   await pool.query(
-    `INSERT INTO wa_groups (wa_group_id, league_id, is_active) VALUES ($1,$2,true)
+    `INSERT INTO wa_groups (wa_group_id, league_id, is_active) VALUES ($1, $2, true)
      ON CONFLICT (wa_group_id, league_id) DO UPDATE SET is_active = true`,
     [groupJid, league.id]
   );
-  await pool.query(`UPDATE leagues SET wa_enabled = true WHERE id = $1`, [league.id]);
-
-  // Upsert settings with defaults
   await pool.query(
-    `INSERT INTO wa_league_settings (league_id) VALUES ($1) ON CONFLICT DO NOTHING`,
+    `INSERT INTO wa_league_settings (league_id, bet_mode, stake_amount) VALUES ($1, 'prediction', 0)
+     ON CONFLICT (league_id) DO NOTHING`,
     [league.id]
   );
 
-  // Find which group members are linked to Kickoff
-  const chat = await client.getChatById(groupJid);
-  const participants = chat.participants || [];
+  // 3. Get participants and invite link
   let identified = 0;
-
-  for (const p of participants) {
-    const phone = extractNumber(p.id._serialized);
-    const userRes = await pool.query(
-      `SELECT id FROM users WHERE phone_number = $1 AND phone_verified = true`, [phone]
-    );
-    if (userRes.rows[0]) identified++;
+  let unidentified = 0;
+  try {
+    const participants = await chat.getParticipants();
+    const participantJids = participants.map(p => p.id._serialized);
+    
+    if (participantJids.length > 0) {
+      const placeholders = participantJids.map((_, i) => `$${i + 1}`).join(',');
+      const usersRes = await pool.query(`SELECT id FROM users WHERE phone_number IN (${placeholders})`, participantJids);
+      identified = usersRes.rows.length;
+      unidentified = participants.length - identified - 1; // -1 for bot
+    }
+  } catch (e) {
+    console.error('[WA] Failed to get participants:', e.message);
   }
 
-  const unidentified = participants.length - identified - 1; // -1 for bot itself
-  await msg.reply(
-    `✅ ליגת *"${league.name}"* מחוברת!\n\n` +
+  let inviteLink = null;
+  let adminWarning = '';
+  try {
+    const code = await chat.getInviteCode();
+    inviteLink = `https://chat.whatsapp.com/${code}`;
+    await pool.query(`UPDATE wa_groups SET invite_link = $1 WHERE wa_group_id = $2 AND league_id = $3`, [inviteLink, groupJid, league.id]);
+  } catch (e) {
+    console.warn(`[WA] setupCommand invite link FAIL: ${e.message}`);
+    adminWarning = `\n\n⚠️ *שים לב:* הבוט אינו מנהל בקבוצה, לכן לא יכולתי לשלוף את לינק ההצטרפות באופן אוטומטי. להצגת הלינק באתר, אנא הוסף אותו ידנית בדאשבורד או הפוך את הבוט למנהל.`;
+  }
+
+  const welcomeText = `✅ ליגת *"${league.name}"* מחוברת!\n\n` +
     `חברים מזוהים: ${identified}\n` +
     `לא מזוהים: ${unidentified > 0 ? unidentified : 0} מספרים לא מקושרים לקיקאוף.\n\n` +
     `*כללי המשחק:*\n` +
@@ -68,10 +93,10 @@ async function handleSetupCommand(client, msg, groupJid, inviteCode) {
     `רוצים לראות את הטבלה העדכנית? תכתבו *"שלח טבלה גבר"*.\n\n` +
     `יאללה, מי שעוד לא חיבר את המשתמש שלו לווטסאפ - זה הזמן.\n` +
     `אתר הליגה:\n` +
-    `https://kickoff-bet.app/leagues?join=${league.invite_code}\n\n` +
-    `שיהיה בהצלחה! 🏆`
-  );
+    `https://kickoff-bet.app/leagues/${league.id}\n\n` +
+    `שיהיה בהצלחה! 🏆${adminWarning}`;
 
+  await msg.reply(welcomeText);
 }
 
 module.exports = { handleSetupCommand };
