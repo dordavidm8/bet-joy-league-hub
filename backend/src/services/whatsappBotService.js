@@ -75,39 +75,52 @@ async function buildResultMessage(gameId, leagueId) {
   const game = gameRes.rows[0];
   if (!game) return null;
 
-  const betsRes = await pool.query(
-    `SELECT b.user_id, b.selected_outcome, b.status, b.actual_payout, b.odds,
-            u.username
-     FROM bets b JOIN users u ON u.id = b.user_id
-     WHERE b.game_id = $1 AND b.league_id = $2 AND b.wa_bet = true AND b.status != 'cancelled'`,
-    [gameId, leagueId]
-  );
-
-  const won = betsRes.rows.filter(b => b.status === 'won');
-  const lost = betsRes.rows.filter(b => b.status === 'lost');
-
+  // Get ALL league members
   const membersRes = await pool.query(
-    `SELECT u.username, lm.points_in_league
-     FROM league_members lm JOIN users u ON u.id = lm.user_id
-     WHERE lm.league_id = $1 AND lm.is_active = true
-     ORDER BY lm.points_in_league DESC LIMIT 5`,
+    `SELECT u.id as user_id, u.username
+     FROM league_members lm
+     JOIN users u ON u.id = lm.user_id
+     WHERE lm.league_id = $1 AND lm.is_active = true`,
     [leagueId]
   );
 
-  const rankEmoji = ['🥇', '🥈', '🥉'];
-  const score = game.score_home != null ? `${game.score_home}-${game.score_away}` : '';
-  let msg = `━━━━━━━━━━━━━━━━━━━━━━\n📊 ${translateTeam(game.home_team)} ${score} ${translateTeam(game.away_team)}\n`;
+  // Get ALL bets for this game and league
+  const betsRes = await pool.query(
+    `SELECT user_id, status, actual_payout, odds
+     FROM bets
+     WHERE game_id = $1 AND league_id = $2 AND status != 'cancelled'`,
+    [gameId, leagueId]
+  );
 
-  if (won.length > 0) {
+  const betsMap = {};
+  betsRes.rows.forEach(b => { betsMap[b.user_id] = b; });
+
+  const winners = [];
+  const noPoints = [];
+
+  membersRes.rows.forEach(m => {
+    const bet = betsMap[m.user_id];
+    if (bet && bet.status === 'won') {
+      winners.push({ username: m.username, payout: bet.actual_payout, odds: bet.odds });
+    } else {
+      noPoints.push(m.username);
+    }
+  });
+
+  const score = game.score_home != null ? `${game.score_home}-${game.score_away}` : '';
+  let msg = `📊 ${translateTeam(game.home_team)} ${score} ${translateTeam(game.away_team)}\n`;
+
+  if (winners.length > 0) {
     msg += `\n🏆 מנצחים:\n`;
-    won.forEach((b, i) => {
-      msg += `${rankEmoji[i] || '🎉'} ${b.username} — +${b.actual_payout} נקודות (x${b.odds})\n`;
+    winners.forEach(w => {
+      msg += `🥇 ${w.username} — +${w.payout} נקודות (x${w.odds})\n`;
     });
   }
-  if (lost.length > 0) {
-    msg += `\n😔 לא הצלחנו: ${lost.map(b => b.username).join(', ')}\n`;
+
+  if (noPoints.length > 0) {
+    msg += `\n😔 0 נקודות: ${noPoints.join(', ')}\n`;
   }
-  msg += `━━━━━━━━━━━━━━━━━━━━━━`;
+
   return msg;
 }
 
