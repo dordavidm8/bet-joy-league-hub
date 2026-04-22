@@ -130,7 +130,7 @@ async function handleGroupMessage(client, msg, chat) {
       `SELECT b.*, g.status as game_status, g.home_team, g.away_team
        FROM bets b
        JOIN games g ON g.id = b.game_id
-       WHERE b.user_id = $1 AND (b.wa_bet_message_id = $2 OR b.wa_confirmation_message_id = $2)
+       WHERE b.user_id = $1 AND b.wa_bet_message_id = $2
        AND b.status = 'pending'
        ORDER BY b.placed_at DESC LIMIT 1`,
       [user.id, quotedId]
@@ -236,7 +236,7 @@ async function handleGroupMessage(client, msg, chat) {
      FROM bets b
      JOIN games g ON g.id = b.game_id
      WHERE b.user_id = $1 
-     AND (b.wa_bet_message_id = $2 OR b.wa_confirmation_message_id = $2)
+     AND b.wa_bet_message_id = $2
      AND b.status = 'pending'
      ORDER BY b.placed_at DESC LIMIT 1`,
     [user.id, quotedId]

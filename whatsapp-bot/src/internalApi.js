@@ -80,7 +80,7 @@ function startInternalApi(client) {
         await pool.query('UPDATE leagues SET wa_enabled = true WHERE id = $1', [leagueId]);
         await pool.query(
           `INSERT INTO wa_groups (wa_group_id, league_id, is_active) VALUES ($1, $2, true) 
-           ON CONFLICT (wa_group_id, league_id) DO UPDATE SET is_active = true`,
+           ON CONFLICT (wa_group_id) DO UPDATE SET league_id = $2, is_active = true`,
           [groupJid, leagueId]
         );
         console.log(`[WA] League ${leagueId} linked to ${groupJid}`);
