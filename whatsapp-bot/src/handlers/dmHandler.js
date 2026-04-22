@@ -204,7 +204,8 @@ async function sendMyBets(msg, user) {
       payoutValue = (parseFloat(String(b.odds)) * (b.exact_score_prediction ? 3 : 1)).toFixed(2);
     }
 
-    const payoutInfo = (b.status === 'won' && b.actual_payout) ? ` | זכייה: *${b.actual_payout}*` :
+    const isExactHit = b.status === 'won' && parseFloat(String(b.actual_payout)) > (parseFloat(String(b.odds)) * 1.5);
+    const payoutInfo = (b.status === 'won' && b.actual_payout != null) ? ` | זכייה: *${parseFloat(String(b.actual_payout)).toFixed(isShared ? 1 : 0)}*${isExactHit ? ' 🎯' : ''}` :
                        (b.status === 'pending') ? ` | אפשרי: *${payoutValue}*` :
                        (b.status === 'parlay_failed') ? ` | נכשל במסגרת פרליי` : '';
 

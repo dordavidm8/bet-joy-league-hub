@@ -164,6 +164,7 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Brighton & Hove Albion': 'ברייטון',
   'Brighton': 'ברייטון',
   'Burnley': 'ברנלי',
+  'Elche': 'אלצ\'ה',
   'Crystal Palace': 'קריסטל פאלאס',
   'Everton': 'אברטון',
   'Fulham': 'פולהאם',

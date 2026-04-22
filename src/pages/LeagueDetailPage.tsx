@@ -369,7 +369,11 @@ const LeagueDetailPage = () => {
                 {isCreator && (
                   <>
                     <button
-                      onClick={() => waUnlinkGroupMutation.mutate()}
+                      onClick={() => {
+                        if (window.confirm("האם אתה בטוח שברצונך לנתק את הקבוצה? שים לב: הבוט לא יכול לחזור לקבוצות שהוא מתנתק מהן באופן אוטומטי. כדי לחבר קבוצה אחרת תצטרך להוסיף את הבוט לקבוצה החדשה באופן ידני.")) {
+                          waUnlinkGroupMutation.mutate();
+                        }
+                      }}
                       disabled={waUnlinkGroupMutation.isPending}
                       className="text-xs text-destructive hover:underline self-start"
                     >
