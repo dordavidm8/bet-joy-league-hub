@@ -18,7 +18,7 @@ async function callBot(path, body) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-internal-key': INTERNAL_API_KEY },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(8000), // Increased to 8s
+      signal: AbortSignal.timeout(30000), // Increased to 30s for group creation
     });
     if (!res.ok) {
       const errorText = await res.text();

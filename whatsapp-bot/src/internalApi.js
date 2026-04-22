@@ -141,8 +141,22 @@ function startInternalApi(client) {
       const result = await client.createGroup(name, participants);
       const groupJid = result.gid?._serialized || result.gid;
       console.log(`[WA] Group created: ${groupJid}`);
-      
-      const invite_link = await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName, leagueId);
+
+      let chat = null;
+      for (let i = 0; i < 5; i++) {
+        try {
+          chat = await client.getChatById(groupJid);
+          if (chat) break;
+        } catch (e) {
+          console.warn(`[WA] getChatById attempt ${i+1} FAIL: ${e.message}`);
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+
+      if (!chat) throw new Error('Could not find created group chat object');
+
+      const leagueName = req.body.leagueName;
+      const invite_link = await setupGroup(chat, inviteCode, leagueName, leagueId);
       res.json({ wa_group_id: groupJid, invite_link });
     } catch (err) {
       console.error('[WA] create-group FAIL:', err.message);
