@@ -227,94 +227,211 @@ const LeagueDetailPage = () => {
       </div>
 
       {/* Invite code */}
-      {league.access_type === "invite" && !isFinished && (
-        <div className="px-5">
-          <div className="card-kickoff">
-            <p className="text-xs text-muted-foreground mb-2">קוד הזמנה — שתף עם חברים</p>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="flex-1 bg-secondary rounded-xl px-4 py-2.5 font-mono font-bold tracking-widest text-center text-base">
-                {league.invite_code}
-              </span>
-              <button
-                onClick={copyCode}
-                className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center transition-colors hover:bg-primary/20"
-              >
-                {copied ? <Check size={18} className="text-primary" /> : <Copy size={18} className="text-primary" />}
-              </button>
-            </div>
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent("הצטרף לליגה שלי ב-Kickoff!\nשם: " + league.name + "\nקוד הזמנה: " + league.invite_code + "\nהצטרף ישירות: \u200B" + "https://kickoff-bet.app/leagues?join=" + league.invite_code)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors"
-            >
-              <Share2 size={15} />
-              שתף בוואטסאפ
-            </a>
+        </div>
+      )}
 
-            {/* Invite by username — live search */}
-            <div className="mt-3">
-              <p className="text-xs text-muted-foreground mb-1.5">הזמן לפי שם משתמש</p>
-              <div className="relative">
-                <input
-                  placeholder="הקלד שם משתמש לחיפוש..."
-                  value={inviteSearch}
-                  onChange={(e) => {
-                    setInviteSearch(e.target.value);
-                    setInviteSearchQuery(e.target.value.trim());
-                    setInviteUsername(e.target.value.trim());
-                  }}
-                  className="w-full bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                {/* Search results dropdown */}
-                {inviteSearchQuery.length >= 2 && (
-                  <div className="absolute z-10 top-full mt-1 w-full bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-                    {inviteSearchLoading ? (
-                      <p className="text-xs text-muted-foreground px-3 py-2">מחפש...</p>
-                    ) : (inviteSearchData?.users ?? []).length === 0 ? (
-                      <p className="text-xs text-muted-foreground px-3 py-2">לא נמצאו משתמשים</p>
-                    ) : (
-                      (inviteSearchData?.users ?? []).map((u) => (
-                        <button
-                          key={u.id}
-                          onClick={() => {
-                            setInviteUsername(u.username);
-                            setInviteSearch(u.username);
-                            setInviteSearchQuery("");
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary transition-colors text-right"
-                        >
-                          <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs shrink-0 overflow-hidden">
-                            {u.avatar_url
-                              ? <img src={u.avatar_url} className="w-full h-full object-cover" alt="" />
-                              : "👤"}
-                          </div>
-                          <div className="flex-1 text-right">
-                            <p className="text-sm font-bold">{u.display_name || u.username}</p>
-                            <p className="text-[10px] text-muted-foreground">@{u.username}</p>
-                          </div>
-                        </button>
-                      ))
-                    )}
+      {/* WhatsApp Bot section — only for tournament leagues */}
+      {!isFinished && isTournament && league.access_type !== 'public' && (
+        <div className="px-5">
+          <div className="card-kickoff flex flex-col gap-3">
+            <p className="text-xs font-bold flex items-center gap-1.5">
+              <Smartphone size={13} className="text-primary" />
+              WhatsApp Bot
+            </p>
+
+            {waSettingsData?.settings?.group_active ? (
+              <>
+                <p className="text-xs text-green-600">קבוצה מחוברת ✅</p>
+
+                {/* Invite link — show join button or prompt to add one */}
+                {waSettingsData.settings.invite_link ? (
+                  <a
+                    href={waSettingsData.settings.invite_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-sm font-bold text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2 hover:bg-green-100 transition-colors self-start"
+                  >
+                    <Smartphone size={14} />
+                    הצטרף לקבוצת WhatsApp
+                  </a>
+                ) : isCreator ? (
+                  <div className="flex flex-col gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-xs font-bold text-amber-800">הוסף לינק הצטרפות לקבוצה</p>
+                    <p className="text-[10px] text-amber-700">כדי שחברים יוכלו להצטרף, הוסף את הבוט כמנהל בקבוצה ולחץ ״קבל לינק אוטומטית״, או הדבק לינק ידנית.</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button size="sm" variant="outline" onClick={() => waRefreshLinkMutation.mutate()} disabled={waRefreshLinkMutation.isPending}>
+                        {waRefreshLinkMutation.isPending ? "מנסה..." : "קבל לינק אוטומטית"}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setWaInviteLinkInput(""); setShowWaLinkEdit(true); }}>
+                        הזן לינק ידנית
+                      </Button>
+                    </div>
                   </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">מנהל הליגה טרם הוסיף לינק הצטרפות לקבוצה</p>
                 )}
-              </div>
-              {inviteUsername && (
-                <button
-                  onClick={() => inviteMutation.mutate()}
-                  disabled={!inviteUsername.trim() || inviteMutation.isPending}
-                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-40"
-                >
-                  <UserPlus size={13} />
-                  {inviteMutation.isPending ? "שולח..." : `הזמן את @${inviteUsername}`}
-                </button>
-              )}
-              {inviteMsg && (
-                <p className={`text-xs mt-1.5 ${inviteMsg.ok ? "text-green-600" : "text-destructive"}`}>
-                  {inviteMsg.text}
+
+                {isCreator && (
+                  <>
+                    <button
+                      onClick={() => waUnlinkGroupMutation.mutate()}
+                      disabled={waUnlinkGroupMutation.isPending}
+                      className="text-xs text-destructive hover:underline self-start"
+                    >
+                      {waUnlinkGroupMutation.isPending ? "מנתק..." : "נתק קבוצה"}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (waSettingsData?.settings) {
+                          setEditWaSettings({
+                            morning_message_time: waSettingsData.settings.morning_message_time || '09:00',
+                            leaderboard_frequency: waSettingsData.settings.leaderboard_frequency || 'weekly',
+                            leaderboard_time: waSettingsData.settings.leaderboard_time || '10:00',
+                            leaderboard_day: waSettingsData.settings.leaderboard_day ?? 0,
+                          });
+                        }
+                        setShowWaSettings(!showWaSettings);
+                      }}
+                      className="text-xs text-primary hover:underline self-start flex items-center gap-1"
+                    >
+                      ⚙️ הגדרות עדכונים
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        console.log('[DEBUG] Triggering manual broadcast for league:', leagueId);
+                        waBroadcastMutation.mutate();
+                      }}
+                      disabled={waBroadcastMutation.isPending}
+                      className="text-xs text-primary hover:underline self-start flex items-center gap-1"
+                    >
+                      📢 {waBroadcastMutation.isPending ? "משדר..." : "שידור ידני של משחקי מחר"}
+                    </button>
+
+                    {showWaSettings && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="flex flex-col gap-3 bg-secondary/30 p-3 rounded-xl overflow-hidden">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold text-muted-foreground mr-1">שידור הודעת בוקר (שעה)</label>
+                          <input type="time" value={editWaSettings.morning_message_time}
+                            onChange={e => setEditWaSettings(prev => ({ ...prev, morning_message_time: e.target.value }))}
+                            className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold text-muted-foreground mr-1">תדירות שליחת טבלה</label>
+                          <Select value={editWaSettings.leaderboard_frequency} onValueChange={(val: any) => setEditWaSettings(prev => ({ ...prev, leaderboard_frequency: val }))} dir="rtl">
+                            <SelectTrigger className="bg-secondary rounded-lg px-3 py-1 text-xs outline-none border-border/50 h-8">
+                              <SelectValue placeholder="בחר תדירות" />
+                            </SelectTrigger>
+                            <SelectContent dir="rtl">
+                              <SelectItem value="after_game">אחרי כל משחק</SelectItem>
+                              <SelectItem value="daily">פעם ביום (בשעה קבועה)</SelectItem>
+                              <SelectItem value="weekly">פעם בשבוע (ביום ושעה קבועים)</SelectItem>
+                              <SelectItem value="never">לעולם לא</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {(editWaSettings.leaderboard_frequency === 'daily' || editWaSettings.leaderboard_frequency === 'weekly') && (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-muted-foreground mr-1">שעת שליחת טבלה</label>
+                            <input type="time" value={editWaSettings.leaderboard_time}
+                              onChange={e => setEditWaSettings(prev => ({ ...prev, leaderboard_time: e.target.value }))}
+                              className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50" />
+                          </div>
+                        )}
+
+                        {editWaSettings.leaderboard_frequency === 'weekly' && (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-muted-foreground mr-1">יום בשבוע</label>
+                            <Select value={editWaSettings.leaderboard_day.toString()} onValueChange={val => setEditWaSettings(prev => ({ ...prev, leaderboard_day: parseInt(val) }))} dir="rtl">
+                              <SelectTrigger className="bg-secondary rounded-lg px-3 py-1 text-xs outline-none border-border/50 h-8">
+                                <SelectValue placeholder="בחר יום" />
+                              </SelectTrigger>
+                              <SelectContent dir="rtl">
+                                <SelectItem value="0">ראשון</SelectItem>
+                                <SelectItem value="1">שני</SelectItem>
+                                <SelectItem value="2">שלישי</SelectItem>
+                                <SelectItem value="3">רביעי</SelectItem>
+                                <SelectItem value="4">חמישי</SelectItem>
+                                <SelectItem value="5">שישי</SelectItem>
+                                <SelectItem value="6">שבת</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        <Button size="sm" onClick={() => waSaveSettingsMutation.mutate(editWaSettings)} disabled={waSaveSettingsMutation.isPending}>
+                          {waSaveSettingsMutation.isPending ? "שומר..." : "שמור הגדרות"}
+                        </Button>
+                      </motion.div>
+                    )}
+                  </>
+                )}
+              </>
+            ) : isCreator ? (
+              <>
+                <p className="text-[11px] text-muted-foreground">
+                  חבר קבוצת וואטסאפ לליגה — חברים יקבלו הודעות על משחקים ויוכלו להמר ישירות
                 </p>
-              )}
-            </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setWaMsg(null); waCreateGroupMutation.mutate(); }}
+                  disabled={waCreateGroupMutation.isPending}
+                  className="self-start"
+                >
+                  <Smartphone size={14} /> {waCreateGroupMutation.isPending ? "יוצר..." : "צור קבוצת WhatsApp"}
+                </Button>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1">
+                    או הוסף בוט לקבוצה קיימת — שלח בקבוצה:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="flex-1 font-mono text-[11px] bg-secondary rounded-lg px-2 py-1.5 select-all">
+                      /kickoff setup {league.invite_code}
+                    </span>
+                    <button
+                      onClick={copySetupCommand}
+                      className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center transition-colors hover:bg-primary/20 shrink-0"
+                    >
+                      {copiedSetup ? <Check size={14} className="text-primary" /> : <Copy size={14} className="text-primary" />}
+                    </button>
+                  </div>
+                </div>
+                {showWaLinkEdit ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      value={waInviteLinkInput}
+                      onChange={e => setWaInviteLinkInput(e.target.value)}
+                      placeholder="לינק הזמנה לקבוצת WA"
+                      className="bg-secondary rounded-xl px-3 py-2 text-xs outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => waUpdateLinkMutation.mutate()} disabled={waUpdateLinkMutation.isPending}>
+                        {waUpdateLinkMutation.isPending ? "שומר..." : "שמור לינק"}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowWaLinkEdit(false)}>ביטול</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { setWaInviteLinkInput(""); setShowWaLinkEdit(true); }}
+                    className="text-xs text-primary hover:underline self-start">
+                    הוסף לינק הזמנה ישיר לקבוצה
+                  </button>
+                )}
+              </>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                עדיין לא קושרה קבוצת וואטסאפ לליגה זו
+              </p>
+            )}
+            {waMsg && (
+              <p className={`text-xs ${waMsg.ok ? 'text-green-600' : 'text-destructive'}`}>
+                {waMsg.text}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -566,211 +683,6 @@ const LeagueDetailPage = () => {
         </div>
       )}
 
-      {/* WhatsApp Bot section — only for tournament leagues */}
-      {!isFinished && isTournament && league.access_type !== 'public' && (
-        <div className="px-5">
-          <div className="card-kickoff flex flex-col gap-3">
-            <p className="text-xs font-bold flex items-center gap-1.5">
-              <Smartphone size={13} className="text-primary" />
-              WhatsApp Bot
-            </p>
-
-            {waSettingsData?.settings?.group_active ? (
-              <>
-                <p className="text-xs text-green-600">קבוצה מחוברת ✅</p>
-
-                {/* Invite link — show join button or prompt to add one */}
-                {waSettingsData.settings.invite_link ? (
-                  <a
-                    href={waSettingsData.settings.invite_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-sm font-bold text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2 hover:bg-green-100 transition-colors self-start"
-                  >
-                    <Smartphone size={14} />
-                    הצטרף לקבוצת WhatsApp
-                  </a>
-                ) : isCreator ? (
-                  <div className="flex flex-col gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                    <p className="text-xs font-bold text-amber-800">הוסף לינק הצטרפות לקבוצה</p>
-                    <p className="text-[10px] text-amber-700">כדי שחברים יוכלו להצטרף, הוסף את הבוט כמנהל בקבוצה ולחץ ״קבל לינק אוטומטית״, או הדבק לינק ידנית.</p>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button size="sm" variant="outline" onClick={() => waRefreshLinkMutation.mutate()} disabled={waRefreshLinkMutation.isPending}>
-                        {waRefreshLinkMutation.isPending ? "מנסה..." : "קבל לינק אוטומטית"}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => { setWaInviteLinkInput(""); setShowWaLinkEdit(true); }}>
-                        הזן לינק ידנית
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">מנהל הליגה טרם הוסיף לינק הצטרפות לקבוצה</p>
-                )}
-
-                {isCreator && (
-                  <>
-                    <button
-                      onClick={() => waUnlinkGroupMutation.mutate()}
-                      disabled={waUnlinkGroupMutation.isPending}
-                      className="text-xs text-destructive hover:underline self-start"
-                    >
-                      {waUnlinkGroupMutation.isPending ? "מנתק..." : "נתק קבוצה"}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        if (waSettingsData?.settings) {
-                          setEditWaSettings({
-                            morning_message_time: waSettingsData.settings.morning_message_time || '09:00',
-                            leaderboard_frequency: waSettingsData.settings.leaderboard_frequency || 'weekly',
-                            leaderboard_time: waSettingsData.settings.leaderboard_time || '10:00',
-                            leaderboard_day: waSettingsData.settings.leaderboard_day ?? 0,
-                          });
-                        }
-                        setShowWaSettings(!showWaSettings);
-                      }}
-                      className="text-xs text-primary hover:underline self-start flex items-center gap-1"
-                    >
-                      ⚙️ הגדרות עדכונים
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        console.log('[DEBUG] Triggering manual broadcast for league:', leagueId);
-                        waBroadcastMutation.mutate();
-                      }}
-                      disabled={waBroadcastMutation.isPending}
-                      className="text-xs text-primary hover:underline self-start flex items-center gap-1"
-                    >
-                      📢 {waBroadcastMutation.isPending ? "משדר..." : "שידור ידני של משחקי מחר"}
-                    </button>
-
-                    {showWaSettings && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="flex flex-col gap-3 bg-secondary/30 p-3 rounded-xl overflow-hidden">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-bold text-muted-foreground mr-1">שידור הודעת בוקר (שעה)</label>
-                          <input type="time" value={editWaSettings.morning_message_time}
-                            onChange={e => setEditWaSettings(prev => ({ ...prev, morning_message_time: e.target.value }))}
-                            className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50" />
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-bold text-muted-foreground mr-1">תדירות שליחת טבלה</label>
-                          <Select value={editWaSettings.leaderboard_frequency} onValueChange={(val: any) => setEditWaSettings(prev => ({ ...prev, leaderboard_frequency: val }))} dir="rtl">
-                            <SelectTrigger className="bg-secondary rounded-lg px-3 py-1 text-xs outline-none border-border/50 h-8">
-                              <SelectValue placeholder="בחר תדירות" />
-                            </SelectTrigger>
-                            <SelectContent dir="rtl">
-                              <SelectItem value="after_game">אחרי כל משחק</SelectItem>
-                              <SelectItem value="daily">פעם ביום (בשעה קבועה)</SelectItem>
-                              <SelectItem value="weekly">פעם בשבוע (ביום ושעה קבועים)</SelectItem>
-                              <SelectItem value="never">לעולם לא</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {(editWaSettings.leaderboard_frequency === 'daily' || editWaSettings.leaderboard_frequency === 'weekly') && (
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-muted-foreground mr-1">שעת שליחת טבלה</label>
-                            <input type="time" value={editWaSettings.leaderboard_time}
-                              onChange={e => setEditWaSettings(prev => ({ ...prev, leaderboard_time: e.target.value }))}
-                              className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50" />
-                          </div>
-                        )}
-
-                        {editWaSettings.leaderboard_frequency === 'weekly' && (
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-muted-foreground mr-1">יום בשבוע</label>
-                            <Select value={editWaSettings.leaderboard_day.toString()} onValueChange={val => setEditWaSettings(prev => ({ ...prev, leaderboard_day: parseInt(val) }))} dir="rtl">
-                              <SelectTrigger className="bg-secondary rounded-lg px-3 py-1 text-xs outline-none border-border/50 h-8">
-                                <SelectValue placeholder="בחר יום" />
-                              </SelectTrigger>
-                              <SelectContent dir="rtl">
-                                <SelectItem value="0">ראשון</SelectItem>
-                                <SelectItem value="1">שני</SelectItem>
-                                <SelectItem value="2">שלישי</SelectItem>
-                                <SelectItem value="3">רביעי</SelectItem>
-                                <SelectItem value="4">חמישי</SelectItem>
-                                <SelectItem value="5">שישי</SelectItem>
-                                <SelectItem value="6">שבת</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-
-                        <Button size="sm" onClick={() => waSaveSettingsMutation.mutate(editWaSettings)} disabled={waSaveSettingsMutation.isPending}>
-                          {waSaveSettingsMutation.isPending ? "שומר..." : "שמור הגדרות"}
-                        </Button>
-                      </motion.div>
-                    )}
-                  </>
-                )}
-              </>
-            ) : isCreator ? (
-              <>
-                <p className="text-[11px] text-muted-foreground">
-                  חבר קבוצת וואטסאפ לליגה — חברים יקבלו הודעות על משחקים ויוכלו להמר ישירות
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => { setWaMsg(null); waCreateGroupMutation.mutate(); }}
-                  disabled={waCreateGroupMutation.isPending}
-                  className="self-start"
-                >
-                  <Smartphone size={14} /> {waCreateGroupMutation.isPending ? "יוצר..." : "צור קבוצת WhatsApp"}
-                </Button>
-                <div>
-                  <p className="text-[11px] text-muted-foreground mb-1">
-                    או הוסף בוט לקבוצה קיימת — שלח בקבוצה:
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="flex-1 font-mono text-[11px] bg-secondary rounded-lg px-2 py-1.5 select-all">
-                      /kickoff setup {league.invite_code}
-                    </span>
-                    <button
-                      onClick={copySetupCommand}
-                      className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center transition-colors hover:bg-primary/20 shrink-0"
-                    >
-                      {copiedSetup ? <Check size={14} className="text-primary" /> : <Copy size={14} className="text-primary" />}
-                    </button>
-                  </div>
-                </div>
-                {showWaLinkEdit ? (
-                  <div className="flex flex-col gap-2">
-                    <input
-                      value={waInviteLinkInput}
-                      onChange={e => setWaInviteLinkInput(e.target.value)}
-                      placeholder="לינק הזמנה לקבוצת WA"
-                      className="bg-secondary rounded-xl px-3 py-2 text-xs outline-none"
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => waUpdateLinkMutation.mutate()} disabled={waUpdateLinkMutation.isPending}>
-                        {waUpdateLinkMutation.isPending ? "שומר..." : "שמור לינק"}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowWaLinkEdit(false)}>ביטול</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={() => { setWaInviteLinkInput(""); setShowWaLinkEdit(true); }}
-                    className="text-xs text-primary hover:underline self-start">
-                    הוסף לינק הזמנה ישיר לקבוצה
-                  </button>
-                )}
-              </>
-            ) : (
-              <p className="text-[11px] text-muted-foreground">
-                עדיין לא קושרה קבוצת וואטסאפ לליגה זו
-              </p>
-            )}
-            {waMsg && (
-              <p className={`text-xs ${waMsg.ok ? 'text-green-600' : 'text-destructive'}`}>
-                {waMsg.text}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
