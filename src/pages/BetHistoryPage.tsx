@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { getMyBets } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getMyBets, cancelBet } from "@/lib/api";
 import { motion } from "framer-motion";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const STATUS_TABS = [
   { value: "",              label: "הכל" },
@@ -34,10 +35,14 @@ const PAGE_SIZE = 20;
 
 const BetHistoryPage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { refreshUser } = useAuth();
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [offset, setOffset] = useState(0);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["my-bets-full", status, search, offset],
@@ -57,6 +62,22 @@ const BetHistoryPage = () => {
     setOffset(0);
   };
 
+  const handleCancelBet = async (betId: string) => {
+    if (!confirm("לבטל את ההימור? הסכום יוחזר לחשבונך.")) return;
+    setCancellingId(betId);
+    setCancelError(null);
+    try {
+      await cancelBet(betId);
+      await refreshUser();
+      queryClient.invalidateQueries({ queryKey: ["my-bets-full"] });
+      queryClient.invalidateQueries({ queryKey: ["my-bets"] });
+    } catch (err: any) {
+      setCancelError(err.message || "שגיאה בביטול ההימור");
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 pb-24">
       {/* Header */}
@@ -67,6 +88,12 @@ const BetHistoryPage = () => {
         <h2 className="text-2xl font-black">היסטוריית הימורים</h2>
         {total > 0 && <p className="text-xs text-muted-foreground mt-0.5">{total.toLocaleString()} הימורים סה״כ</p>}
       </div>
+
+      {cancelError && (
+        <div className="px-5">
+          <p className="text-xs text-destructive bg-destructive/10 rounded-xl px-3 py-2">{cancelError}</p>
+        </div>
+      )}
 
       {/* Search */}
       <div className="px-5 flex gap-2">
@@ -163,6 +190,16 @@ const BetHistoryPage = () => {
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-secondary ${STATUS_COLOR[bet.status]}`}>
                     {STATUS_LABEL[bet.status] ?? bet.status}
                   </span>
+                  {bet.status === "pending" && (
+                    <button
+                      title="בטל הימור"
+                      disabled={cancellingId === bet.id}
+                      onClick={() => handleCancelBet(bet.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
               </div>
 

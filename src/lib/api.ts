@@ -80,6 +80,9 @@ export const placeBet = (data: PlaceBetInput) =>
 export const placeParlay = (data: PlaceParlayInput) =>
   request<{ parlay: Parlay }>('/bets/parlay', { method: 'POST', body: JSON.stringify(data) });
 
+export const cancelBet = (betId: string) =>
+  request<{ message: string }>(`/bets/${betId}`, { method: 'DELETE' });
+
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 export const getLeaderboard = (limit = 50) =>
   request<{ leaderboard: LeaderboardEntry[] }>(`/leaderboard/global?limit=${limit}`);

@@ -358,4 +358,68 @@ router.get('/:id', authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── DELETE /api/bets/:id — user self-cancel ───────────────────────────────────
+// Users can cancel their own pending bets and get the stake back.
+// If the bet belongs to a parlay, the ENTIRE parlay is cancelled.
+router.delete('/:id', authenticate, async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Fetch the bet — must belong to the requesting user
+    const betRes = await client.query(`SELECT * FROM bets WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.id]);
+    const bet = betRes.rows[0];
+    if (!bet) return res.status(404).json({ error: 'הימור לא נמצא' });
+    if (bet.status !== 'pending') return res.status(400).json({ error: 'ניתן לבטל רק הימורים שעדיין ממתינים' });
+
+    // Check the game hasn't started (cannot cancel after kickoff-10min)
+    const gameRes = await client.query(`SELECT start_time, status FROM games WHERE id = $1`, [bet.game_id]);
+    const game = gameRes.rows[0];
+    if (game) {
+      const closesAt = new Date(new Date(game.start_time).getTime() - 10 * 60 * 1000);
+      if (new Date() >= closesAt || game.status !== 'scheduled') {
+        return res.status(400).json({ error: 'לא ניתן לבטל לאחר תחילת ההתחשבנות (10 דקות לפני קיקאוף)' });
+      }
+    }
+
+    if (bet.parlay_id) {
+      // Cancel the entire parlay — refund total_stake once
+      const parlayRes = await client.query(`SELECT * FROM parlays WHERE id = $1`, [bet.parlay_id]);
+      const parlay = parlayRes.rows[0];
+      if (!parlay) return res.status(404).json({ error: 'פרליי לא נמצא' });
+
+      await client.query(`UPDATE bets SET status = 'cancelled', settled_at = NOW() WHERE parlay_id = $1`, [bet.parlay_id]);
+      await client.query(`UPDATE parlays SET status = 'cancelled', settled_at = NOW() WHERE id = $1`, [bet.parlay_id]);
+      await client.query(
+        `UPDATE users SET points_balance = points_balance + $1, total_bets = total_bets - $2 WHERE id = $3`,
+        [parlay.total_stake, parlay.total_stake > 0 ? 1 : 0, req.user.id]
+      );
+      await client.query(
+        `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+         VALUES ($1, $2, 'bet_cancelled', $3, $4)`,
+        [req.user.id, parlay.total_stake, parlay.id, `פרליי #${parlay.parlay_number} בוטל על ידי המשתמש — הסכום הוחזר`]
+      );
+      await client.query('COMMIT');
+      return res.json({ message: `פרליי #${parlay.parlay_number} בוטל בהצלחה — ${parlay.total_stake} נקודות הוחזרו` });
+    }
+
+    // Single bet cancel
+    await client.query(`UPDATE bets SET status = 'cancelled', settled_at = NOW() WHERE id = $1`, [bet.id]);
+    await client.query(
+      `UPDATE users SET points_balance = points_balance + $1, total_bets = total_bets - 1 WHERE id = $2`,
+      [bet.stake, req.user.id]
+    );
+    await client.query(
+      `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
+       VALUES ($1, $2, 'bet_cancelled', $3, 'הימור בוטל על ידי המשתמש — הסכום הוחזר')`,
+      [req.user.id, bet.stake, bet.id]
+    );
+    await client.query('COMMIT');
+    res.json({ message: `הימור בוטל בהצלחה — ${bet.stake} נקודות הוחזרו` });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
+});
+
 module.exports = router;
