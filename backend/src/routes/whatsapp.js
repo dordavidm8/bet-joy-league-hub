@@ -240,13 +240,19 @@ router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
   const { id: leagueId } = req.params;
   const { invite_link } = req.body;
   try {
-    const leagueRes = await pool.query(`SELECT creator_id FROM leagues WHERE id = $1`, [leagueId]);
+    const leagueRes = await pool.query(`SELECT creator_id, name, invite_code FROM leagues WHERE id = $1`, [leagueId]);
     if (!leagueRes.rows[0]) return res.status(404).json({ error: 'League not found' });
     if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
 
     if (invite_link) {
       // Ask bot to join the group
-      const joinRes = await callBot('/internal/join-group-by-link', { link: invite_link, leagueId });
+      const joinRes = await callBot('/internal/join-group-by-link', { 
+        link: invite_link, 
+        leagueId,
+        leagueName: leagueRes.rows[0].name,
+        inviteCode: leagueRes.rows[0].invite_code
+      });
+
       if (joinRes && joinRes.wa_group_id) {
         // Upsert group tracking
         await pool.query(
