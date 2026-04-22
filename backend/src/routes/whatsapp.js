@@ -164,7 +164,7 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
 
     await pool.query(
       `INSERT INTO wa_groups (wa_group_id, league_id, invite_link)
-       VALUES ($1,$2,$3) ON CONFLICT (wa_group_id) DO UPDATE SET 
+       VALUES ($1,$2,$3) ON CONFLICT (wa_group_id, league_id) DO UPDATE SET 
          league_id=$2, 
          is_active=true, 
          invite_link = COALESCE(EXCLUDED.invite_link, wa_groups.invite_link)`,
@@ -197,7 +197,7 @@ router.post('/leagues/:id/link-group', authenticate, async (req, res, next) => {
 
     await pool.query(
       `INSERT INTO wa_groups (wa_group_id, league_id)
-       VALUES ($1,$2) ON CONFLICT (wa_group_id) DO UPDATE SET league_id=$2, is_active=true`,
+       VALUES ($1,$2) ON CONFLICT (wa_group_id, league_id) DO UPDATE SET is_active=true`,
       [wa_group_id, leagueId]
     );
     await pool.query(
