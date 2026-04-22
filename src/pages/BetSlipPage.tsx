@@ -177,6 +177,7 @@ const BetSlipPage = () => {
               />
             </button>
           </div>
+        </div>
       )}
 
       {/* Bet Items */}
