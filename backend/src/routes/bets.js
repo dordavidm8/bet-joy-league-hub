@@ -141,7 +141,8 @@ router.post('/', authenticate, async (req, res, next) => {
     for (const lid of targets) {
       const dupCheck = await client.query(
         `SELECT id FROM bets WHERE user_id = $1 AND bet_question_id = $2
-         AND (($3::uuid IS NULL AND league_id IS NULL) OR league_id = $3)`,
+         AND (($3::uuid IS NULL AND league_id IS NULL) OR league_id = $3)
+         AND status != 'cancelled'`,
         [req.user.id, bet_question_id, lid]
       );
       if (dupCheck.rows[0]) {
@@ -275,7 +276,7 @@ router.post('/parlay', authenticate, async (req, res, next) => {
 
       // Check for duplicate bets on same question in the global context
       const dupCheck = await client.query(
-        `SELECT id FROM bets WHERE user_id = $1 AND bet_question_id = $2 AND league_id IS NULL`,
+        `SELECT id FROM bets WHERE user_id = $1 AND bet_question_id = $2 AND league_id IS NULL AND status != 'cancelled'`,
         [req.user.id, sel.bet_question_id]
       );
       if (dupCheck.rows[0]) {
