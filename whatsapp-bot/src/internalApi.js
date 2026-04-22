@@ -55,7 +55,7 @@ function startInternalApi(client) {
     }
   });
 
-  async function setupGroup(chat, inviteCode, leagueName) {
+  async function setupGroup(chat, inviteCode, leagueName, leagueId) {
     let invite_link = null;
     const groupJid = chat.id._serialized;
 
@@ -99,8 +99,8 @@ function startInternalApi(client) {
         // Wait only 2s before description
         await new Promise(r => setTimeout(r, 2000));
         
-        if (inviteCode) {
-          const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
+        if (inviteCode && leagueId) {
+          const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues/${leagueId}`;
           await chat.setDescription(description).catch(e => {
             console.warn(`[WA] Description background update FAIL: ${e.message}`);
           });
@@ -116,7 +116,7 @@ function startInternalApi(client) {
           `רוצים לראות את הטבלה העדכנית? תכתבו *"שלח טבלה גבר"*.\n\n` +
           `יאללה, מי שעוד לא חיבר את המשתמש שלו לווטסאפ - זה הזמן.\n` +
           `אתר הליגה:\n` +
-          `https://kickoff-bet.app/leagues?join=${inviteCode}\n\n` +
+          `https://kickoff-bet.app/leagues/${leagueId}\n\n` +
           `שיהיה בהצלחה! 🏆`;
         
         await chat.sendMessage(welcomeText);
@@ -142,7 +142,7 @@ function startInternalApi(client) {
       const groupJid = result.gid?._serialized || result.gid;
       console.log(`[WA] Group created: ${groupJid}`);
       
-      const invite_link = await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName);
+      const invite_link = await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName, leagueId);
       res.json({ wa_group_id: groupJid, invite_link });
     } catch (err) {
       console.error('[WA] create-group FAIL:', err.message);
@@ -178,7 +178,7 @@ function startInternalApi(client) {
       res.json({ wa_group_id: groupJid });
       
       // Send welcome message
-      await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName);
+      await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName, leagueId);
     } catch (err) {
       console.error('[internal/join-group-by-link]', err.message);
       res.status(500).json({ error: err.message });
