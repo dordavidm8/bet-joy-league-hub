@@ -165,8 +165,9 @@ async function sendMyBets(msg, user) {
 
   const formatBetLine = (b) => {
     let statusIcon;
-    if (b.status === 'won') statusIcon = '✅';
-    else if (b.status === 'lost' || b.status === 'parlay_failed') statusIcon = '❌';
+    const isParlayLoss = b.parlay_number && b.parlay_status === 'lost';
+    if (b.status === 'won' && !isParlayLoss) statusIcon = '✅';
+    else if (b.status === 'lost' || b.status === 'parlay_failed' || isParlayLoss) statusIcon = '❌';
     else statusIcon = '⏳';
 
     const label = typeLabels[b.bet_type] || 'הימור';
@@ -205,9 +206,9 @@ async function sendMyBets(msg, user) {
     }
 
     const isExactHit = b.status === 'won' && parseFloat(String(b.actual_payout)) > (parseFloat(String(b.odds)) * 1.5);
-    const payoutInfo = (b.status === 'won' && b.actual_payout != null) ? ` | זכייה: *${parseFloat(String(b.actual_payout)).toFixed(isShared ? 1 : 0)}*${isExactHit ? ' 🎯' : ''}` :
-                       (b.status === 'pending') ? ` | אפשרי: *${payoutValue}*` :
-                       (b.status === 'parlay_failed') ? ` | נכשל במסגרת פרליי` : '';
+    const showPayout = b.status === 'won' && b.actual_payout != null && !isParlayLoss;
+    const payoutInfo = showPayout ? ` | זכייה: *${parseFloat(String(b.actual_payout)).toFixed(isShared ? 1 : 0)}*${isExactHit ? ' 🎯' : ''}` :
+                       (b.status === 'pending') ? ` | אפשרי: *${payoutValue}*` : '';
 
     return `${statusIcon} ${betDetail} | ${contextLabel} | ${stakeDisplay}${payoutInfo}\n`;
   };
