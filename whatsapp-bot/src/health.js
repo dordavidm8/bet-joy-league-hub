@@ -49,17 +49,8 @@ function startHealthChecks(client) {
     const minutes = ilTime.getMinutes();
     
     if (restartTimes.includes(hours) && minutes === 0) {
-      const report = await getHealthStatus();
-      try {
-        await client.sendMessage(DEVELOPER_NUMBER, `🔄 *Scheduled Restart*
-Reason: Periodic health maintenance (3,7,11...)
-${report}`);
-      } catch (e) {
-        console.error('[Health] Failed to send restart report:', e.message);
-      }
-      
       console.log('[Health] Scheduled restart triggering...');
-      // Wait a bit for message to send
+      // Wait bit then exit. The bot will send a "Started" message upon reboot anyway.
       setTimeout(() => process.exit(0), 5000);
     }
   }, 60000);
