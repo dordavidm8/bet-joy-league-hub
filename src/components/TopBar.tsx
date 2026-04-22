@@ -1,6 +1,7 @@
 import { useAuth } from "@/context/AuthContext";
 import NotificationBell from "@/components/NotificationBell";
 import { useNavigate } from "react-router-dom";
+import { HelpCircle } from "lucide-react";
 
 const TopBar = () => {
   const { backendUser } = useAuth();
@@ -15,6 +16,12 @@ const TopBar = () => {
           <span className="text-xl font-black tracking-tight leading-none">Kickoff</span>
         </button>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate("/help")}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+          >
+            <HelpCircle size={20} className="text-muted-foreground" />
+          </button>
           <NotificationBell />
           <div className="flex items-center gap-1.5 bg-secondary rounded-full px-3 py-1.5">
             <span className="text-sm font-bold">{Math.floor(points).toLocaleString()}</span>

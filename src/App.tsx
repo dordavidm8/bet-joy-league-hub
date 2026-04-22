@@ -27,6 +27,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import PublicProfilePage from "@/pages/PublicProfilePage";
 import BetHistoryPage from "@/pages/BetHistoryPage";
 import StatsPage from "@/pages/StatsPage";
+import HelpPage from "@/pages/HelpPage";
 import { Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -130,6 +131,7 @@ function AuthGate() {
       <Route path="/profile/:username" element={<AppLayout><PublicProfilePage /></AppLayout>} />
       <Route path="/bets" element={<AppLayout><BetHistoryPage /></AppLayout>} />
       <Route path="/stats" element={<AppLayout><StatsPage /></AppLayout>} />
+      <Route path="/help" element={<AppLayout><HelpPage /></AppLayout>} />
       <Route path="/admin" element={<AdminRoute />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

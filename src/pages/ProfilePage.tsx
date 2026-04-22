@@ -255,102 +255,6 @@ const ProfilePage = () => {
         <ChevronRight size={16} className="text-muted-foreground" />
       </button>
 
-      {/* Referral */}
-      {referralCode && (
-        <div className="card-kickoff flex flex-col gap-3">
-          <div>
-            <p className="text-sm font-bold">הפניה שלי</p>
-            <p className="text-xs text-muted-foreground">חבר שנרשם = +1,000 נקודות לך</p>
-          </div>
-          {/* Code row */}
-          <div className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2">
-            <p className="font-mono text-sm font-black tracking-widest">{referralCode}</p>
-            <button onClick={copyReferral} className="text-muted-foreground hover:text-primary transition-colors mr-2">
-              {copied ? <Check size={16} className="text-primary" /> : <Copy size={16} />}
-            </button>
-          </div>
-          {/* Link row */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center justify-between bg-secondary rounded-lg px-3 py-2 min-w-0">
-              <p className="text-xs text-muted-foreground truncate">{referralLink}</p>
-              <button onClick={copyReferralLink} className="text-muted-foreground hover:text-primary transition-colors mr-2 shrink-0">
-                {copiedLink ? <Check size={16} className="text-primary" /> : <Copy size={16} />}
-              </button>
-            </div>
-            <button
-              onClick={shareWhatsApp}
-              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shrink-0"
-            >
-              <Share2 size={14} />
-              WhatsApp
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Achievements */}
-      {achievementsData && achievementsData.achievements.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="section-label">הישגים</span>
-            {achievementsData.streak > 0 && (
-              <span className="text-xs font-bold text-primary">🔥 {achievementsData.streak} ברצף</span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {achievementsData.achievements.map(a => {
-              const def = ACHIEVEMENTS[a.achievement_key];
-              if (!def) return null;
-              return (
-                <div key={a.achievement_key} title={def.desc}
-                  className="flex items-center gap-1.5 bg-secondary rounded-xl px-3 py-2">
-                  <span className="text-base">{def.icon}</span>
-                  <span className="text-xs font-bold">{def.title}</span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Bet History */}
-      {recentBets.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="section-label">הימורים אחרונים</span>
-            <button
-              onClick={() => navigate("/bets")}
-              className="flex items-center gap-0.5 text-xs text-primary font-bold"
-            >
-              ראה הכל <ChevronRight size={14} />
-            </button>
-          </div>
-          {recentBets.map((bet, i) => (
-            <motion.div
-              key={bet.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="card-kickoff flex items-center justify-between"
-            >
-              <div>
-                <p className="text-sm font-bold">{bet.home_team} נגד {bet.away_team}</p>
-                <p className="text-xs text-muted-foreground">
-                  {bet.selected_outcome}
-                  {bet.exact_score_prediction && ` (תוצאה: ${bet.exact_score_prediction})`}
-                </p>
-              </div>
-              <div className="text-left">
-                <p className={`text-sm font-bold ${bet.status === "won" ? "text-primary" : bet.status === "lost" ? "text-destructive" : "text-muted-foreground"}`}>
-                  {bet.status === "won" ? `+${bet.actual_payout}` :
-                   bet.status === "lost" ? `-${bet.stake}` : "ממתין"}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </section>
-      )}
-
       {/* Settings — unified section */}
       <section className="flex flex-col gap-2">
         <span className="section-label">הגדרות</span>
@@ -530,18 +434,103 @@ const ProfilePage = () => {
             </div>
           )}
         </div>
-
-        {/* Sign out */}
-        <button onClick={() => signOut()} className="card-kickoff flex items-center gap-3 text-right text-muted-foreground">
-          <LogOut size={18} />
-          <span className="text-sm font-medium">התנתקות</span>
-        </button>
-
-        {/* Delete account */}
-        <button onClick={() => setShowDeleteConfirm(true)} className="card-kickoff flex items-center gap-3 text-right text-destructive">
-          <span className="text-sm font-medium">מחיקת חשבון</span>
-        </button>
       </section>
+
+      {/* Referral */}
+      {referralCode && (
+        <div className="card-kickoff flex flex-col gap-3">
+          <div>
+            <p className="text-sm font-bold">הפניה שלי</p>
+            <p className="text-xs text-muted-foreground">חבר שנרשם = +1,000 נקודות לך</p>
+          </div>
+          {/* Code row */}
+          <div className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2">
+            <p className="font-mono text-sm font-black tracking-widest">{referralCode}</p>
+            <button onClick={copyReferral} className="text-muted-foreground hover:text-primary transition-colors mr-2">
+              {copied ? <Check size={16} className="text-primary" /> : <Copy size={16} />}
+            </button>
+          </div>
+          {/* Link row */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center justify-between bg-secondary rounded-lg px-3 py-2 min-w-0">
+              <p className="text-xs text-muted-foreground truncate">{referralLink}</p>
+              <button onClick={copyReferralLink} className="text-muted-foreground hover:text-primary transition-colors mr-2 shrink-0">
+                {copiedLink ? <Check size={16} className="text-primary" /> : <Copy size={16} />}
+              </button>
+            </div>
+            <button
+              onClick={shareWhatsApp}
+              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shrink-0"
+            >
+              <Share2 size={14} />
+              WhatsApp
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Achievements */}
+      {achievementsData && achievementsData.achievements.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="section-label">הישגים</span>
+            {achievementsData.streak > 0 && (
+              <span className="text-xs font-bold text-primary">🔥 {achievementsData.streak} ברצף</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {achievementsData.achievements.map(a => {
+              const def = ACHIEVEMENTS[a.achievement_key];
+              if (!def) return null;
+              return (
+                <div key={a.achievement_key} title={def.desc}
+                  className="flex items-center gap-1.5 bg-secondary rounded-xl px-3 py-2">
+                  <span className="text-base">{def.icon}</span>
+                  <span className="text-xs font-bold">{def.title}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Bet History */}
+      {recentBets.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="section-label">הימורים אחרונים</span>
+            <button
+              onClick={() => navigate("/bets")}
+              className="flex items-center gap-0.5 text-xs text-primary font-bold"
+            >
+              ראה הכל <ChevronRight size={14} />
+            </button>
+          </div>
+          {recentBets.map((bet, i) => (
+            <motion.div
+              key={bet.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="card-kickoff flex items-center justify-between"
+            >
+              <div>
+                <p className="text-sm font-bold">{bet.home_team} נגד {bet.away_team}</p>
+                <p className="text-xs text-muted-foreground">
+                  {bet.selected_outcome}
+                  {bet.exact_score_prediction && ` (תוצאה: ${bet.exact_score_prediction})`}
+                </p>
+              </div>
+              <div className="text-left">
+                <p className={`text-sm font-bold ${bet.status === "won" ? "text-primary" : bet.status === "lost" ? "text-destructive" : "text-muted-foreground"}`}>
+                  {bet.status === "won" ? `+${bet.actual_payout}` :
+                   bet.status === "lost" ? `-${bet.stake}` : "ממתין"}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </section>
+      )}
 
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (

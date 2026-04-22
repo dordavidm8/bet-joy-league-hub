@@ -17,7 +17,7 @@ function timeAgo(dateStr: string) {
 }
 
 const HomePage = () => {
-  const { backendUser } = useAuth();
+  const { backendUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [feedFilter, setFeedFilter] = useState<'all' | 'following'>('all');
 
@@ -104,7 +104,7 @@ const HomePage = () => {
       )}
 
       {/* WhatsApp Link Prompt */}
-      {backendUser && !backendUser.phone_verified && (
+      {!authLoading && backendUser && !backendUser.phone_verified && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
