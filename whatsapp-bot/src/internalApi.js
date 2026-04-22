@@ -55,7 +55,7 @@ function startInternalApi(client) {
     }
   });
 
-  async function setupGroup(chat, inviteCode) {
+  async function setupGroup(chat, inviteCode, leagueName) {
     let invite_link = null;
     // 1. Get invite link immediately so the UI can update
     try {
@@ -91,6 +91,20 @@ function startInternalApi(client) {
           });
           console.log(`[WA] Background: Description set`);
         }
+
+        // Wait 5 seconds and send the final welcome message
+        await new Promise(r => setTimeout(r, 5000));
+        const welcomeText = `ברוכים הבאים לליגת *${leagueName || 'Kickoff'}*! ⚽\n\n` +
+          `*כללי המשחק:*\n` +
+          `בכל בוקר יישלחו לקבוצה הודעות על משחקי היום הבא. על מנת להמר על המשחק יש להגיב להודעה עם המנצחת (1/2/X) והתוצאה המדויקת.\n` +
+          `בסיום כל משחק יישלחו התוצאות והניקוד שהרוויח כל משתתף.\n` +
+          `רוצים לראות את הטבלה העדכנית? תכתבו *"שלח טבלה גבר"*.\n\n` +
+          `יאללה, מי שעוד לא חיבר את המשתמש שלו לווטסאפ - זה הזמן.\n` +
+          `אתר הליגה:\n` +
+          `https://kickoff-bet.app/leagues?join=${inviteCode}\n\n` +
+          `שיהיה בהצלחה! 🏆`;
+        
+        await chat.sendMessage(welcomeText);
       } catch (err) {
         console.error('[WA] Background setup block CRASH:', err.message);
       }
@@ -111,13 +125,7 @@ function startInternalApi(client) {
       const groupJid = result.gid?._serialized || result.gid;
       console.log(`[WA] Group created: ${groupJid}`);
       
-      if (result.participants) {
-        Object.entries(result.participants).forEach(([jid, status]) => {
-          console.log(`[WA] Participant ${jid} status: ${status.code}`);
-        });
-      }
-
-      const invite_link = await setupGroup(await client.getChatById(groupJid), inviteCode);
+      const invite_link = await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName);
       res.json({ wa_group_id: groupJid, invite_link });
     } catch (err) {
       console.error('[WA] create-group FAIL:', err.message);
@@ -141,7 +149,7 @@ function startInternalApi(client) {
 
   // POST /internal/join-group-by-link — bot joins via link
   app.post('/internal/join-group-by-link', auth, async (req, res) => {
-    const { link, leagueId, inviteCode } = req.body;
+    const { link, leagueId, inviteCode, leagueName } = req.body;
     if (!link || !leagueId) return res.status(400).json({ error: 'link and leagueId required' });
     try {
       const inviteCodeWA = link.replace('https://chat.whatsapp.com/', '').split('?')[0].trim();
@@ -153,7 +161,7 @@ function startInternalApi(client) {
       res.json({ wa_group_id: groupJid });
       
       // Send welcome message
-      await client.sendMessage(groupJid, `⚽ בוט Kickoff חובר לליגה בהצלחה!`);
+      await setupGroup(await client.getChatById(groupJid), inviteCode, leagueName);
     } catch (err) {
       console.error('[internal/join-group-by-link]', err.message);
       res.status(500).json({ error: err.message });

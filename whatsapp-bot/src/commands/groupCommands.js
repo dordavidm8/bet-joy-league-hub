@@ -59,10 +59,19 @@ async function handleSetupCommand(client, msg, groupJid, inviteCode) {
 
   const unidentified = participants.length - identified - 1; // -1 for bot itself
   await msg.reply(
-    `✅ ליגת *"${league.name}"* מחוברת!\n` +
+    `✅ ליגת *"${league.name}"* מחוברת!\n\n` +
     `חברים מזוהים: ${identified}\n` +
-    `לא מזוהים: ${unidentified > 0 ? unidentified : 0} מספרים לא מקושרים לקיקאוף.`
+    `לא מזוהים: ${unidentified > 0 ? unidentified : 0} מספרים לא מקושרים לקיקאוף.\n\n` +
+    `*כללי המשחק:*\n` +
+    `בכל בוקר יישלחו לקבוצה הודעות על משחקי היום הבא. על מנת להמר על המשחק יש להגיב להודעה עם המנצחת (1/2/X) והתוצאה המדויקת.\n` +
+    `בסיום כל משחק יישלחו התוצאות והניקוד שהרוויח כל משתתף.\n` +
+    `רוצים לראות את הטבלה העדכנית? תכתבו *"שלח טבלה גבר"*.\n\n` +
+    `יאללה, מי שעוד לא חיבר את המשתמש שלו לווטסאפ - זה הזמן.\n` +
+    `אתר הליגה:\n` +
+    `https://kickoff-bet.app/leagues?join=${league.invite_code}\n\n` +
+    `שיהיה בהצלחה! 🏆`
   );
+
 }
 
 module.exports = { handleSetupCommand };

@@ -147,6 +147,7 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
 
     const result = await callBot('/internal/create-group', {
       name: `Kickoff - ${league.name} ⚽`,
+      leagueName: league.name,
       phones: participantPhones,
       leagueId: leagueId,
       inviteCode: league.invite_code,
