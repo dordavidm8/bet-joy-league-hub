@@ -235,7 +235,14 @@ export const adminAdjustPoints = (userId: string, amount: number, reason: string
   request<{ message: string; user: { username: string; points_balance: number } }>(
     `/admin/users/${userId}/adjust-points`, { method: 'POST', body: JSON.stringify({ amount, reason }) }
   );
-export const adminSendNotification = (data: { type: string; title: string; body?: string; target: string | string[] | { league_id: string } | { league_ids: string[] } }) =>
+export const adminSendNotification = (data: { 
+  type: string; 
+  title: string; 
+  body?: string; 
+  target: string | string[] | { league_id: string } | { league_ids: string[] };
+  send_to_dms?: boolean;
+  send_to_group?: boolean;
+}) =>
   request<{ message: string; sent_to: number }>('/admin/notify', {
     method: 'POST', body: JSON.stringify(data),
   });

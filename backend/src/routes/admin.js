@@ -448,60 +448,74 @@ router.post('/users/:id/adjust-points', async (req, res, next) => {
 
 // POST /api/admin/notify — send notification to all users or a specific user (by username)
 router.post('/notify', async (req, res, next) => {
-  const { type, title, body, target } = req.body; // target: 'all' | username string
+  const { type, title, body, target, send_to_dms = true, send_to_group = false } = req.body;
   if (!type || !title) return res.status(400).json({ error: 'type and title required' });
   if (!['special_offer', 'admin_message'].includes(type)) {
     return res.status(400).json({ error: 'type must be special_offer or admin_message' });
   }
   const { createNotification } = require('../services/notificationService');
-  const { sendDM } = require('../services/whatsappBotService');
+  const { sendDM, sendGroup: sendMessageToGroup } = require('../services/whatsappBotService');
+  
   try {
     let users = [];
+    let leagueGroupIds = [];
+
     if (!target || target === 'all') {
       const result = await pool.query(`SELECT id, phone_number, phone_verified, wa_opt_in FROM users`);
       users = result.rows;
     } else if (typeof target === 'object' && (target.league_id || target.league_ids)) {
       const ids = target.league_ids ?? [target.league_id];
-      const result = await pool.query(
+      
+      // Fetch users
+      const userRes = await pool.query(
         `SELECT DISTINCT u.id, u.phone_number, u.phone_verified, u.wa_opt_in
          FROM users u
          JOIN league_members lm ON lm.user_id = u.id
          WHERE lm.league_id = ANY($1) AND lm.is_active = true`,
         [ids]
       );
-      if (result.rows.length === 0) return res.status(404).json({ error: 'לא נמצאו חברים בליגות אלו' });
-      users = result.rows;
+      users = userRes.rows;
+
+      // Fetch group IDs if needed
+      if (send_to_group) {
+        const groupRes = await pool.query(`SELECT wa_group_id FROM leagues WHERE id = ANY($1) AND wa_group_id IS NOT NULL`, [ids]);
+        leagueGroupIds = groupRes.rows.map(r => r.wa_group_id);
+      }
     } else {
       const targetList = Array.isArray(target) ? target : [target];
       const result = await pool.query(
         `SELECT id, phone_number, phone_verified, wa_opt_in FROM users WHERE username = ANY($1)`,
         [targetList]
       );
-      if (result.rows.length === 0) return res.status(404).json({ error: 'לא נמצאו משתמשים' });
       users = result.rows;
     }
 
-    for (const u of users) {
-      console.log(`[AdminNotify] Processing user ${u.id} (${u.phone_number}), verified: ${u.phone_verified}, opt-in: ${u.wa_opt_in}`);
-      
-      // Internal site notification
-      await createNotification(u.id, { type, title, body });
+    const waText = `הודעה מצוות KickOff 📣:\n\n*${title}*\n${body || ''}`;
 
-      // WhatsApp notification
-      if (u.phone_number && u.phone_verified && u.wa_opt_in) {
-        console.log(`[AdminNotify] Sending WA to ${u.phone_number}`);
-        const waText = `הודעה מצוות KickOff 📣:\n\n*${title}*\n${body || ''}`;
-        sendDM(u.phone_number, waText).catch(e => console.error(`[AdminNotify] WA error for ${u.id}:`, e.message));
-      } else {
-        console.log(`[AdminNotify] Skipping WA for user ${u.id}: missing phone, verified, or opt-in`);
+    // Send to Internal Notifications ALWAYS
+    for (const u of users) {
+      await createNotification(u.id, { type, title, body });
+      
+      // Send to DMs ONLY IF requested
+      if (send_to_dms && u.phone_number && u.phone_verified && u.wa_opt_in) {
+        sendDM(u.phone_number, waText).catch(e => console.error(`[AdminNotify] DM error for ${u.id}:`, e.message));
       }
     }
-    res.json({ message: 'Notifications sent', sent_to: users.length });
+
+    // Send to Groups
+    if (send_to_group && leagueGroupIds.length > 0) {
+      for (const groupId of leagueGroupIds) {
+        sendMessageToGroup(groupId, waText).catch(e => console.error(`[AdminNotify] Group error for ${groupId}:`, e.message));
+      }
+    }
+
+    res.json({ message: 'Notifications sent', sent_to: users.length, groups_sent: leagueGroupIds.length });
   } catch (err) { 
     console.error(`[AdminNotify] Global error:`, err.message);
     next(err); 
   }
 });
+
 
 // GET /api/admin/quiz — list all quiz questions
 router.get('/quiz', async (req, res, next) => {

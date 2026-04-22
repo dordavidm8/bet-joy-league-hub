@@ -919,11 +919,20 @@ const LeaguesTab = () => {
   const [msgTitle, setMsgTitle] = useState("");
   const [msgBody, setMsgBody] = useState("");
   const [msgResult, setMsgResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [sendToDms, setSendToDms] = useState(true);
+  const [sendToGroup, setSendToGroup] = useState(false);
 
   const sendMsgMutation = useMutation({
-    mutationFn: () => adminSendNotification({ type: 'admin_message', title: msgTitle, body: msgBody, target: { league_id: msgLeague!.id } as any }),
+    mutationFn: () => adminSendNotification({ 
+      type: 'admin_message', 
+      title: msgTitle, 
+      body: msgBody, 
+      target: { league_id: msgLeague!.id } as any,
+      send_to_dms: sendToDms,
+      send_to_group: sendToGroup
+    }),
     onSuccess: (res) => {
-      setMsgResult({ ok: true, text: `✅ נשלח ל-${res.sent_to} משתמשים` });
+      setMsgResult({ ok: true, text: `✅ ההודעה נשלחה בהצלחה` });
       setMsgTitle(""); setMsgBody("");
       setTimeout(() => { setMsgLeague(null); setMsgResult(null); }, 2000);
     },
@@ -1320,6 +1329,20 @@ const LeaguesTab = () => {
               className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none" />
             <textarea value={msgBody} onChange={e => setMsgBody(e.target.value)} placeholder="תוכן ההודעה (אופציונלי)" rows={3}
               className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none resize-none" />
+            
+            <div className="flex flex-col gap-2 bg-muted/30 p-3 rounded-xl">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={sendToDms} onChange={e => setSendToDms(e.target.checked)} className="w-4 h-4 accent-primary" />
+                <span className="text-xs font-medium text-muted-foreground">שלח הודעות אישיות בווטסאפ (לכל חבר בנפרד)</span>
+              </label>
+              {msgLeague.wa_group_id && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={sendToGroup} onChange={e => setSendToGroup(e.target.checked)} className="w-4 h-4 accent-primary" />
+                  <span className="text-xs font-bold text-green-700">שלח הודעה לקבוצת הווטסאפ המחוברת</span>
+                </label>
+              )}
+            </div>
+
             {msgResult && <p className={`text-sm ${msgResult.ok ? "text-green-600" : "text-destructive"}`}>{msgResult.text}</p>}
             <div className="flex gap-2">
               <Button onClick={() => { setMsgResult(null); sendMsgMutation.mutate(); }}
