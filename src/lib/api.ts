@@ -428,6 +428,9 @@ export interface Bet {
   score_home?: number | null;
   score_away?: number | null;
   question_text?: string;
+  league_name?: string;
+  league_bet_mode?: string;
+  league_access_type?: string;
 }
 
 export interface Parlay {

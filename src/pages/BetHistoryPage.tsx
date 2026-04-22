@@ -162,7 +162,7 @@ const BetHistoryPage = () => {
                   }`}>
                     {!bet.league_id 
                       ? "הימור חופשי" 
-                      : `${bet.league_access_type === 'public' ? 'ליגה ציבורית' : 'ליגה פרטית'}: ${bet.league_name}`}
+                      : `${bet.league_access_type === 'public' ? 'ליגה ציבורית' : 'ליגה פרטית'}: ${bet.league_name || 'ליגה'}`}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -195,7 +195,7 @@ const BetHistoryPage = () => {
                 {bet.league_bet_mode === 'initial_balance' ? (
                   <span className="text-[10px] bg-secondary/50 px-2 py-0.5 rounded italic text-muted-foreground">קופה משותפת (ללא השקעה)</span>
                 ) : (
-                  <span className="text-xs text-muted-foreground font-medium">הימור: {bet.stake.toLocaleString()} נק׳</span>
+                  <span className="text-xs text-muted-foreground font-medium">הימור: {Number(bet.stake).toLocaleString()} נק׳</span>
                 )}
                 <div className="flex items-center gap-2">
                   {bet.status === "won" && bet.actual_payout != null && (
@@ -208,8 +208,8 @@ const BetHistoryPage = () => {
                     <span className="text-xs text-muted-foreground">
                       אפשרי: {
                         bet.league_bet_mode === 'initial_balance' 
-                          ? (parseFloat(String(bet.odds)) * (bet.exact_score_prediction ? 3 : 1)).toFixed(2)
-                          : bet.potential_payout.toLocaleString()
+                          ? `סה״כ ×${(parseFloat(String(bet.odds)) * (bet.exact_score_prediction ? 3 : 1)).toFixed(2)}`
+                          : Number(bet.potential_payout).toLocaleString()
                       } נק׳
                     </span>
                   )}

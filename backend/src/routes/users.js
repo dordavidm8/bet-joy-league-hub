@@ -68,7 +68,9 @@ router.get('/me/bets', authenticate, async (req, res, next) => {
       `SELECT b.*, g.home_team, g.away_team, g.start_time, g.score_home, g.score_away,
               bq.question_text, c.name AS competition_name,
               p.parlay_number, p.status AS parlay_status, p.potential_payout AS parlay_potential_payout,
-              l.name AS league_name, l.bet_mode AS league_bet_mode, l.access_type AS league_access_type
+              COALESCE(l.name, 'ליגה לא ידועה') AS league_name, 
+              COALESCE(l.bet_mode, 'minimum_stake') AS league_bet_mode, 
+              COALESCE(l.access_type, 'invite') AS league_access_type
        FROM bets b
        JOIN games g ON g.id = b.game_id
        JOIN bet_questions bq ON bq.id = b.bet_question_id
