@@ -93,8 +93,8 @@ const BetSlipPage = () => {
         }
       }
 
-      const text = isParlay && realBets.length >= 2
-        ? `⚽️ פרלאי של ${realBets.length} הימורים עם מכפיל x${combinedOdds.toFixed(2)} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`
+      const text = isParlay && freeBets.length >= 2
+        ? `⚽️ פרליי של ${freeBets.length} הימורים חופשיים עם בונוס ×1.10 — ${freeBets.reduce((s,b)=>s+b.points,0).toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`
         : betSlip.length === 1
           ? `⚽️ הימרתי על ${betSlip[0].selectedOption} (x${betSlip[0].odds}) ב-${betSlip[0].gameLabel} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`
           : `⚽️ שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`;
@@ -151,8 +151,8 @@ const BetSlipPage = () => {
     <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
       <h2 className="text-2xl font-black">תלוש הימורים</h2>
 
-      {/* Parlay Toggle — only for free (global) bets with 2+ */}
-      {freeBets.length > 1 && (
+      {/* Parlay Toggle — only when ALL real bets are free (no league bets in slip) */}
+      {freeBets.length >= 2 && freeBets.length === realBets.length && (
         <div className="card-kickoff flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div>
@@ -172,12 +172,6 @@ const BetSlipPage = () => {
               />
             </button>
           </div>
-          {freeBets.length < realBets.length && isParlay && (
-            <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1">
-              ⚠️ הפרליי יכלול רק את ההימורים החופשיים ({freeBets.length} מתוך {realBets.length}). הימורי הליגה יישלחו בנפרד.
-            </p>
-          )}
-        </div>
       )}
 
       {/* Bet Items */}
