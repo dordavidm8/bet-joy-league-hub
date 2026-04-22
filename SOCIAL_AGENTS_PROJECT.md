@@ -120,14 +120,14 @@
 | 3 | **התקן dependencies** | `npm install` בתיקיית backend | `@google/genai`, `@anthropic-ai/sdk` חדשים |
 | 4 | **Manual Dry Run** | `POST /api/social/runs` עם `dryRun: true` | לוודא שהאייגנטים עובדים |
 
-### Priority: MEDIUM — שיפורים ויכולות נוספות
+### Priority: MEDIUM — שיפורים ויכולות נוספות (COMPLETED)
 
 | # | משימה | תיאור |
 |---|---|---|
-| 5 | **unifiedMemoryService.js** | שירות שמסכם 30 יום של analytics להזנת הזיכרון לאייגנטים |
-| 6 | **managementChatAgent.js** | Groq עם Tool Calling (בדיקת DB, הפעלת pipeline, שינוי config) |
-| 7 | **Magic Switch Panel** | `MagicSwitchPanel.tsx` — ממיר פוסט מפלטפורמה לפלטפורמה ב-1 קליק |
-| 8 | **analyticsAgent.js** | ניתוח ביצועים עמוק: best time to post, top hashtags, engagement rate |
+| 5 | **[x] unifiedMemoryService.js** | שירות שמסכם 30 יום של analytics להזנת הזיכרון לאייגנטים |
+| 6 | **[x] managementChatAgent.js** | Groq עם Tool Calling (בדיקת DB, הפעלת pipeline, שינוי config) |
+| 7 | **[x] Magic Switch Panel** | `MagicSwitchModal.tsx` — ממיר פוסט מפלטפורמה לפלטפורמה ב-1 קליק |
+| 8 | **[x] analyticsAgent.js** | ניתוח ביצועים עמוק: best time to post, top hashtags, engagement rate |
 | 9 | **Video support (TikTok)** | Veo 2 כשיפתח ב-API — כרגע רק thumbnail |
 
 ### Priority: LOW — Nice to Have

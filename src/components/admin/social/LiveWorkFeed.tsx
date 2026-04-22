@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, X, Edit2, Loader2, Image, RefreshCw, ExternalLink } from 'lucide-react';
+import { Check, X, Edit2, Loader2, Image, RefreshCw, ExternalLink, Wand2 } from 'lucide-react';
+import { MagicSwitchModal } from './MagicSwitchModal';
 
 const API = '/api/social';
 
@@ -44,6 +45,7 @@ export const LiveWorkFeed = () => {
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [magicSwitchText, setMagicSwitchText] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['social-pending-posts'],
@@ -159,7 +161,7 @@ export const LiveWorkFeed = () => {
                 rows={4}
                 className="w-full text-sm bg-secondary border border-border rounded-xl px-3 py-2 outline-none resize-none focus:ring-1 focus:ring-primary/30"
               />
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => updateMut.mutate({ id: post.id, caption: editing[post.id] })}
                   disabled={updateMut.isPending}
@@ -172,6 +174,13 @@ export const LiveWorkFeed = () => {
                   className="text-xs px-3 py-2 rounded-xl border hover:bg-secondary"
                 >
                   ביטול
+                </button>
+                <button
+                  onClick={() => setMagicSwitchText(editing[post.id])}
+                  title="מטה הקסם לפורמטים נוספים"
+                  className="text-xs p-2 rounded-xl border hover:bg-purple-50 text-purple-600 transition-colors"
+                >
+                  <Wand2 size={16} />
                 </button>
               </div>
             </div>
@@ -231,6 +240,13 @@ export const LiveWorkFeed = () => {
           </div>
         </div>
       ))}
+      
+      {magicSwitchText !== null && (
+        <MagicSwitchModal 
+          initialText={magicSwitchText} 
+          onClose={() => setMagicSwitchText(null)} 
+        />
+      )}
     </div>
   );
 };

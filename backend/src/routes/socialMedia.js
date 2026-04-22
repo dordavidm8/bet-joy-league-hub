@@ -370,27 +370,9 @@ router.post('/chat', async (req, res, next) => {
     );
     const history = historyRes.rows.reverse();
 
-    // Generate response via Claude
-    const { callClaude } = require('../services/social/socialMediaUtils');
-    const config = await getSocialConfig();
-
-    const systemPrompt = `אתה יועץ ניהול סושיאל מדיה של KickOff — אפליקציית הימורי כדורגל חברתית ישראלית.
-אתה יכול לעזור עם:
-- הפעלת/ביטול pipeline יצירת תוכן
-- שינוי הגדרות (brand voice, posting time, enabled/disabled)
-- ניתוח ביצועי פוסטים
-- המלצות לתוכן
-- מענה על שאלות על המערכת
-
-מצב נוכחי:
-- מערכת ${config.enabled === 'true' ? 'פעילה ✅' : 'כבויה ❌'}
-- אישור אוטומטי: ${config.auto_approve === 'true' ? 'כן' : 'לא'}
-- שעת פרסום: ${config.posting_time || '08:00'}
-
-ענה בעברית באופן ידידותי ומקצועי.`;
-
-    const conversationStr = history.map(m => `${m.role === 'user' ? 'משתמש' : 'יועץ'}: ${m.content}`).join('\n');
-    const reply = await callClaude(systemPrompt, `${conversationStr}\n\nמשתמש: ${message}`, { temperature: 0.7 });
+    // Generate response via Groq Tool Calling
+    const { processManagementChat } = require('../services/social/managementChatAgent');
+    const reply = await processManagementChat(req.user.email, history, message);
 
     // Save assistant message
     await pool.query(
