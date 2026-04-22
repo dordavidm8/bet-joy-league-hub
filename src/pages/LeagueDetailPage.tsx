@@ -227,6 +227,95 @@ const LeagueDetailPage = () => {
       </div>
 
       {/* Invite code */}
+      {league.access_type === "invite" && !isFinished && (
+        <div className="px-5">
+          <div className="card-kickoff">
+            <p className="text-xs text-muted-foreground mb-2">קוד הזמנה — שתף עם חברים</p>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="flex-1 bg-secondary rounded-xl px-4 py-2.5 font-mono font-bold tracking-widest text-center text-base">
+                {league.invite_code}
+              </span>
+              <button
+                onClick={copyCode}
+                className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center transition-colors hover:bg-primary/20"
+              >
+                {copied ? <Check size={18} className="text-primary" /> : <Copy size={18} className="text-primary" />}
+              </button>
+            </div>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent("הצטרף לליגה שלי ב-Kickoff!\nשם: " + league.name + "\nקוד הזמנה: " + league.invite_code + "\nהצטרף ישירות: \u200B" + "https://kickoff-bet.app/leagues?join=" + league.invite_code)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors"
+            >
+              <Share2 size={15} />
+              שתף בוואטסאפ
+            </a>
+
+            {/* Invite by username — live search */}
+            <div className="mt-3">
+              <p className="text-xs text-muted-foreground mb-1.5">הזמן לפי שם משתמש</p>
+              <div className="relative">
+                <input
+                  placeholder="הקלד שם משתמש לחיפוש..."
+                  value={inviteSearch}
+                  onChange={(e) => {
+                    setInviteSearch(e.target.value);
+                    setInviteSearchQuery(e.target.value.trim());
+                    setInviteUsername(e.target.value.trim());
+                  }}
+                  className="w-full bg-secondary rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                {/* Search results dropdown */}
+                {inviteSearchQuery.length >= 2 && (
+                  <div className="absolute z-10 top-full mt-1 w-full bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                    {inviteSearchLoading ? (
+                      <p className="text-xs text-muted-foreground px-3 py-2">מחפש...</p>
+                    ) : (inviteSearchData?.users ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground px-3 py-2">לא נמצאו משתמשים</p>
+                    ) : (
+                      (inviteSearchData?.users ?? []).map((u) => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setInviteUsername(u.username);
+                            setInviteSearch(u.username);
+                            setInviteSearchQuery("");
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary transition-colors text-right"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs shrink-0 overflow-hidden">
+                            {u.avatar_url
+                              ? <img src={u.avatar_url} className="w-full h-full object-cover" alt="" />
+                              : "👤"}
+                          </div>
+                          <div className="flex-1 text-right">
+                            <p className="text-sm font-bold">{u.display_name || u.username}</p>
+                            <p className="text-[10px] text-muted-foreground">@{u.username}</p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              {inviteUsername && (
+                <button
+                  onClick={() => inviteMutation.mutate()}
+                  disabled={!inviteUsername.trim() || inviteMutation.isPending}
+                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-40"
+                >
+                  <UserPlus size={13} />
+                  {inviteMutation.isPending ? "שולח..." : `הזמן את @${inviteUsername}`}
+                </button>
+              )}
+              {inviteMsg && (
+                <p className={`text-xs mt-1.5 ${inviteMsg.ok ? "text-green-600" : "text-destructive"}`}>
+                  {inviteMsg.text}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -682,7 +771,6 @@ const LeagueDetailPage = () => {
           )}
         </div>
       )}
-
     </div>
   );
 };
