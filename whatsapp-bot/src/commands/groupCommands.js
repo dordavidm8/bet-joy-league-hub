@@ -71,13 +71,13 @@ async function handleSetupCommand(client, msg, chat, parts) {
       throw new Error('Chat object is not a group chat');
     }
 
-    let participants = await groupChat.getParticipants();
-    
-    // If empty, wait a bit and retry (synching delay)
-    if (participants.length <= 1) {
-      console.log('[WA] Setup: Participants list empty or only bot, waiting 2s for sync...');
-      await new Promise(r => setTimeout(r, 4000));
-      participants = await groupChat.getParticipants();
+    let participants = [];
+    for (let i = 0; i < 3; i++) {
+        participants = await groupChat.getParticipants();
+        if (participants.length > 1) break;
+        const delay = 2000 + (i * 3000);
+        console.log(`[WA] Setup: Participants list empty or only bot (count=${participants.length}), waiting ${delay}ms for sync (retry ${i+1})...`);
+        await new Promise(r => setTimeout(r, delay));
     }
 
     const phones = participants.map(p => extractNumber(p.id._serialized)).filter(Boolean);
