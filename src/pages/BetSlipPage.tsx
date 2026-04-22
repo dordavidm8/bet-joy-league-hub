@@ -29,10 +29,10 @@ const BetSlipPage = () => {
   const realBets = betSlip.filter((b) => b.bet_mode !== "initial_balance");
   const freeBets = realBets.filter((b) => !b.league_id);
   const scoringBets = betSlip.filter((b) => b.bet_mode === "initial_balance");
-  // Parlay requires all free bets to be from different games
-  const freeBetGameIds = freeBets.map(b => b.game_id);
-  const freeBetsHaveDuplicateGames = freeBetGameIds.length !== new Set(freeBetGameIds).size;
-  const canParlay = freeBets.length >= 2 && freeBets.length === realBets.length && !freeBetsHaveDuplicateGames;
+  // Parlay: all real bets must be free bets, no duplicate bet_question_ids
+  const freeQuestionIds = freeBets.map(b => b.bet_question_id);
+  const freeBetsHaveDuplicateQuestions = freeQuestionIds.length !== new Set(freeQuestionIds).size;
+  const canParlay = freeBets.length >= 2 && freeBets.length === realBets.length && !freeBetsHaveDuplicateQuestions;
 
   const totalStake = realBets.reduce((sum, b) => sum + b.points, 0);
   const userPoints = backendUser?.points_balance ?? 0;

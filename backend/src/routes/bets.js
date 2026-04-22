@@ -241,14 +241,10 @@ router.post('/parlay', authenticate, async (req, res, next) => {
     }
   }
 
-  // No duplicate games or questions within the same parlay
-  const gameIds = legs.map(l => l.game_id);
+  // No duplicate questions within the same parlay submission
   const questionIds = legs.map(l => l.bet_question_id);
   if (new Set(questionIds).size < legs.length) {
     return res.status(400).json({ error: 'לא ניתן לכלול את אותה שאלה פעמיים בפרליי' });
-  }
-  if (new Set(gameIds).size < legs.length) {
-    return res.status(400).json({ error: 'לא ניתן לכלול שני הימורים מאותו משחק בפרליי' });
   }
 
   const totalStake = legs.reduce((s, l) => s + l.stake, 0);

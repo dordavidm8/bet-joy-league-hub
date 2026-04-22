@@ -62,12 +62,15 @@ const BetHistoryPage = () => {
     setOffset(0);
   };
 
-  const handleCancelBet = async (betId: string) => {
-    if (!confirm("לבטל את ההימור? הסכום יוחזר לחשבונך.")) return;
-    setCancellingId(betId);
+  const handleCancelBet = async (bet: any) => {
+    const confirmMsg = bet.parlay_number
+      ? `הימור זה הוא חלק מ-פרליי #${bet.parlay_number}.\nביטול ימחק את כל הפרליי ויחזיר את כל הסכום שהושקע.\nלהמשיך?`
+      : `לבטל את ההימור? הסכום יוחזר לחשבונך.`;
+    if (!confirm(confirmMsg)) return;
+    setCancellingId(bet.id);
     setCancelError(null);
     try {
-      await cancelBet(betId);
+      await cancelBet(bet.id);
       await refreshUser();
       queryClient.invalidateQueries({ queryKey: ["my-bets-full"] });
       queryClient.invalidateQueries({ queryKey: ["my-bets"] });
@@ -194,7 +197,7 @@ const BetHistoryPage = () => {
                     <button
                       title="בטל הימור"
                       disabled={cancellingId === bet.id}
-                      onClick={() => handleCancelBet(bet.id)}
+                      onClick={() => handleCancelBet(bet)}
                       className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
                     >
                       <Trash2 size={15} />
