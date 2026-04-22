@@ -187,8 +187,13 @@ router.post('/submit', authenticate, async (req, res, next) => {
       is_correct = matchesName(guess, correct_en) || (correct_he && matchesName(guess, correct_he));
     }
 
-    const pointsToAward = is_correct ? 500 : 0;
     const newAttemptCount = (existingRow?.attempt_count ?? 0) + 1;
+    let pointsToAward = 0;
+    if (is_correct) {
+      if (newAttemptCount === 1) pointsToAward = 500;
+      else if (newAttemptCount === 2) pointsToAward = 300;
+      else if (newAttemptCount === 3) pointsToAward = 100;
+    }
     const showAnswer = is_correct || newAttemptCount >= MAX_ATTEMPTS;
     const displayAnswer = correct_he ? `${correct_en} (${correct_he})` : correct_en;
 
