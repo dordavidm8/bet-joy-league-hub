@@ -180,7 +180,7 @@ router.post('/', authenticate, async (req, res, next) => {
       const lData = lid ? leagueData[lid] : null;
       const isInitialBalance = lData?.bet_mode === 'initial_balance';
       const betStake = isInitialBalance ? 0 : (stake || 0);
-      const potentialPayout = isInitialBalance ? 0 : calculatePayout(betStake, baseOdds, 0);
+      const potentialPayout = isInitialBalance ? 0 : calculatePayout(betStake, baseOdds, 0) * (cleanExactScore ? 3 : 1);
 
       const betRes = await client.query(
         `INSERT INTO bets

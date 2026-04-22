@@ -213,7 +213,7 @@ const BetHistoryPage = () => {
                       אפשרי: {
                         bet.league_bet_mode === 'initial_balance' 
                           ? `סה״כ ×${(parseFloat(String(bet.odds)) * (bet.exact_score_prediction ? 3 : 1)).toFixed(2)}`
-                          : Number(bet.potential_payout).toLocaleString()
+                          : (Number(bet.potential_payout) * (bet.exact_score_prediction ? 3 : 1)).toLocaleString()
                       } נק׳
                     </span>
                   )}

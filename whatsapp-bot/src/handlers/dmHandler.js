@@ -201,8 +201,13 @@ async function sendMyBets(msg, user) {
     const stakeDisplay = isShared ? '💎 קופה משותפת' : `${b.stake} נק'`;
     
     let payoutValue = b.potential_payout;
-    if (isShared && b.status === 'pending') {
-      payoutValue = (parseFloat(String(b.odds)) * (b.exact_score_prediction ? 3 : 1)).toFixed(2);
+    if (b.status === 'pending') {
+      const multiplier = b.exact_score_prediction ? 3 : 1;
+      if (isShared) {
+        payoutValue = (parseFloat(String(b.odds)) * multiplier).toFixed(2);
+      } else {
+        payoutValue = (parseFloat(String(b.potential_payout)) * multiplier).toLocaleString();
+      }
     }
 
     const isExactHit = b.status === 'won' && parseFloat(String(b.actual_payout)) > (parseFloat(String(b.odds)) * 1.5);
