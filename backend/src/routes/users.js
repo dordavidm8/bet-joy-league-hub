@@ -65,7 +65,7 @@ router.get('/me/bets', authenticate, async (req, res, next) => {
     if (search) { params.push(`%${search}%`); conditions.push(`(g.home_team ILIKE $${params.length} OR g.away_team ILIKE $${params.length})`); }
     const where = conditions.join(' AND ');
     const result = await pool.query(
-      `SELECT b.*, g.home_team, g.away_team, g.start_time, g.score_home, g.score_away,
+      `SELECT b.*, g.home_team, g.away_team, g.start_time, g.score_home, g.score_away, g.status AS game_status,
               bq.question_text, c.name AS competition_name,
               p.parlay_number, p.status AS parlay_status, p.potential_payout AS parlay_potential_payout,
               COALESCE(l.name, 'ליגה לא ידועה') AS league_name, 
@@ -81,6 +81,7 @@ router.get('/me/bets', authenticate, async (req, res, next) => {
        ORDER BY b.placed_at DESC LIMIT $2 OFFSET $3`,
       params
     );
+
 
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM bets b JOIN games g ON g.id = b.game_id

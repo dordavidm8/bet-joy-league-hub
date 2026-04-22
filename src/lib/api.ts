@@ -431,6 +431,7 @@ export interface Bet {
   league_name?: string;
   league_bet_mode?: string;
   league_access_type?: string;
+  game_status?: string;
 }
 
 export interface Parlay {

@@ -230,11 +230,12 @@ const BetHistoryPage = () => {
               </div>
 
               {/* Final score if finished */}
-              {bet.score_home != null && bet.score_away != null && (
+              {bet.game_status === 'finished' && bet.score_home != null && bet.score_away != null && (
                 <p className="text-[11px] text-muted-foreground">
                   תוצאה סופית: {bet.home_team} {bet.score_home} - {bet.score_away} {bet.away_team}
                 </p>
               )}
+
 
               {/* WhatsApp share on won bets */}
               {bet.status === "won" && bet.actual_payout != null && (
