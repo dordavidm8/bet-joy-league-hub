@@ -22,7 +22,7 @@ function isLiveBettingAllowed(minute) {
 
 // payout = stake × odds × (1 - penalty/100), floored to whole points
 function calculatePayout(stake, odds, penaltyPct = 0) {
-  return stake * odds * (1 - penaltyPct / 100);
+  return Math.floor(stake * odds * (1 - penaltyPct / 100));
 }
 
 module.exports = { getLivePenalty, isLiveBettingAllowed, calculatePayout, LIVE_LOCK_MINUTE };

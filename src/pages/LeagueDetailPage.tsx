@@ -76,25 +76,28 @@ const LeagueDetailPage = () => {
     },
   });
 
-  const { data: waSettingsData, refetch: refetchWaSettings } = useQuery({
+  const { data: waSettingsData } = useQuery({
     queryKey: ["wa-league-settings", leagueId],
     queryFn: () => getWaLeagueSettings(leagueId!),
     enabled: !!leagueId,
-    staleTime: 60_000,
+    staleTime: 5000, // Reduced from 60s for better responsiveness
   });
 
   const waCreateGroupMutation = useMutation({
     mutationFn: () => createWaGroup(leagueId!),
     onSuccess: (d) => {
       setWaMsg({ ok: true, text: d.invite_link ? `קבוצה נוצרה! ${d.invite_link}` : (d.message || 'בקשה נשלחה') });
-      refetchWaSettings();
+      queryClient.invalidateQueries({ queryKey: ["wa-league-settings", leagueId] });
     },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });
 
   const waUnlinkGroupMutation = useMutation({
     mutationFn: () => unlinkWaGroup(leagueId!),
-    onSuccess: () => { setWaMsg({ ok: true, text: 'קבוצה נותקה' }); refetchWaSettings(); },
+    onSuccess: () => { 
+      setWaMsg({ ok: true, text: 'קבוצה נותקה' }); 
+      queryClient.invalidateQueries({ queryKey: ["wa-league-settings", leagueId] });
+    },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });
 
@@ -104,14 +107,17 @@ const LeagueDetailPage = () => {
       setWaMsg({ ok: true, text: 'לינק עודכן ✅' });
       setShowWaLinkEdit(false);
       setWaInviteLinkInput("");
-      refetchWaSettings();
+      queryClient.invalidateQueries({ queryKey: ["wa-league-settings", leagueId] });
     },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });
 
   const waRefreshLinkMutation = useMutation({
     mutationFn: () => refreshWaInviteLink(leagueId!),
-    onSuccess: (d) => { setWaMsg({ ok: true, text: 'לינק עודכן ✅' }); refetchWaSettings(); },
+    onSuccess: (d) => { 
+      setWaMsg({ ok: true, text: 'לינק עודכן ✅' }); 
+      queryClient.invalidateQueries({ queryKey: ["wa-league-settings", leagueId] });
+    },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });
 
@@ -120,7 +126,7 @@ const LeagueDetailPage = () => {
     onSuccess: () => {
       setWaMsg({ ok: true, text: 'הגדרות נשמרו ✅' });
       setShowWaSettings(false);
-      refetchWaSettings();
+      queryClient.invalidateQueries({ queryKey: ["wa-league-settings", leagueId] });
     },
     onError: (e: any) => setWaMsg({ ok: false, text: e.message }),
   });

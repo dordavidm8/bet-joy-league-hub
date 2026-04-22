@@ -47,7 +47,7 @@ async function handleSetupCommand(client, msg, chat, parts) {
   await pool.query('UPDATE leagues SET wa_enabled = true WHERE id = $1', [league.id]);
   await pool.query(
     `INSERT INTO wa_groups (wa_group_id, league_id, is_active) VALUES ($1, $2, true)
-     ON CONFLICT (wa_group_id, league_id) DO UPDATE SET is_active = true`,
+     ON CONFLICT (wa_group_id) DO UPDATE SET league_id = $2, is_active = true`,
     [groupJid, league.id]
   );
   await pool.query(
@@ -76,7 +76,7 @@ async function handleSetupCommand(client, msg, chat, parts) {
     // If empty, wait a bit and retry (synching delay)
     if (participants.length <= 1) {
       console.log('[WA] Setup: Participants list empty or only bot, waiting 2s for sync...');
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 4000));
       participants = await groupChat.getParticipants();
     }
 
