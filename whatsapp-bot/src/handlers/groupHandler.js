@@ -80,9 +80,11 @@ async function handleGroupMessage(client, msg, chat) {
 
   // ── Command: Setup / Link League ───────────────────────────────────────────
   if (body.includes('/kickoff setup ')) {
-    const inviteCode = body.split('/kickoff setup ')[1].split(' ')[0].trim();
-    if (inviteCode) {
-      await handleSetupCommand(client, msg, groupJid, inviteCode);
+    const parts = body.split(/\s+/);
+    // Find index of '/kickoff' to be safe
+    const setupIdx = parts.indexOf('/kickoff');
+    if (setupIdx !== -1 && parts[setupIdx+1] === 'setup') {
+      await handleSetupCommand(client, msg, chat, parts);
       return;
     }
   }
