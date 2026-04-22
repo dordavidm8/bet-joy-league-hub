@@ -713,9 +713,13 @@ const LeagueDetailPage = () => {
                       </span>
                       {hasBet && (
                         <span className="text-[10px] font-bold text-green-600">
-                          {match.selected_outcome} · {(match.stake ?? 0) > 0 ? `${match.stake} נק׳` : "ניקוד"}
+                          {match.bet_status === "won" && isInitialBalanceLeague && match.actual_payout && (
+                            <span className="text-[10px] font-bold text-green-600">
+                              {match.selected_outcome} · +{parseFloat(String(match.actual_payout)).toFixed(1)} נק׳
+                              {(parseFloat(String(match.actual_payout)) > (parseFloat(String(match.bet_odds || 0)) * 1.5)) && " 🎯"}
+                            </span>
+                          )}
                           {match.bet_status === "won" && !isInitialBalanceLeague && ` +${match.actual_payout} נק׳`}
-                          {match.bet_status === "won" && isInitialBalanceLeague && match.bet_odds && ` +${match.bet_odds}× נק׳`}
                           {match.bet_status === "lost" && " ✗"}
                         </span>
                       )}

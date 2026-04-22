@@ -199,10 +199,13 @@ const BetHistoryPage = () => {
                 )}
                 <div className="flex items-center gap-2">
                   {bet.status === "won" && bet.actual_payout != null && (
-                    <span className="text-xs font-bold text-primary">+{bet.actual_payout.toLocaleString()} נק׳</span>
+                    <span className="text-xs font-bold text-primary">
+                      +{parseFloat(String(bet.actual_payout)).toFixed(bet.league_bet_mode === 'initial_balance' ? 1 : 0)} נק׳
+                      {(parseFloat(String(bet.actual_payout)) > (parseFloat(String(bet.odds)) * 1.5)) && " 🎯"}
+                    </span>
                   )}
                   {bet.status === "lost" && (
-                    <span className="text-xs font-bold text-destructive">-{bet.stake.toLocaleString()} נק׳</span>
+                    <span className="text-xs font-bold text-destructive">-{Number(bet.stake).toLocaleString()} נק׳</span>
                   )}
                   {bet.status === "pending" && (
                     <span className="text-xs text-muted-foreground">
