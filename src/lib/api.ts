@@ -387,6 +387,8 @@ export interface BackendUser {
   total_bets: number;
   total_wins: number;
   referral_code: string;
+  phone_number: string | null;
+  phone_verified: boolean;
   created_at: string;
 }
 

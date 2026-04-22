@@ -4,7 +4,7 @@ import { getMyBets, getMyReferralCode, updateAvatar, updateProfile, deleteAccoun
 import AvatarUploader from "@/components/AvatarUploader";
 import { motion } from "framer-motion";
 import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X, Smartphone, Share2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
@@ -26,6 +26,14 @@ const ProfilePage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [waExpanded, setWaExpanded] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('section') === 'whatsapp') {
+      setWaExpanded(true);
+    }
+  }, [location]);
 
   const { data: betsData } = useQuery({ queryKey: ["my-bets"], queryFn: () => getMyBets({ limit: 5 }) });
   const { data: referralData } = useQuery({ queryKey: ["my-referral"], queryFn: getMyReferralCode });
