@@ -447,7 +447,7 @@ const BetsTab = () => {
         <div className="border rounded-xl overflow-auto">
           <table className="w-full text-xs min-w-[700px]">
             <thead className="bg-muted/50"><tr>
-              {["משתמש", "משחק", "בחירה", "סכום", "odds", "תשלום", "סטטוס", "זמן", ""].map(h => (
+              {["משתמש", "מסגרת", "משחק", "סוג", "בחירה", "סכום", "odds", "פוטנציאל", "סטטוס", "זמן", ""].map(h => (
                 <th key={h} className="text-right px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
               ))}
             </tr></thead>
@@ -455,14 +455,42 @@ const BetsTab = () => {
               {bets.map(b => (
                 <tr key={b.id} className="border-t border-border/50 hover:bg-muted/30">
                   <td className="px-3 py-2 font-bold">{b.username}</td>
+                  <td className="px-3 py-2">
+                    {!b.league_id ? (
+                      <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground">חופשי</span>
+                    ) : (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-blue-600">
+                          {b.league_access_type === 'public' ? 'ציבורית' : 'פרטית'}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground leading-tight">{b.league_name}</span>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-muted-foreground text-[11px]">{b.home_team} vs {b.away_team}</td>
-                  <td className="px-3 py-2">{b.selected_outcome}</td>
-                  <td className="px-3 py-2 font-bold">{fmt(b.stake)}</td>
+                  <td className="px-3 py-2 text-[10px] text-muted-foreground">{b.question_text || b.bet_type}</td>
+                  <td className="px-3 py-2">
+                    <div className="font-medium">{b.selected_outcome}</div>
+                    {b.exact_score_prediction && <div className="text-[10px] text-muted-foreground">({b.exact_score_prediction})</div>}
+                  </td>
+                  <td className="px-3 py-2 font-bold italic">
+                    {b.league_bet_mode === 'initial_balance' ? '-' : fmt(b.stake)}
+                  </td>
                   <td className="px-3 py-2">{Number(b.odds).toFixed(2)}</td>
-                  <td className="px-3 py-2">{b.actual_payout != null ? fmt(b.actual_payout) : fmt(b.potential_payout)}</td>
+                  <td className="px-3 py-2">
+                    {b.status === 'won' ? (
+                      <span className="text-primary font-bold">{fmt(b.actual_payout)}</span>
+                    ) : (
+                      <span className="text-muted-foreground italic">
+                        {b.league_bet_mode === 'initial_balance' 
+                          ? `×${(parseFloat(String(b.odds)) * (b.exact_score_prediction ? 3 : 1)).toFixed(2)}`
+                          : fmt(b.potential_payout)}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2"><StatusBadge status={b.status} /></td>
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtTime(b.placed_at)}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-right">
                     {b.status === "pending" && (
                       <button onClick={() => { if (confirm("לבטל הימור זה?")) cancelMutation.mutate(b.id); }}
                         className="text-destructive/60 hover:text-destructive"><XCircle size={14} /></button>
@@ -470,6 +498,7 @@ const BetsTab = () => {
                   </td>
                 </tr>
               ))}
+
             </tbody>
           </table>
           {bets.length === 0 && !isLoading && <p className="text-center text-sm text-muted-foreground py-6">אין הימורים</p>}

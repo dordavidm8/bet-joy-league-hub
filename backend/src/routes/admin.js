@@ -234,10 +234,17 @@ router.get('/bets', async (req, res, next) => {
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   try {
     const result = await pool.query(
-      `SELECT b.*, u.username, g.home_team, g.away_team FROM bets b
-       JOIN users u ON u.id = b.user_id JOIN games g ON g.id = b.game_id
+      `SELECT b.*, u.username, g.home_team, g.away_team, 
+              bq.question_text, bq.type as bet_type,
+              l.name as league_name, l.bet_mode as league_bet_mode, l.access_type as league_access_type
+       FROM bets b
+       JOIN users u ON u.id = b.user_id 
+       JOIN games g ON g.id = b.game_id
+       JOIN bet_questions bq ON bq.id = b.bet_question_id
+       LEFT JOIN leagues l ON l.id = b.league_id
        ${where} ORDER BY b.placed_at DESC LIMIT $1 OFFSET $2`, params
     );
+
     res.json({ bets: result.rows });
   } catch (err) { next(err); }
 });

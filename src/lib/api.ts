@@ -618,6 +618,12 @@ export interface AdminBet {
   status: string;
   is_live_bet: boolean;
   placed_at: string;
+  question_text?: string;
+  bet_type?: string;
+  league_name?: string;
+  league_bet_mode?: string;
+  league_access_type?: string;
+  exact_score_prediction?: string;
 }
 
 export interface AdminGame {
