@@ -60,15 +60,17 @@ async function handleSetupCommand(client, msg, chat, parts) {
   let identified = 0;
   let unidentified = 0;
   try {
+    // Refresh chat to ensure participants are loaded
     const participants = await chat.getParticipants();
-    const participantJids = participants.map(p => p.id._serialized);
+    const phones = participants.map(p => extractNumber(p.id._serialized)).filter(Boolean);
     
-    if (participantJids.length > 0) {
-      const placeholders = participantJids.map((_, i) => `$${i + 1}`).join(',');
-      const usersRes = await pool.query(`SELECT id FROM users WHERE phone_number IN (${placeholders})`, participantJids);
+    if (phones.length > 0) {
+      const placeholders = phones.map((_, i) => `$${i + 1}`).join(',');
+      const usersRes = await pool.query(`SELECT id FROM users WHERE phone_number IN (${placeholders}) AND phone_verified = true`, phones);
       identified = usersRes.rows.length;
       unidentified = participants.length - identified - 1; // -1 for bot
     }
+    console.log(`[WA] Setup: identified=${identified}, unidentified=${unidentified}, total=${participants.length}`);
   } catch (e) {
     console.error('[WA] Failed to get participants:', e.message);
   }
