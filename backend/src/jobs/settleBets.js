@@ -133,52 +133,63 @@ async function settleBets() {
           bet.exact_score_prediction === `${game.score_home}-${game.score_away}`;
         const payoutMultiplier = exactScoreHit ? 3 : 1;
 
-        // For initial_balance bets, payout is in league points (decimal odds), not integer
-        const payout = (won && !isInitialBalance)
-          ? calculatePayout(bet.stake, bet.odds, bet.live_penalty_pct || 0) * payoutMultiplier
-          : 0;
+        // Balance Payout (for users.points_balance) vs League Points (for league_members.points_in_league)
+        // For initial_balance leagues, actual_payout stores the league points earned.
+        let balancePayout = 0;
+        let leaguePointsPayout = 0;
+
+        if (won) {
+          if (isInitialBalance) {
+            leaguePointsPayout = parseFloat(bet.odds) * payoutMultiplier;
+          } else {
+            balancePayout = calculatePayout(bet.stake, bet.odds, bet.live_penalty_pct || 0) * payoutMultiplier;
+            leaguePointsPayout = balancePayout;
+          }
+        }
+
+        const storedPayout = isInitialBalance ? leaguePointsPayout : balancePayout;
 
         await client.query(
           `UPDATE bets SET status = $1, actual_payout = $2, settled_at = NOW() WHERE id = $3`,
-          [won ? 'won' : 'lost', payout, bet.id]
+          [won ? 'won' : 'lost', storedPayout, bet.id]
         );
 
         if (won) {
           if (isInitialBalance) {
-            // initial_balance league: credit odds-based points (×3 bonus if exact score hit)
+            // initial_balance league: credit odds-based points to league standing
             await client.query(
               `UPDATE league_members
                SET points_in_league = points_in_league + $1
                WHERE league_id = $2 AND user_id = $3 AND is_active = true`,
-              [parseFloat(bet.odds) * payoutMultiplier, bet.league_id, bet.user_id]
+              [leaguePointsPayout, bet.league_id, bet.user_id]
             );
           } else if (bet.league_id) {
             // minimum_stake league: credit global balance + this league's standings
             await client.query(
               `UPDATE users SET points_balance = points_balance + $1, total_wins = total_wins + 1 WHERE id = $2`,
-              [payout, bet.user_id]
+              [balancePayout, bet.user_id]
             );
             await client.query(
               `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
                VALUES ($1,$2,'bet_won',$3,$4)`,
-              [bet.user_id, payout, bet.id, `Bet won: ${game.home_team} vs ${game.away_team}`]
+              [bet.user_id, balancePayout, bet.id, `Bet won: ${game.home_team} vs ${game.away_team}`]
             );
             await client.query(
               `UPDATE league_members
                SET points_in_league = points_in_league + $1
                WHERE league_id = $2 AND user_id = $3 AND is_active = true`,
-              [payout, bet.league_id, bet.user_id]
+              [leaguePointsPayout, bet.league_id, bet.user_id]
             );
           } else {
             // Global bet (no league): credit global balance only
             await client.query(
               `UPDATE users SET points_balance = points_balance + $1, total_wins = total_wins + 1 WHERE id = $2`,
-              [payout, bet.user_id]
+              [balancePayout, bet.user_id]
             );
             await client.query(
               `INSERT INTO point_transactions (user_id, amount, type, reference_id, description)
                VALUES ($1,$2,'bet_won',$3,$4)`,
-              [bet.user_id, payout, bet.id, `Bet won: ${game.home_team} vs ${game.away_team}`]
+              [bet.user_id, balancePayout, bet.id, `Bet won: ${game.home_team} vs ${game.away_team}`]
             );
           }
 
@@ -193,9 +204,9 @@ async function settleBets() {
           userBetResults[bet.user_id].won++;
           if (exactScoreHit) userBetResults[bet.user_id].exactScoreHits++;
           if (isInitialBalance) {
-            userBetResults[bet.user_id].leaguePoints += parseFloat(bet.odds) * payoutMultiplier;
+            userBetResults[bet.user_id].leaguePoints += leaguePointsPayout;
           } else {
-            userBetResults[bet.user_id].totalPayout += payout;
+            userBetResults[bet.user_id].totalPayout += balancePayout;
           }
         } else { userBetResults[bet.user_id].lost++; }
       }

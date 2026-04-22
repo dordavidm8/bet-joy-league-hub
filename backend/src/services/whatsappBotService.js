@@ -101,7 +101,17 @@ async function buildResultMessage(gameId, leagueId) {
   membersRes.rows.forEach(m => {
     const bet = betsMap[m.user_id];
     if (bet && bet.status === 'won') {
-      winners.push({ username: m.username, payout: bet.actual_payout, odds: bet.odds });
+      // Check if exact score bonus was hit (payout is roughly 3x odds, or exactly 3x odds in shared pot)
+      const baseOdds = parseFloat(bet.odds);
+      const payout = parseFloat(bet.actual_payout);
+      const isExactHit = payout > (baseOdds * 1.5); // covers both stake-based and shared-pot
+
+      winners.push({ 
+        username: m.username, 
+        payout: payout.toFixed(payout % 1 === 0 ? 0 : 2), 
+        odds: baseOdds.toFixed(2),
+        isExactHit
+      });
     } else {
       noPoints.push(m.username);
     }
@@ -113,7 +123,7 @@ async function buildResultMessage(gameId, leagueId) {
   if (winners.length > 0) {
     msg += `\n🏆 מנצחים:\n`;
     winners.forEach(w => {
-      msg += `🥇 ${w.username} — +${w.payout} נקודות (x${w.odds})\n`;
+      msg += `🥇 ${w.username} — +${w.payout} נקודות (x${w.odds})${w.isExactHit ? ' 🎯' : ''}\n`;
     });
   }
 

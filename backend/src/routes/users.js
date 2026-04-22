@@ -87,10 +87,16 @@ router.get('/me/bets', authenticate, async (req, res, next) => {
     );
 
 
+    const countParams = [req.user.id];
+    const countConditions = [`b.user_id = $1`];
+    if (status) { countParams.push(status); countConditions.push(`b.status = $${countParams.length}`); }
+    if (search) { countParams.push(`%${search}%`); countConditions.push(`(g.home_team ILIKE $${countParams.length} OR g.away_team ILIKE $${countParams.length})`); }
+    const countWhere = countConditions.join(' AND ');
+
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM bets b JOIN games g ON g.id = b.game_id
-       WHERE ${where.replace(/\$2|\$3/g, '')}`,
-      params.slice(0, params.length - 2) // without limit/offset
+       WHERE ${countWhere}`,
+      countParams
     );
     res.json({ bets: result.rows, total: parseInt(countRes.rows[0].count) });
   } catch (err) { next(err); }
