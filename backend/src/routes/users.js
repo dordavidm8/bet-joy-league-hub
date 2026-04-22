@@ -28,9 +28,13 @@ router.get('/search', async (req, res, next) => {
   try {
     const result = await pool.query(
       `SELECT id, username, display_name, avatar_url, points_balance, total_bets, total_wins
-       FROM users WHERE username ILIKE $1 OR display_name ILIKE $1 ORDER BY points_balance DESC LIMIT 10`,
+       FROM users 
+       WHERE (username ILIKE $1 OR display_name ILIKE $1)
+         AND username NOT LIKE 'deleted_%'
+       ORDER BY points_balance DESC LIMIT 10`,
       [`${q.trim()}%`]
     );
+
     res.json({ users: result.rows });
   } catch (err) { next(err); }
 });

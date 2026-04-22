@@ -320,9 +320,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
     const membersRes = await pool.query(
       `SELECT u.id, u.username, u.display_name, u.avatar_url, lm.points_in_league, lm.joined_at, lm.is_active
        FROM league_members lm JOIN users u ON u.id = lm.user_id
-       WHERE lm.league_id = $1 ORDER BY lm.points_in_league DESC`,
+       WHERE lm.league_id = $1 AND lm.is_active = true AND u.username NOT LIKE 'deleted_%'
+       ORDER BY lm.points_in_league DESC`,
       [req.params.id]
     );
+
     res.json({ league, members: membersRes.rows });
   } catch (err) { next(err); }
 });
