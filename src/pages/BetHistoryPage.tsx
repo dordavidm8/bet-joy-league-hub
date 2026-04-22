@@ -5,6 +5,7 @@ import { ArrowRight, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { translateTeam } from "@/lib/teamNames";
 
 const STATUS_TABS = [
   { value: "",              label: "הכל" },
@@ -243,7 +244,7 @@ const BetHistoryPage = () => {
               {/* WhatsApp share on won bets */}
               {bet.status === "won" && bet.actual_payout != null && (
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`🏆 ניצחתי +${bet.actual_payout.toLocaleString()} נקודות על ${bet.home_team} נגד ${bet.away_team} (×${parseFloat(String(bet.odds)).toFixed(2)})! הצטרף ל-Kickoff 🎯`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`זכיתי ב-${parseFloat(String(bet.actual_payout)).toFixed(bet.league_bet_mode === 'initial_balance' ? 1 : 0)} נקודות על ${translateTeam(bet.home_team)} נגד ${translateTeam(bet.away_team)} (×${parseFloat(String(bet.odds)).toFixed(2)})! הצטרף ל-Kickoff: https://kickoff-bet.app`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={e => e.stopPropagation()}
