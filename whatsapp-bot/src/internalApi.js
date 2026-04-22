@@ -57,32 +57,47 @@ function startInternalApi(client) {
 
   async function setupGroup(chat, inviteCode, leagueName) {
     let invite_link = null;
+    const groupJid = chat.id._serialized;
+
     // 1. Get invite link immediately so the UI can update
     try {
       const code = await chat.getInviteCode();
       invite_link = `https://chat.whatsapp.com/${code}`;
       console.log(`[WA] Initial link fetch: ${invite_link}`);
     } catch (e) {
-      console.error(`[WA] Initial link fetch FAIL: ${e.message}`);
+      console.warn(`[WA] Initial link fetch FAIL: ${e.message}`);
     }
 
-    // 2. Perform everything else in background to avoid blocking the API
+    // 2. Perform everything else in background
     (async () => {
       try {
-        console.log(`[WA] Starting background setup for group ${chat.id._serialized}`);
+        console.log(`[WA] Starting background setup for group ${groupJid}`);
         
-        // Wait 10s for initial sync before permissions
-        await new Promise(r => setTimeout(r, 10000));
+        // Wait 3s instead of 10s
+        await new Promise(r => setTimeout(r, 3000));
         
-        await chat.setMessagesAdminsOnly(false).catch(() => {});
-        await chat.setInfoAdminsOnly(false).catch(() => {});
+        // Retry invite link if we missed it
+        if (!invite_link) {
+          try {
+            const code = await chat.getInviteCode();
+            invite_link = `https://chat.whatsapp.com/${code}`;
+            await pool.query(`UPDATE wa_groups SET invite_link = $1 WHERE wa_group_id = $2`, [invite_link, groupJid]);
+            console.log(`[WA] Background: Invite link recovered and saved: ${invite_link}`);
+          } catch (e) {
+            console.error(`[WA] Background link retry FAIL: ${e.message}`);
+          }
+        }
+
+        // Apply settings
+        await chat.setMessagesAdminsOnly(false).catch(e => console.warn(`[WA] setMessagesAdminsOnly FAIL: ${e.message}`));
+        await chat.setInfoAdminsOnly(false).catch(e => console.warn(`[WA] setInfoAdminsOnly FAIL: ${e.message}`));
         if (chat.setAddMembersAdminsOnly) await chat.setAddMembersAdminsOnly(false).catch(() => {});
         else if (chat.setAddParticipantsAdminsOnly) await chat.setAddParticipantsAdminsOnly(false).catch(() => {});
         
-        console.log(`[WA] Background: Sync and permissions set`);
+        console.log(`[WA] Background: Permissions set`);
 
-        // Wait another 50s (total 60s) before description
-        await new Promise(r => setTimeout(r, 50000));
+        // Wait only 2s before description
+        await new Promise(r => setTimeout(r, 2000));
         
         if (inviteCode) {
           const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues?join=${inviteCode}`;
@@ -92,8 +107,8 @@ function startInternalApi(client) {
           console.log(`[WA] Background: Description set`);
         }
 
-        // Wait 5 seconds and send the final welcome message
-        await new Promise(r => setTimeout(r, 5000));
+        // Wait 2 seconds and send the final welcome message
+        await new Promise(r => setTimeout(r, 2000));
         const welcomeText = `ברוכים הבאים לליגת *${leagueName || 'Kickoff'}*! ⚽\n\n` +
           `*כללי המשחק:*\n` +
           `בכל בוקר יישלחו לקבוצה הודעות על משחקי היום הבא. על מנת להמר על המשחק יש להגיב להודעה עם המנצחת (1/2/X) והתוצאה המדויקת.\n` +
@@ -105,6 +120,7 @@ function startInternalApi(client) {
           `שיהיה בהצלחה! 🏆`;
         
         await chat.sendMessage(welcomeText);
+        console.log(`[WA] Background: Welcome message sent`);
       } catch (err) {
         console.error('[WA] Background setup block CRASH:', err.message);
       }
@@ -112,6 +128,7 @@ function startInternalApi(client) {
 
     return invite_link;
   }
+
 
   // POST /internal/create-group — create a new WA group
   app.post('/internal/create-group', auth, async (req, res) => {
