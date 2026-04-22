@@ -233,8 +233,8 @@ async function settleBets() {
         if (r.won > 0 && r.lost === 0) {
           const exactBonus = r.exactScoreHits > 0 ? ' 🎯 בונוס תוצאה מדויקת!' : '';
           const payoutDesc = r.totalPayout > 0
-            ? `ניצחת ${r.totalPayout.toLocaleString()} נק׳${exactBonus}`
-            : `הרווחת ${r.leaguePoints.toFixed(1)} נק׳ בליגה${exactBonus}`;
+            ? `זכית ב-${r.totalPayout.toLocaleString()} נקודות${exactBonus}`
+            : `זכית ב-${r.leaguePoints.toFixed(1)} נקודות בליגה${exactBonus}`;
           createNotification(userId, {
             type: 'bet_won',
             title: '✅ הימור מוצלח!',
@@ -250,8 +250,8 @@ async function settleBets() {
           }).catch(() => {});
         } else if (r.won > 0 && r.lost > 0) {
           const mixedDesc = r.totalPayout > 0
-            ? `ניצחת ${r.totalPayout.toLocaleString()} נק׳`
-            : `הרווחת ${r.leaguePoints.toFixed(1)} נק׳ בליגה`;
+            ? `זכית ב-${r.totalPayout.toLocaleString()} נקודות`
+            : `זכית ב-${r.leaguePoints.toFixed(1)} נקודות בליגה`;
           createNotification(userId, {
             type: 'bet_won',
             title: `✅ ${r.won} הימורים עברו`,
@@ -374,7 +374,7 @@ async function settleParlays(client, gameId, correctOutcomeMap) {
     createNotification(parlay.user_id, {
       type: 'bet_won',
       title: `🎉 פרליי #${parlay.parlay_number} ניצח!`,
-      body: `כל ${legsRes.rows.length} הבחירות הצליחו — ניצחת ${payout.toLocaleString()} נק׳!`,
+      body: `כל ${legsRes.rows.length} הבחירות הצליחו — זכית ב-${payout.toLocaleString()} נקודות!`,
       data: { parlay_id: parlayId, parlay_number: parlay.parlay_number },
     }).catch(() => {});
   }
