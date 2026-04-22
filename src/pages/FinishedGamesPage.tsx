@@ -104,10 +104,11 @@ const FinishedGamesPage = () => {
                 {gameBets.length > 0 && (
                   <div className="border-t border-border pt-2 flex flex-col gap-1.5">
                     {gameBets.map(bet => {
+                      const potentialWithBonus = Number(bet.potential_payout) * (bet.exact_score_prediction ? 3 : 1);
                       const profit = bet.status === "won"
-                        ? (bet.actual_payout ?? bet.potential_payout) - bet.stake
+                        ? (Number(bet.actual_payout) || potentialWithBonus) - Number(bet.stake)
                         : bet.status === "lost"
-                        ? -bet.stake
+                        ? -Number(bet.stake)
                         : null;
 
                       return (

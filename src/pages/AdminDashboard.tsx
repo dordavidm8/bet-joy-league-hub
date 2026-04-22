@@ -486,7 +486,7 @@ const BetsTab = () => {
                       <span className="text-muted-foreground italic">
                         {b.league_bet_mode === 'initial_balance' 
                           ? `×${(parseFloat(String(b.odds)) * (b.exact_score_prediction ? 3 : 1)).toFixed(2)}`
-                          : fmt(b.potential_payout)}
+                          : fmt(Number(b.potential_payout) * (b.exact_score_prediction ? 3 : 1))}
                       </span>
                     )}
                   </td>

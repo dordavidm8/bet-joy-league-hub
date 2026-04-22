@@ -524,7 +524,8 @@ const ProfilePage = () => {
               <div className="text-left">
                 <p className={`text-sm font-bold ${bet.status === "won" ? "text-primary" : bet.status === "lost" ? "text-destructive" : "text-muted-foreground"}`}>
                   {bet.status === "won" ? `+${bet.actual_payout}` :
-                   bet.status === "lost" ? `-${bet.stake}` : "ממתין"}
+                   bet.status === "lost" ? `-${bet.stake}` : 
+                   `אפשרי: ${(Number(bet.potential_payout) * (bet.exact_score_prediction ? 3 : 1)).toLocaleString()}`}
                 </p>
               </div>
             </motion.div>
