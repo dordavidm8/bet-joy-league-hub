@@ -117,8 +117,8 @@ async function buildResultMessage(gameId, leagueId) {
     }
   });
 
-  const score = game.score_home != null ? `${game.score_home}-${game.score_away}` : '';
-  let msg = `📊 ${translateTeam(game.home_team)} ${score} ${translateTeam(game.away_team)}\n`;
+  const score = game.score_home != null ? `(${game.score_home}) - (${game.score_away})` : '';
+  let msg = `📊 *${translateTeam(game.home_team)} ${score} ${translateTeam(game.away_team)}*\n`;
 
   if (winners.length > 0) {
     msg += `\n🏆 מנצחים:\n`;
