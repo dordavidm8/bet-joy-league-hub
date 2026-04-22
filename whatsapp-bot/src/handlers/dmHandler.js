@@ -103,7 +103,7 @@ async function sendMyBets(msg, user) {
   const { translateTeam } = require('../utils/teamNames');
   const betsRes = await pool.query(
     `SELECT b.*, g.home_team, g.away_team, g.score_home, g.score_away, g.status AS game_status, bq.type AS bet_type, bq.question_text,
-            l.name AS league_name,
+            l.name AS league_name, l.bet_mode AS league_bet_mode, l.access_type AS league_access_type,
             p.parlay_number, p.status AS parlay_status,
             t1.name_he as home_he_db, t2.name_he as away_he_db
      FROM bets b
@@ -189,16 +189,24 @@ async function sendMyBets(msg, user) {
     if (b.parlay_number) {
       const parlayStatusLabel = b.parlay_status === 'lost' ? ' ❌ נכשל' : b.parlay_status === 'won' ? ' ✅ ניצח' : '';
       contextLabel = `🔗 פרליי #${b.parlay_number}${parlayStatusLabel}`;
-    } else if (b.league_name) {
-      contextLabel = `🏆 ליגת ${b.league_name}`;
+    } else if (b.league_id) {
+      const type = b.league_access_type === 'public' ? 'ליגה ציבורית' : 'ליגה פרטית';
+      contextLabel = `🏆 ${type}: ${b.league_name}`;
     } else {
       contextLabel = `✉️ הימור חופשי`;
     }
 
-    const stakeDisplay = b.stake > 0 ? `${b.stake} נק'` : 'ניקוד';
-    const payoutInfo = b.status === 'won' && b.actual_payout ? ` | זכייה: *${b.actual_payout}*` :
-                       b.status === 'pending' ? ` | אפשרי: *${b.potential_payout}*` :
-                       b.status === 'parlay_failed' ? ` | נכשל במסגרת פרליי` : '';
+    const isShared = b.league_bet_mode === 'initial_balance';
+    const stakeDisplay = isShared ? '💎 קופה משותפת' : `${b.stake} נק'`;
+    
+    let payoutValue = b.potential_payout;
+    if (isShared && b.status === 'pending') {
+      payoutValue = (parseFloat(String(b.odds)) * (b.exact_score_prediction ? 3 : 1)).toFixed(2);
+    }
+
+    const payoutInfo = (b.status === 'won' && b.actual_payout) ? ` | זכייה: *${b.actual_payout}*` :
+                       (b.status === 'pending') ? ` | אפשרי: *${payoutValue}*` :
+                       (b.status === 'parlay_failed') ? ` | נכשל במסגרת פרליי` : '';
 
     return `${statusIcon} ${betDetail} | ${contextLabel} | ${stakeDisplay}${payoutInfo}\n`;
   };

@@ -151,7 +151,20 @@ const BetHistoryPage = () => {
             >
               {/* Competition + date + parlay badge */}
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-muted-foreground">{bet.competition_name ?? "כדורגל"}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{bet.competition_name ?? "כדורגל"}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                    !bet.league_id 
+                      ? "bg-secondary text-muted-foreground"
+                      : bet.league_access_type === 'public'
+                        ? "bg-blue-500/10 text-blue-600"
+                        : "bg-amber-500/10 text-amber-600"
+                  }`}>
+                    {!bet.league_id 
+                      ? "הימור חופשי" 
+                      : `${bet.league_access_type === 'public' ? 'ליגה ציבורית' : 'ליגה פרטית'}: ${bet.league_name}`}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2">
                   {bet.parlay_number && (
                     <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
@@ -179,7 +192,11 @@ const BetHistoryPage = () => {
 
               {/* Stake / payout row */}
               <div className="flex items-center justify-between pt-1 border-t border-border">
-                <span className="text-xs text-muted-foreground">הימור: {bet.stake.toLocaleString()} נק׳</span>
+                {bet.league_bet_mode === 'initial_balance' ? (
+                  <span className="text-[10px] bg-secondary/50 px-2 py-0.5 rounded italic text-muted-foreground">קופה משותפת (ללא השקעה)</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground font-medium">הימור: {bet.stake.toLocaleString()} נק׳</span>
+                )}
                 <div className="flex items-center gap-2">
                   {bet.status === "won" && bet.actual_payout != null && (
                     <span className="text-xs font-bold text-primary">+{bet.actual_payout.toLocaleString()} נק׳</span>
@@ -188,7 +205,13 @@ const BetHistoryPage = () => {
                     <span className="text-xs font-bold text-destructive">-{bet.stake.toLocaleString()} נק׳</span>
                   )}
                   {bet.status === "pending" && (
-                    <span className="text-xs text-muted-foreground">אפשרי: {bet.potential_payout.toLocaleString()} נק׳</span>
+                    <span className="text-xs text-muted-foreground">
+                      אפשרי: {
+                        bet.league_bet_mode === 'initial_balance' 
+                          ? (parseFloat(String(bet.odds)) * (bet.exact_score_prediction ? 3 : 1)).toFixed(2)
+                          : bet.potential_payout.toLocaleString()
+                      } נק׳
+                    </span>
                   )}
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-secondary ${STATUS_COLOR[bet.status]}`}>
                     {STATUS_LABEL[bet.status] ?? bet.status}

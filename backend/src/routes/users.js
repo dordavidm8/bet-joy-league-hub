@@ -63,16 +63,19 @@ router.get('/me/bets', authenticate, async (req, res, next) => {
     const result = await pool.query(
       `SELECT b.*, g.home_team, g.away_team, g.start_time, g.score_home, g.score_away,
               bq.question_text, c.name AS competition_name,
-              p.parlay_number, p.status AS parlay_status, p.potential_payout AS parlay_potential_payout
+              p.parlay_number, p.status AS parlay_status, p.potential_payout AS parlay_potential_payout,
+              l.name AS league_name, l.bet_mode AS league_bet_mode, l.access_type AS league_access_type
        FROM bets b
        JOIN games g ON g.id = b.game_id
        JOIN bet_questions bq ON bq.id = b.bet_question_id
        LEFT JOIN competitions c ON c.id = g.competition_id
        LEFT JOIN parlays p ON p.id = b.parlay_id
+       LEFT JOIN leagues l ON l.id = b.league_id
        WHERE ${where}
        ORDER BY b.placed_at DESC LIMIT $2 OFFSET $3`,
       params
     );
+
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM bets b JOIN games g ON g.id = b.game_id
        WHERE ${where.replace(/\$2|\$3/g, '')}`,
