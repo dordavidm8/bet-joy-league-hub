@@ -305,42 +305,37 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
     normalizedScore = validation.normalized;
   }
 
-  // Check for existing pending bet on this game
-  const existingRes = await pool.query(
-    `SELECT b.* FROM bets b
-     JOIN bet_questions bq ON bq.id = b.bet_question_id
-     WHERE b.user_id = $1 AND bq.game_id = $2 AND b.wa_bet = true AND b.status = 'pending'`,
-    [user.id, game.id]
-  );
-
-  if (existingRes.rows[0]) {
-    const prevBet = existingRes.rows[0];
-    // Refund stake if needed
-    if (!prevBet.is_free_bet && prevBet.stake > 0) {
-      await pool.query(`UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`, [prevBet.stake, user.id]);
-    }
-  }
-
-  // Delete old pending/cancelled bets for this user+game to avoid unique constraint violations
-  await pool.query(
-    `DELETE FROM bets WHERE user_id = $1 AND game_id = $2 AND status IN ('pending', 'cancelled')`,
-    [user.id, game.id]
-  );
-
-  // Get the match_winner bet_question for this game
+  // ── 1. Find the specific bet question (the bot only handles match_winner) ─────
   const questionRes = await pool.query(
     `SELECT * FROM bet_questions WHERE game_id = $1 AND type = 'match_winner' LIMIT 1`,
     [game.id]
   );
-  console.log(`[WA-DEBUG] Question look-up: ${questionRes.rows.length} rows found for game ${game.id}`);
-  
   if (!questionRes.rows[0]) {
     await msg.reply('❌ לא נמצאו שאלות הימור למשחק זה');
     return;
   }
   const question = questionRes.rows[0];
 
-  // Get odds from JSONB outcomes (which are stored as [Home, Draw, Away])
+  // ── 2. Check for existing bet on THIS QUESTION in THIS LEAGUE ───────────────
+  const existingRes = await pool.query(
+    `SELECT * FROM bets 
+     WHERE user_id = $1 AND bet_question_id = $2 AND league_id = $3 AND status = 'pending'`,
+    [user.id, question.id, gameMsg.league_id]
+  );
+
+  let isUpdate = false;
+  if (existingRes.rows[0]) {
+    const prevBet = existingRes.rows[0];
+    isUpdate = true;
+    // Refund stake if the old bet had one
+    if (!prevBet.is_free_bet && prevBet.stake > 0) {
+      await pool.query(`UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`, [prevBet.stake, user.id]);
+    }
+    // Delete the old bet to make room for the new one (avoids unique constraint if any)
+    await pool.query(`DELETE FROM bets WHERE id = $1`, [prevBet.id]);
+  }
+
+  // ── 3. Odds and Calculations ────────────────────────────────────────────────
   const outcomes = question.outcomes || [];
   let odds = 2.0;
   if (selectedOutcome === 'Draw') {
@@ -350,36 +345,37 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
   } else if (selectedOutcome === game.away_team) {
     odds = outcomes[2]?.odds || 2.0;
   }
-  console.log(`[WA-DEBUG] Odds for ${selectedOutcome}: ${odds}`);
 
-  // Handle stake / balance
   const isFree = game.bet_mode === 'prediction';
   const stake = isFree ? 0 : (game.stake_amount || 0);
 
+  // Check balance if needed
   if (!isFree && stake > 0) {
     const balRes = await pool.query(`SELECT points_balance FROM users WHERE id = $1`, [user.id]);
     if (balRes.rows[0].points_balance < stake) {
       await msg.reply(`❌ אין לך מספיק נקודות. יתרה: ${balRes.rows[0].points_balance} | נדרש: ${stake}`);
       return;
     }
-    await pool.query(
-      `UPDATE users SET points_balance = points_balance - $1 WHERE id = $2`,
-      [stake, user.id]
-    );
+    await pool.query(`UPDATE users SET points_balance = points_balance - $1 WHERE id = $2`, [stake, user.id]);
   }
 
-  const payout = (isFree ? 1 : stake) * odds;
+  const potentialPayout = (isFree ? 1 : stake) * odds;
 
-  // Save match_winner bet with exact score if provided
+  // ── 4. Insert New Bet ───────────────────────────────────────────────────────
   await pool.query(
     `INSERT INTO bets (user_id, bet_question_id, game_id, league_id, selected_outcome, odds, stake, potential_payout, is_free_bet, wa_bet, wa_source, wa_bet_message_id, exact_score_prediction)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,$10,$11,$12)`,
-    [user.id, question.id, game.id, gameMsg.league_id, selectedOutcome, odds, stake, payout, isFree, source, msg.id._serialized, normalizedScore]
+    [user.id, question.id, game.id, gameMsg.league_id, selectedOutcome, odds, stake, potentialPayout, isFree, source, msg.id._serialized, normalizedScore]
   );
-  console.log(`[WA-DEBUG] Main bet inserted successfully for user ${user.id} with exact score: ${normalizedScore}`);
 
-  // React 👍 and confirm
-  try { await msg.react('👍'); } catch {}
+  // ── 5. Confirmation ────────────────────────────────────────────────────────
+  try { 
+    await msg.react('👍'); 
+    if (isUpdate) {
+      // Small confirmation for update
+      await msg.reply(`🔄 ההימור שלך על *${game.home_team} - ${game.away_team}* עודכן בהצלחה!`);
+    }
+  } catch {}
 }
 
 // ── Process a bet correction (reply to own bet message) ──────────────────────
