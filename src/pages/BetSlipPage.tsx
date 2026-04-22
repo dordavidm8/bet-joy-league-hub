@@ -29,17 +29,22 @@ const BetSlipPage = () => {
   const realBets = betSlip.filter((b) => b.bet_mode !== "initial_balance");
   const freeBets = realBets.filter((b) => !b.league_id);
   const scoringBets = betSlip.filter((b) => b.bet_mode === "initial_balance");
+  // Parlay requires all free bets to be from different games
+  const freeBetGameIds = freeBets.map(b => b.game_id);
+  const freeBetsHaveDuplicateGames = freeBetGameIds.length !== new Set(freeBetGameIds).size;
+  const canParlay = freeBets.length >= 2 && freeBets.length === realBets.length && !freeBetsHaveDuplicateGames;
 
   const totalStake = realBets.reduce((sum, b) => sum + b.points, 0);
   const userPoints = backendUser?.points_balance ?? 0;
 
   // Non-parlay: each bet pays individually
   const individualPayout = realBets.reduce((sum, b) => sum + Math.floor(b.points * b.odds), 0);
-  // Parlay: sum(stake × odds) × 1.1 — only free bets
-  const parlayPayout = freeBets.length >= 2
+  // Parlay: sum(stake × odds) × 1.1 — only free bets from different games
+  const parlayPayout = canParlay
     ? Math.floor(freeBets.reduce((sum, b) => sum + b.points * b.odds, 0) * 1.1)
     : 0;
   const potentialPayout = isParlay ? parlayPayout : individualPayout;
+
 
   const handleConfirm = async () => {
     if (betSlip.length === 0) return;
@@ -59,7 +64,7 @@ const BetSlipPage = () => {
     setLoading(true);
     setResult(null);
     try {
-      if (isParlay && freeBets.length >= 2) {
+      if (isParlay && canParlay) {
         await placeParlay({
           legs: freeBets.map((b) => ({
             game_id: b.game_id,
@@ -93,7 +98,7 @@ const BetSlipPage = () => {
         }
       }
 
-      const text = isParlay && freeBets.length >= 2
+      const text = isParlay && canParlay
         ? `⚽️ פרליי של ${freeBets.length} הימורים חופשיים עם בונוס ×1.10 — ${freeBets.reduce((s,b)=>s+b.points,0).toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`
         : betSlip.length === 1
           ? `⚽️ הימרתי על ${betSlip[0].selectedOption} (x${betSlip[0].odds}) ב-${betSlip[0].gameLabel} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff 🎯`
@@ -151,8 +156,8 @@ const BetSlipPage = () => {
     <div className="flex flex-col gap-6 px-5 pt-4 pb-24">
       <h2 className="text-2xl font-black">תלוש הימורים</h2>
 
-      {/* Parlay Toggle — only when ALL real bets are free (no league bets in slip) */}
-      {freeBets.length >= 2 && freeBets.length === realBets.length && (
+      {/* Parlay Toggle — only when ALL real bets are free bets from different games */}
+      {canParlay && (
         <div className="card-kickoff flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div>
@@ -246,7 +251,7 @@ const BetSlipPage = () => {
             <span className="font-bold">{scoringBets.length} הימורים</span>
           </div>
         )}
-        {isParlay && freeBets.length >= 2 && (
+        {isParlay && canParlay && (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">מכפיל פרליי</span>
             <span className="font-bold">×1.10</span>

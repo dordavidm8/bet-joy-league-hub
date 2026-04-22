@@ -241,7 +241,18 @@ router.post('/parlay', authenticate, async (req, res, next) => {
     }
   }
 
+  // No duplicate games or questions within the same parlay
+  const gameIds = legs.map(l => l.game_id);
+  const questionIds = legs.map(l => l.bet_question_id);
+  if (new Set(questionIds).size < legs.length) {
+    return res.status(400).json({ error: 'לא ניתן לכלול את אותה שאלה פעמיים בפרליי' });
+  }
+  if (new Set(gameIds).size < legs.length) {
+    return res.status(400).json({ error: 'לא ניתן לכלול שני הימורים מאותו משחק בפרליי' });
+  }
+
   const totalStake = legs.reduce((s, l) => s + l.stake, 0);
+
 
   const client = await pool.connect();
   try {
@@ -266,13 +277,13 @@ router.post('/parlay', authenticate, async (req, res, next) => {
       const chosen = question.outcomes.find(o => o.label === sel.selected_outcome);
       if (!chosen) throw Object.assign(new Error('אפשרות לא חוקית'), { status: 400 });
 
-      // Check for duplicate bets on same question in same parlay
+      // Check for duplicate bets on same question in the global context
       const dupCheck = await client.query(
-        `SELECT id FROM bets WHERE user_id = $1 AND bet_question_id = $2 AND league_id IS NULL AND status = 'pending'`,
+        `SELECT id FROM bets WHERE user_id = $1 AND bet_question_id = $2 AND league_id IS NULL`,
         [req.user.id, sel.bet_question_id]
       );
       if (dupCheck.rows[0]) {
-        throw Object.assign(new Error('כבר הימרת על שאלה זו בהימור חופשי'), { status: 409 });
+        throw Object.assign(new Error(`כבר המרת על שאלה זו בהימור חופשי`), { status: 409 });
       }
 
       const odds = parseFloat(chosen.odds);
