@@ -4,6 +4,10 @@ const { pool } = require('../config/database');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { getStreak } = require('../services/achievementService');
 
+router.get('/version', (req, res) => {
+  res.json({ version: '1.0.1', deployed_at: '2026-04-22T13:58:00Z' });
+});
+
 // POST /api/users/email-by-username — resolve username → email for login (no auth required)
 router.post('/email-by-username', async (req, res, next) => {
   const { username } = req.body;
