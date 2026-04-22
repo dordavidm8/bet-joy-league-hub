@@ -3,6 +3,8 @@
 const express = require('express');
 const { pool } = require('./utils/db');
 
+const pendingSetups = new Set();
+
 const INTERNAL_KEY = process.env.INTERNAL_API_KEY || '';
 const PORT = parseInt(process.env.BOT_INTERNAL_PORT || '4001', 10);
 
@@ -56,14 +58,38 @@ function startInternalApi(client) {
   });
 
   async function setupGroup(chat, inviteCode, leagueName, leagueId) {
-    let invite_link = null;
     const groupJid = chat.id._serialized;
+    if (pendingSetups.has(groupJid)) {
+      console.log(`[WA] Setup already in progress for ${groupJid}, skipping...`);
+      return null;
+    }
+    pendingSetups.add(groupJid);
 
-    // 1. Get invite link immediately so the UI can update
+    let invite_link = null;
+
+    // 1. Link league in DB immediately
+    if (leagueId) {
+      try {
+        await pool.query('UPDATE leagues SET wa_enabled = true WHERE id = $1', [leagueId]);
+        await pool.query(
+          `INSERT INTO wa_groups (wa_group_id, league_id, is_active) VALUES ($1, $2, true) 
+           ON CONFLICT (wa_group_id, league_id) DO UPDATE SET is_active = true`,
+          [groupJid, leagueId]
+        );
+        console.log(`[WA] League ${leagueId} linked to ${groupJid}`);
+      } catch (e) {
+        console.error(`[WA] DB link FAIL: ${e.message}`);
+      }
+    }
+
+    // 2. Get invite link immediately so the UI can update
     try {
       const code = await chat.getInviteCode();
       invite_link = `https://chat.whatsapp.com/${code}`;
       console.log(`[WA] Initial link fetch: ${invite_link}`);
+      if (invite_link && leagueId) {
+        await pool.query(`UPDATE wa_groups SET invite_link = $1 WHERE wa_group_id = $2 AND league_id = $3`, [invite_link, groupJid, leagueId]);
+      }
     } catch (e) {
       console.warn(`[WA] Initial link fetch FAIL: ${e.message}`);
     }
@@ -123,6 +149,8 @@ function startInternalApi(client) {
         console.log(`[WA] Background: Welcome message sent`);
       } catch (err) {
         console.error('[WA] Background setup block CRASH:', err.message);
+      } finally {
+        pendingSetups.delete(groupJid);
       }
     })();
 
