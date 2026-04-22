@@ -106,11 +106,10 @@ const HomePage = () => {
       {/* WhatsApp Link Prompt */}
       {!loading && backendUser && !backendUser.phone_verified && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mx-5 my-2 p-4 rounded-3xl bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border border-green-500/20 flex items-center justify-between group cursor-pointer active:scale-[0.98] transition-transform"
           onClick={() => navigate("/profile?section=whatsapp")}
-          className="mx-5 p-4 rounded-2xl bg-gradient-to-br from-[#25D366]/10 to-transparent border border-[#25D366]/20 cursor-pointer hover:bg-[#25D366]/15 transition-all group relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#25D366]/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-[#25D366]/10 transition-colors" />
           
