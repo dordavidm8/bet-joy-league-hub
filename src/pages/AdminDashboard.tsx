@@ -7,6 +7,7 @@ import {
   LogOut, XCircle, ToggleLeft, ToggleRight, Activity, X, Check, Bot, Flag
 } from "lucide-react";
 import { AdvisorTab } from "@/components/admin/AdvisorTab";
+import { SocialAgentTab } from "@/components/admin/SocialAgentTab";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -41,7 +42,7 @@ export const ADMIN_EMAILS = [
   "kickoffsportsapp@gmail.com",
 ];
 
-type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "advanced" | "advisor";
+type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "advanced" | "advisor" | "social";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "stats",         label: "סקירה",      icon: <BarChart2 size={14} /> },
@@ -52,7 +53,8 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "notifications",label: "התראות",     icon: <Bell size={14} /> },
   { id: "minigames",    label: "אתגרים",     icon: <Target size={14} /> },
   { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
-  { id: "advisor",      label: "יועץ AI",    icon: <Bot size={14} /> },
+  { id: "advisor",      label: "יועץ AI",        icon: <Bot size={14} /> },
+  { id: "social",       label: "סוכני סושיאל 🤖", icon: <Bot size={14} /> },
 ];
 
 const fmt = (n: string | number) => Number(n).toLocaleString("he-IL");
@@ -2275,6 +2277,7 @@ const AdminDashboard = () => {
     games: <GamesTab />, leagues: <LeaguesTab />, notifications: <NotificationsTab />,
     minigames: <MiniGamesTab />, advanced: <AdvancedTab />,
     advisor: <AdvisorTab />,
+    social:  <SocialAgentTab />,
   };
 
   return (

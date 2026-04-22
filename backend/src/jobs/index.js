@@ -56,7 +56,40 @@ function startJobs() {
     catch (err) { console.error('[cron:featuredNotif]', err.message); }
   });
 
-  console.log('[jobs] Cron jobs started: syncGames, settleBets, dailySync, miniGames, dailyReminder, weeklyBonus, featuredNotif (15min)');
+  // ── Social Media Agents ─────────────────────────────────────────────────
+  const { runDailySocialMediaPipeline } = require('./socialMediaPost');
+
+  // 04:30 UTC = 07:30 IST (Growth Strategy pre-run)
+  cron.schedule('30 4 * * *', async () => {
+    try {
+      const { analyzeAndRecommend } = require('../services/social/growthStrategyAgent');
+      await analyzeAndRecommend({});
+    } catch (err) { console.error('[cron:socialGrowth]', err.message); }
+  });
+
+  // 05:00 UTC = 08:00 IST (Daily social pipeline)
+  cron.schedule('0 5 * * *', async () => {
+    try { await runDailySocialMediaPipeline({ triggeredBy: 'cron' }); }
+    catch (err) { console.error('[cron:socialPipeline]', err.message); }
+  });
+
+  // 08:00 UTC = 11:00 IST (Analytics refresh)
+  cron.schedule('0 8 * * *', async () => {
+    try {
+      const { runDailyAnalyticsRefresh } = require('./socialAnalytics');
+      await runDailyAnalyticsRefresh();
+    } catch (err) { console.error('[cron:socialAnalytics]', err.message); }
+  });
+
+  // Every 4 hours (Social Listening)
+  cron.schedule('0 */4 * * *', async () => {
+    try {
+      const { runSocialListening } = require('./socialListening');
+      await runSocialListening();
+    } catch (err) { console.error('[cron:socialListening]', err.message); }
+  });
+
+  console.log('[jobs] Cron jobs started: syncGames, settleBets, dailySync, miniGames, dailyReminder, weeklyBonus, featuredNotif, socialPipeline, socialListening, socialAnalytics');
 }
 
 module.exports = { startJobs, startCronJobs: startJobs };
