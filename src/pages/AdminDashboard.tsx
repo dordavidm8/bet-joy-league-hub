@@ -1346,7 +1346,7 @@ const LeaguesTab = () => {
             {msgResult && <p className={`text-sm ${msgResult.ok ? "text-green-600" : "text-destructive"}`}>{msgResult.text}</p>}
             <div className="flex gap-2">
               <Button onClick={() => { setMsgResult(null); sendMsgMutation.mutate(); }}
-                disabled={!msgTitle || sendMsgMutation.isPending} className="flex-1">
+                disabled={!msgTitle || sendMsgMutation.isPending || (!sendToDms && !sendToGroup)} className="flex-1">
                 <Send size={14} className="ml-1" />
                 {sendMsgMutation.isPending ? "שולח..." : "שלח הודעה"}
               </Button>
