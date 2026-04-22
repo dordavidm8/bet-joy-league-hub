@@ -478,7 +478,7 @@ router.post('/notify', async (req, res, next) => {
 
       // Fetch group IDs if needed
       if (send_to_group) {
-        const groupRes = await pool.query(`SELECT wa_group_id FROM leagues WHERE id = ANY($1) AND wa_group_id IS NOT NULL`, [ids]);
+        const groupRes = await pool.query(`SELECT wa_group_id FROM wa_groups WHERE league_id = ANY($1) AND is_active = true`, [ids]);
         leagueGroupIds = groupRes.rows.map(r => r.wa_group_id);
       }
     } else {
