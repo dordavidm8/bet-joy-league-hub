@@ -809,9 +809,13 @@ const LeagueDetailPage = () => {
             </>
           )}
 
-          {myMember?.is_active && league.access_type !== 'public' && (
+          {myMember?.is_active && (
             <button
-              onClick={() => leaveMutation.mutate()}
+              onClick={() => {
+                if (window.confirm("האם אתה בטוח שברצונך לעזוב את הליגה? שים לב: בעזיבת הליגה אתה מוותר על זכאותך לפרסים במידה ותזכה.")) {
+                  leaveMutation.mutate();
+                }
+              }}
               disabled={leaveMutation.isPending}
               className="text-sm text-destructive flex items-center justify-center gap-1 py-2 opacity-70 hover:opacity-100 transition-opacity"
             >
