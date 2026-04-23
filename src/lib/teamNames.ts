@@ -116,7 +116,7 @@ const TEAM_NAMES_HE: Record<string, string> = {
   'Milan': 'מילאן',
   'Borussia Dortmund': 'בורוסיה דורטמונד',
   'RB Leipzig': 'לייפציג',
-  'Bayer Leverkusen': 'באיירן לברקוזן',
+  'Bayer Leverkusen': 'באייר לברקוזן',
   'Eintracht Frankfurt': 'פרנקפורט',
   'Benfica': 'בנפיקה',
   'SL Benfica': 'בנפיקה',
@@ -328,8 +328,8 @@ export function setDynamicTranslations(map: Record<string, string>) { _dynamic =
 // Lookup: static map → dynamic DB map → original
 export function translateTeam(name: string): string {
   if (!name) return name;
-  if (TEAM_NAMES_HE[name]) return TEAM_NAMES_HE[name];
   if (_dynamic[name]) return _dynamic[name];
+  if (TEAM_NAMES_HE[name]) return TEAM_NAMES_HE[name];
   const lower = name.toLowerCase();
   const found = Object.keys(TEAM_NAMES_HE).find((k) => k.toLowerCase() === lower)
     ?? Object.keys(_dynamic).find((k) => k.toLowerCase() === lower);
