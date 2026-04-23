@@ -414,7 +414,7 @@ const LeagueDetailPage = () => {
                           <label className="text-[10px] font-bold text-muted-foreground mr-1">שידור הודעת בוקר (שעה)</label>
                           <input type="time" value={editWaSettings.morning_message_time}
                             onChange={e => setEditWaSettings(prev => ({ ...prev, morning_message_time: e.target.value }))}
-                            className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50" />
+                            className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50 text-left" dir="ltr" />
                         </div>
 
                         <div className="flex flex-col gap-1">
@@ -437,7 +437,7 @@ const LeagueDetailPage = () => {
                             <label className="text-[10px] font-bold text-muted-foreground mr-1">שעת שליחת טבלה</label>
                             <input type="time" value={editWaSettings.leaderboard_time}
                               onChange={e => setEditWaSettings(prev => ({ ...prev, leaderboard_time: e.target.value }))}
-                              className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50" />
+                              className="bg-secondary rounded-lg px-2 py-1 text-xs outline-none border border-border/50 text-left" dir="ltr" />
                           </div>
                         )}
 
