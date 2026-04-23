@@ -1293,7 +1293,7 @@ const LeaguesTab = () => {
           <div className="text-xs bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3 text-amber-800 flex flex-col gap-1">
             <p>
               קופה נוכחית: <b>{fmt(stopConfirm.pool_total)} נק׳</b>
-              {stopConfirm.distribution ? ` • חלוקה מוגדרת: ${stopConfirm.distribution}` : " • אין חלוקת פרסים מוגדרת"}
+              {stopConfirm.distribution ? ` • חלוקה מוגדרת: ${stopConfirm.distribution.map(d => d.pct).join('/')}%` : " • אין חלוקת פרסים מוגדרת"}
             </p>
             {(!stopConfirm.distribution || stopConfirm.pool_total === 0) && (
               <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-amber-200">
@@ -2112,7 +2112,7 @@ const SupportTab = () => {
                       השב
                     </button>
                     {inq.reply_message && (
-                      <span className="text-gray-400 cursor-help" title={`תשובה: ${inq.reply_message} (נשלח ב-\${fmtTime(inq.replied_at)})`}>💬</span>
+                      <span className="text-gray-400 cursor-help" title={`תשובה: ${inq.reply_message} (נשלח ב-${fmtTime(inq.replied_at)})`}>💬</span>
                     )}
                   </div>
                 </td>
@@ -2124,11 +2124,14 @@ const SupportTab = () => {
       </div>
 
       {replyInquiry && (
-        <Modal onClose={() => setReplyInquiry(null)} title={`תשובה לפנייה מס׳ \${replyInquiry.inquiry_number} (@\${replyInquiry.username})`}>
+        <Modal 
+          onClose={() => setReplyInquiry(null)} 
+          title={"תשובה לפנייה מס׳ " + replyInquiry.inquiry_number + " (@" + replyInquiry.username + ")"}
+        >
           <div className="flex flex-col gap-4">
             <div className="bg-secondary p-3 rounded-xl">
               <p className="text-[10px] text-muted-foreground mb-1 font-bold">הפנייה:</p>
-              <p className="text-xs italic">"\${replyInquiry.message}"</p>
+              <p className="text-xs italic">"{replyInquiry.message}"</p>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-muted-foreground">הודעת תשובה</label>
