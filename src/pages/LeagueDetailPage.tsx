@@ -734,13 +734,18 @@ const LeagueDetailPage = () => {
                         <span className="text-[10px] font-bold">
                           {isWon && (
                             <span className="text-green-600">
-                              {isInitialBalanceLeague && match.actual_payout != null ? (
+                              {isInitialBalanceLeague ? (
                                 <>
-                                  {match.selected_outcome} · +{parseFloat(String(match.actual_payout)).toFixed(1)} נק׳
-                                  {(parseFloat(String(match.actual_payout)) > (parseFloat(String(match.bet_odds || 0)) * 1.5)) && " 🎯"}
+                                  {match.selected_outcome} · +{(() => {
+                                    const payout = match.actual_payout != null && match.actual_payout > 0 
+                                      ? match.actual_payout 
+                                      : (match.bet_odds || 0); // Fallback to odds if payout not set (tournament points = odds)
+                                    return parseFloat(String(payout)).toFixed(1);
+                                  })()} נק׳
+                                  {(parseFloat(String(match.actual_payout || match.bet_odds)) > (parseFloat(String(match.bet_odds || 0)) * 1.5)) && " 🎯"}
                                 </>
                               ) : (
-                                ` +${match.actual_payout} נק׳`
+                                ` +${match.actual_payout || 0} נק׳`
                               )}
                             </span>
                           )}

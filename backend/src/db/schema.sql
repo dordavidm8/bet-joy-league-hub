@@ -74,8 +74,8 @@ CREATE TABLE IF NOT EXISTS parlays (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   total_stake INTEGER NOT NULL,
   total_odds DECIMAL(10,2) NOT NULL,
-  potential_payout INTEGER NOT NULL,
-  actual_payout INTEGER,
+  potential_payout DECIMAL(10,2) NOT NULL,
+  actual_payout DECIMAL(10,2),
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
   placed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   settled_at TIMESTAMPTZ
@@ -90,8 +90,8 @@ CREATE TABLE IF NOT EXISTS bets (
   stake INTEGER NOT NULL,
   odds DECIMAL(6,2) NOT NULL,
   live_penalty_pct INTEGER NOT NULL DEFAULT 0,
-  potential_payout INTEGER NOT NULL,
-  actual_payout INTEGER,
+  potential_payout DECIMAL(10,2) NOT NULL,
+  actual_payout DECIMAL(10,2),
   exact_score_prediction VARCHAR(10) DEFAULT NULL,
   is_live_bet BOOLEAN NOT NULL DEFAULT false,
   match_minute_placed INTEGER,
@@ -464,3 +464,9 @@ CREATE INDEX IF NOT EXISTS idx_team_translations_status ON team_name_translation
 -- Sequential human-readable parlay number
 ALTER TABLE parlays ADD COLUMN IF NOT EXISTS parlay_number SERIAL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_parlays_number ON parlays(parlay_number);
+
+-- Migration: Support fractional payouts
+ALTER TABLE bets ALTER COLUMN actual_payout TYPE DECIMAL(10,2);
+ALTER TABLE bets ALTER COLUMN potential_payout TYPE DECIMAL(10,2);
+ALTER TABLE parlays ALTER COLUMN actual_payout TYPE DECIMAL(10,2);
+ALTER TABLE parlays ALTER COLUMN potential_payout TYPE DECIMAL(10,2);
