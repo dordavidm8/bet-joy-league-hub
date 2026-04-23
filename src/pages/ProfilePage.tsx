@@ -7,7 +7,7 @@ import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X, Smartphone, Share
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
-import { sendSupportInquiry } from "@/lib/api";
+import { sendSupportInquiry, getMySupportInquiries } from "@/lib/api";
 
 const ProfilePage = () => {
   const { backendUser, firebaseUser, signOut, refreshUser } = useAuth();
@@ -58,6 +58,7 @@ const ProfilePage = () => {
   const [supportSuccess, setSupportSuccess] = useState(false);
   const [supportNumber, setSupportNumber] = useState<number | null>(null);
   const [supportError, setSupportError] = useState("");
+  const [showSupportHistoryModal, setShowSupportHistoryModal] = useState(false);
 
   // New timer effect
   useEffect(() => {
@@ -149,6 +150,13 @@ const ProfilePage = () => {
     setSupportError("");
     supportMutation.mutate(supportMsg);
   };
+
+  const { data: supportInquiriesData } = useQuery({
+    queryKey: ["my-support-inquiries"],
+    queryFn: getMySupportInquiries,
+  });
+  const myInquiries = supportInquiriesData?.inquiries ?? [];
+  const recentInquiries = myInquiries.slice(0, 3);
 
   const bets = betsData?.bets ?? [];
   const recentBets = bets.slice(0, 5);
@@ -582,10 +590,51 @@ const ProfilePage = () => {
             </div>
           </div>
           <ChevronRight size={16} className="text-muted-foreground" />
-          
-          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-primary/5 to-transparent -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
         </button>
       </section>
+
+      {/* My Inquiries Tracking */}
+      {myInquiries.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="section-label">מעקב פניות</span>
+            {myInquiries.length > 3 && (
+              <button 
+                onClick={() => setShowSupportHistoryModal(true)}
+                className="text-[11px] font-bold text-primary hover:underline"
+              >
+                לכל הפניות
+              </button>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            {recentInquiries.map(inq => (
+              <div key={inq.id} className="card-kickoff flex flex-col gap-2 bg-card/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-muted-foreground"># {inq.inquiry_number}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    inq.status === 'handled' ? 'bg-green-100 text-green-700' :
+                    inq.status === 'read_unhandled' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {inq.status === 'handled' ? 'טופל' : inq.status === 'read_unhandled' ? 'בטיפול' : 'טרם נקרא'}
+                  </span>
+                </div>
+                <p className="text-sm line-clamp-2">{inq.message}</p>
+                {inq.reply_message && (
+                  <div className="bg-primary/5 p-2 rounded-lg border-r-2 border-primary mt-1">
+                    <p className="text-[10px] font-bold text-primary mb-0.5">תשובת המנהלים:</p>
+                    <p className="text-[11px] italic text-muted-foreground">{inq.reply_message}</p>
+                  </div>
+                )}
+                <span className="text-[9px] text-muted-foreground mt-1 self-start">
+                  שלחת ב-{new Date(inq.created_at).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Support Modal */}
       {showSupportModal && (
@@ -643,6 +692,53 @@ const ProfilePage = () => {
                 </button>
               </>
             )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* Support History Modal */}
+      {showSupportHistoryModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-5" onClick={() => setShowSupportHistoryModal(false)}>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-2xl border border-border max-h-[85vh]" 
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black">היסטוריית פניות</h3>
+              <button onClick={() => setShowSupportHistoryModal(false)} className="text-muted-foreground p-1 bg-secondary rounded-full">
+                <X size={16} />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-3 overflow-y-auto pr-1">
+              {myInquiries.map(inq => (
+                <div key={inq.id} className="p-3 border rounded-xl bg-secondary/30 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-muted-foreground"># {inq.inquiry_number}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      inq.status === 'handled' ? 'bg-green-100 text-green-700' :
+                      inq.status === 'read_unhandled' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {inq.status === 'handled' ? 'טופל' : inq.status === 'read_unhandled' ? 'בטיפול' : 'טרם נקרא'}
+                    </span>
+                  </div>
+                  <p className="text-xs">{inq.message}</p>
+                  {inq.reply_message && (
+                    <div className="bg-primary/10 p-2 rounded-lg border-r-2 border-primary mt-1">
+                      <p className="text-[10px] font-bold text-primary mb-0.5">תשובה:</p>
+                      <p className="text-[11px] italic text-card-foreground">{inq.reply_message}</p>
+                      <p className="text-[9px] text-muted-foreground mt-1">{new Date(inq.replied_at!).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                    </div>
+                  )}
+                  <span className="text-[9px] text-muted-foreground self-start">
+                    {new Date(inq.created_at).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                </div>
+              ))}
+            </div>
           </motion.div>
         </div>
       )}

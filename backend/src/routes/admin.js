@@ -1126,8 +1126,6 @@ router.get('/advisor/playground', async (req, res) => {
   }
 });
 
-module.exports = router;
-module.exports.opsRouter = opsRouter;
 
 // ── Support Inquiries ─────────────────────────────────────────────────────────
 
@@ -1138,7 +1136,7 @@ router.get('/support-inquiries', async (req, res, next) => {
   let where = '';
   if (status) {
     params.push(status);
-    where = 'WHERE s.status = ';
+    where = 'WHERE s.status = $1';
   }
   try {
     const result = await pool.query(
@@ -1197,7 +1195,7 @@ router.post('/support-inquiries/:id/reply', async (req, res, next) => {
     const { createNotification } = require('../services/notificationService');
     await createNotification(inquiry.user_id, {
       type: 'admin_message',
-      title: 'תשובה מפנייה למנהלים',
+      title: `תשובה לפנייה מס׳ ${inquiry.inquiry_number}`,
       body: message,
       data: { inquiry_id: inquiry.id }
     });
@@ -1205,7 +1203,7 @@ router.post('/support-inquiries/:id/reply', async (req, res, next) => {
     // 4. Send WhatsApp if opted in
     if (inquiry.phone_number && inquiry.phone_verified && inquiry.wa_opt_in) {
       const { sendDM } = require('../services/whatsappBotService');
-      const waText = `שלום, התקבלה תשובה מפנייה ששלחת למנהלי Kickoff:\n\n*תשובה:* ${message}`;
+      const waText = `שלום, התקבלה תשובה לפנייה מס׳ ${inquiry.inquiry_number} ששלחת למנהלי Kickoff:\n\n*תשובה:* ${message}`;
       sendDM(inquiry.phone_number, waText).catch(e => console.error('[SupportReply] WA error:', e.message));
     }
 
@@ -1220,3 +1218,6 @@ router.post('/support-inquiries/:id/reply', async (req, res, next) => {
     client.release();
   }
 });
+
+module.exports = router;
+module.exports.opsRouter = opsRouter;

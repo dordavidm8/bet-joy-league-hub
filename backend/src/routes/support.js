@@ -23,4 +23,20 @@ router.post('/', authenticate, async (req, res, next) => {
   }
 });
 
+// GET /api/support
+// List user's inquiries
+router.get('/', authenticate, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM support_inquiries 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC`,
+      [req.user.id]
+    );
+    res.json({ inquiries: result.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

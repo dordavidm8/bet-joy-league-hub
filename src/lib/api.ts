@@ -861,6 +861,8 @@ export async function advisorPlaygroundStream(
 }
 
 // ── Support ──────────────────────────────────────────────────────────────────
+export const getMySupportInquiries = () =>
+  request<{ inquiries: AdminSupportInquiry[] }>("/support");
 export interface AdminSupportInquiry {
   id: string;
   inquiry_number: number;
