@@ -31,6 +31,7 @@ import {
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
   adminGetAdmins, adminAddAdmin, adminRemoveAdmin,
   adminGetTeamTranslations, adminApproveTeamTranslation, adminDismissTeamTranslation, adminRegenerateBetQuestions, adminOddsDebug, adminRunSettlement,
+  adminGetSupportInquiries, adminUpdateSupportStatus, adminReplyToSupport,
   createLeague,
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
   AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion, AdminUserEntry, getGames,
