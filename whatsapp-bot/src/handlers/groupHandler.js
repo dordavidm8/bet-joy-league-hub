@@ -127,7 +127,7 @@ async function handleGroupMessage(client, msg, chat) {
     // 2. Find the bet associated with the quoted message
     // Users might reply to the BOT's confirmation message or their own original bet.
     const betRes = await pool.query(
-      `SELECT b.*, g.status as game_status, g.home_team, g.away_team
+      `SELECT b.*, g.status as game_status, g.start_time, g.home_team, g.away_team
        FROM bets b
        JOIN games g ON g.id = b.game_id
        WHERE b.user_id = $1 AND b.wa_bet_message_id = $2
@@ -144,6 +144,14 @@ async function handleGroupMessage(client, msg, chat) {
 
     if (bet.game_status !== 'scheduled') {
       await msg.reply('❌ לא ניתן לתקן הימור למשחק שכבר החל או הסתיים');
+      return;
+    }
+
+    const now = new Date();
+    const startTime = new Date(bet.start_time);
+    const deadline = new Date(startTime.getTime() - 10 * 60 * 1000);
+    if (now > deadline) {
+      await msg.reply('❌ לא ניתן לתקן הימור פחות מ-10 דקות לפני תחילת המשחק');
       return;
     }
 
@@ -286,6 +294,16 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
     return;
   }
   const game = gameRes.rows[0];
+
+  // Enforce 10-minute deadline consistency with website
+  const now = new Date();
+  const startTime = new Date(game.start_time);
+  const deadline = new Date(startTime.getTime() - 10 * 60 * 1000);
+  if (now > deadline) {
+    await msg.reply('❌ חלון ההימורים נסגר (ניתן להמר עד 10 דקות לפני המשחק)');
+    return;
+  }
+
   console.log(`[WA-DEBUG] Processing bet for Game: ${game.home_team} vs ${game.away_team} (ID: ${game.id})`);
 
   // Map 1/X/2/תיקו to outcome
