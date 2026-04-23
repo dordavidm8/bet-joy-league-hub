@@ -18,7 +18,19 @@ function timeAgo(dateStr: string) {
   return `לפני ${Math.floor(diff / 86400)} ימים`;
 }
 
+const translateFeedDesc = (desc: string) => {
+  if (!desc) return desc;
+  const clean = desc.replace("Bet won: ", "").replace("League payout: ", "");
+  // Try to split by " vs "
+  const parts = clean.split(" vs ");
+  if (parts.length === 2) {
+    return `${translateTeam(parts[0].trim())} נגד ${translateTeam(parts[1].trim())}`;
+  }
+  return clean;
+};
+
 const HomePage = () => {
+
   const { backendUser, loading } = useAuth();
   const navigate = useNavigate();
   const [feedFilter, setFeedFilter] = useState<'all' | 'following'>('all');
@@ -225,8 +237,8 @@ const HomePage = () => {
                       </span>
                       {" "}זכה ב-{" "}
                       <span className="font-bold text-primary">+{item.amount?.toLocaleString()} נק׳</span>
-                      {item.description?.includes(" vs ") && (
-                        <span className="text-muted-foreground text-xs"> · {item.description.replace("Bet won: ", "").replace("League payout: ", "")}</span>
+                      {item.description && (
+                        <span className="text-muted-foreground text-xs"> · {translateFeedDesc(item.description)}</span>
                       )}
                     </p>
                   ) : (
