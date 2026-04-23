@@ -5,6 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { ArrowRight, Trophy, Target, Users, TrendingUp, UserPlus, UserMinus } from "lucide-react";
 import { useState } from "react";
+import { translateTeam, translateOutcomeLabel, translateQuestionText } from "@/lib/teamNames";
+
 
 const PublicProfilePage = () => {
   const { username } = useParams<{ username: string }>();
@@ -192,10 +194,10 @@ const PublicProfilePage = () => {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 text-xs font-semibold truncate mb-0.5">
-                    <span className="truncate">{bet.home_team} נגד {bet.away_team}</span>
+                    <span className="truncate">{translateTeam(bet.home_team)} נגד {translateTeam(bet.away_team)}</span>
                   </div>
                   <p className="text-[10px] text-muted-foreground truncate">
-                    {bet.question_text}: <span className="font-bold text-foreground/80">{bet.selected_outcome}</span>
+                    {translateQuestionText(bet.question_text)}: <span className="font-bold text-foreground/80">{translateOutcomeLabel(bet.selected_outcome)}</span>
                   </p>
                   <p className="text-[9px] text-primary/60 font-bold mt-0.5 uppercase tracking-tight">
                     {bet.league_display_name}

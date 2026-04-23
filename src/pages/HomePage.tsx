@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Trophy } from "lucide-react";
 import { useState } from "react";
+import { translateTeam, translateOutcomeLabel } from "@/lib/teamNames";
+
 
 function timeAgo(dateStr: string) {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -88,12 +90,12 @@ const HomePage = () => {
                     {game.home_team_logo
                       ? <img src={game.home_team_logo} className="w-4 h-4 object-contain" alt="" />
                       : <span className="text-sm">⚽</span>}
-                    <span className="text-sm font-bold truncate">{game.home_team}</span>
+                    <span className="text-sm font-bold truncate">{translateTeam(game.home_team)}</span>
                     <span className="text-xs text-muted-foreground mx-1">נגד</span>
                     {game.away_team_logo
                       ? <img src={game.away_team_logo} className="w-4 h-4 object-contain" alt="" />
                       : <span className="text-sm">⚽</span>}
-                    <span className="text-sm font-bold truncate">{game.away_team}</span>
+                    <span className="text-sm font-bold truncate">{translateTeam(game.away_team)}</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-primary shrink-0">לייב ›</span>

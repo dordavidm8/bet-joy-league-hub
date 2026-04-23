@@ -8,6 +8,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { sendSupportInquiry, getMySupportInquiries } from "@/lib/api";
+import { translateTeam, translateOutcomeLabel } from "@/lib/teamNames";
+
 
 const ProfilePage = () => {
   const { backendUser, firebaseUser, signOut, refreshUser } = useAuth();
@@ -556,9 +558,9 @@ const ProfilePage = () => {
               className="card-kickoff flex items-center justify-between"
             >
               <div>
-                <p className="text-sm font-bold">{bet.home_team} נגד {bet.away_team}</p>
+                <p className="text-sm font-bold">{translateTeam(bet.home_team)} נגד {translateTeam(bet.away_team)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {bet.selected_outcome}
+                  {translateOutcomeLabel(bet.selected_outcome)}
                   {bet.exact_score_prediction && ` (תוצאה: ${bet.exact_score_prediction})`}
                 </p>
               </div>

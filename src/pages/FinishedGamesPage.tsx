@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { translateTeam, translateOutcomeLabel } from "@/lib/teamNames";
+
 
 const FinishedGamesPage = () => {
   const navigate = useNavigate();
@@ -88,11 +90,11 @@ const FinishedGamesPage = () => {
                   <div className="flex-1">
                     <p className="text-[11px] text-muted-foreground">{game.competition_name}</p>
                     <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-sm font-bold">{game.home_team}</span>
+                      <span className="text-sm font-bold">{translateTeam(game.home_team)}</span>
                       <span className="text-base font-black mx-2">
                         {game.score_home ?? "—"} - {game.score_away ?? "—"}
                       </span>
-                      <span className="text-sm font-bold">{game.away_team}</span>
+                      <span className="text-sm font-bold">{translateTeam(game.away_team)}</span>
                     </div>
                   </div>
                   <span className="text-[11px] text-muted-foreground">
@@ -113,7 +115,7 @@ const FinishedGamesPage = () => {
 
                       return (
                         <div key={bet.id} className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">{bet.selected_outcome} · {bet.stake} נק׳</span>
+                          <span className="text-xs text-muted-foreground">{translateOutcomeLabel(bet.selected_outcome)} · {bet.stake} נק׳</span>
                           <div className="flex items-center gap-2">
                             {bet.status === "won" && (
                               <>
