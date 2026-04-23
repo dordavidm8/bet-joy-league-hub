@@ -166,6 +166,8 @@ const GameDetailPage = () => {
           bet_mode: "global",
           exact_score_prediction: validScore,
           start_time: game.start_time,
+          is_featured: game.is_featured,
+          featured_bonus_pct: game.featured_bonus_pct,
         });
       } else {
         const league = activeLeagues.find((l) => l.id === ctx);
@@ -185,6 +187,8 @@ const GameDetailPage = () => {
           bet_mode: isInitialBalance ? "initial_balance" : "minimum_stake",
           exact_score_prediction: validScore,
           start_time: game.start_time,
+          is_featured: game.is_featured,
+          featured_bonus_pct: game.featured_bonus_pct,
         });
       }
     }

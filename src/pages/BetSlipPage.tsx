@@ -15,6 +15,12 @@ function parlayBonus(legs: number) {
   return 1;
 }
 
+function calculateBetPotential(bet: any) {
+  const multiplier = bet.exact_score_prediction ? 3 : 1;
+  const featuredMult = bet.is_featured ? (1 + (bet.featured_bonus_pct || 0) / 100) : 1;
+  return bet.points * bet.odds * multiplier * featuredMult;
+}
+
 const BetSlipPage = () => {
   const { betSlip, removeFromBetSlip, clearBetSlip } = useApp();
   const { backendUser, refreshUser } = useAuth();
@@ -37,11 +43,12 @@ const BetSlipPage = () => {
   const totalStake = realBets.reduce((sum, b) => sum + b.points, 0);
   const userPoints = backendUser?.points_balance ?? 0;
 
-  // Non-parlay: each bet pays individually
-  const individualPayout = realBets.reduce((sum, b) => sum + Math.floor(b.points * b.odds), 0);
-  // Parlay: sum(stake × odds) × 1.1 — only free bets from different games
+  // Non-parlay: each bet pays individually, including x3 exact score and featured bonus
+  const individualPayout = realBets.reduce((sum, b) => sum + Math.floor(calculateBetPotential(b)), 0);
+  
+  // Parlay: sum(stake × odds × scoreMult × featuredMult) × 1.1
   const parlayPayout = canParlay
-    ? Math.floor(freeBets.reduce((sum, b) => sum + b.points * b.odds, 0) * 1.1)
+    ? Math.floor(freeBets.reduce((sum, b) => sum + calculateBetPotential(b), 0) * 1.1)
     : 0;
   const potentialPayout = isParlay ? parlayPayout : individualPayout;
 
@@ -218,9 +225,14 @@ const BetSlipPage = () => {
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {bet.bet_mode === "initial_balance"
-                    ? `ניקוד · ×${bet.odds}`
-                    : `${bet.points} נק׳ · ×${bet.odds}`}
+                    ? `ניקוד · ×${bet.odds.toFixed(2)}`
+                    : `${bet.points} נק׳ · ×${bet.odds.toFixed(2)}`}
                 </span>
+                {bet.is_featured && (
+                  <span className="text-[11px] font-bold text-primary flex items-center gap-0.5">
+                    ✨ משחק השבוע · (+{bet.featured_bonus_pct}%)
+                  </span>
+                )}
                 {bet.exact_score_prediction && (
                   <span className="text-[11px] font-bold text-amber-500">
                     🎯 {bet.exact_score_prediction} · תוצאה נכונה = סה״כ ×3

@@ -407,6 +407,7 @@ export interface Game {
   score_home?: number;
   score_away?: number;
   is_featured?: boolean;
+  featured_bonus_pct?: number;
 }
 
 export interface BetQuestion {

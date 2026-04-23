@@ -16,6 +16,8 @@ export interface BetSlipItem {
   bet_mode: BetMode;
   exact_score_prediction?: string;
   start_time: string;
+  is_featured?: boolean;
+  featured_bonus_pct?: number;
 }
 
 interface AppState {
