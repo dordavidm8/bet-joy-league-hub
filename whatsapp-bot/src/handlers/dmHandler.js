@@ -215,16 +215,16 @@ async function sendMyBets(msg, user) {
       if (multiplier > 1) parts.push(`${multiplier}🎯`);
       if (featuredMult > 1) parts.push(`${featuredMult}✨`);
       
+      const baseStake = isShared ? 1 : parseFloat(String(b.stake));
+      let val = baseStake * parseFloat(String(b.odds)) * multiplier * featuredMult;
+
       if (isParlay) {
-        // For parlay legs, we show the total parlay potential payout
-        payoutValueStr = Math.floor(parseFloat(String(b.parlay_potential_payout))).toLocaleString();
-        // Formula shows leg factors + parlay bonus
+        // Show individual leg potential (leg * 1.1 parlay bonus)
+        val = val * 1.1;
+        payoutValueStr = Math.floor(val).toLocaleString();
         formula = ` (${parts.join(' × ')} × 1.1🔗)`;
       } else {
         formula = ` (${parts.join(' × ')})`;
-        // RE-CALCULATE strictly from components to ensure formula == result
-        const baseStake = isShared ? 1 : parseFloat(String(b.stake));
-        const val = baseStake * parseFloat(String(b.odds)) * multiplier * featuredMult;
         payoutValueStr = isShared ? val.toFixed(2) : Math.floor(val).toLocaleString();
       }
     }
