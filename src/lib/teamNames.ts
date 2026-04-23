@@ -331,9 +331,9 @@ export function translateTeam(name: string): string {
   if (_dynamic[name]) return _dynamic[name];
   if (TEAM_NAMES_HE[name]) return TEAM_NAMES_HE[name];
   const lower = name.toLowerCase();
-  const found = Object.keys(TEAM_NAMES_HE).find((k) => k.toLowerCase() === lower)
-    ?? Object.keys(_dynamic).find((k) => k.toLowerCase() === lower);
-  if (found) return (TEAM_NAMES_HE[found] ?? _dynamic[found]);
+  const found = Object.keys(_dynamic).find((k) => k.toLowerCase() === lower)
+    ?? Object.keys(TEAM_NAMES_HE).find((k) => k.toLowerCase() === lower);
+  if (found) return (_dynamic[found] ?? TEAM_NAMES_HE[found]);
   return name;
 }
 
