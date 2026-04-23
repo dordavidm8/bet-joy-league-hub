@@ -194,7 +194,7 @@ export const getMyFollowing = () =>
   request<{ following: UserSearchResult[] }>('/users/me/following');
 
 export const getPublicProfile = (username: string) =>
-  request<{ user: PublicProfile }>(`/users/${encodeURIComponent(username)}`);
+  request<{ user: PublicProfile; bets: Bet[] }>(`/users/${encodeURIComponent(username)}`);
 export const searchUsers = (q: string) =>
   request<{ users: UserSearchResult[] }>(`/users/search?q=${encodeURIComponent(q)}`);
 export const getMyAchievements = () =>
@@ -342,6 +342,7 @@ export interface UserAchievement {
 export interface UserSearchResult {
   id: string;
   username: string;
+  display_name: string | null;
   avatar_url: string | null;
   points_balance: number;
   total_bets: number;
@@ -438,9 +439,14 @@ export interface Bet {
   score_away?: number | null;
   question_text?: string;
   league_name?: string;
+  league_id?: string;
   league_bet_mode?: string;
   league_access_type?: string;
   game_status?: string;
+  exact_score_prediction?: string;
+  parlay_id?: string;
+  parlay_number?: number;
+  league_display_name?: string;
 }
 
 export interface Parlay {
@@ -530,6 +536,7 @@ export interface League {
 export interface LeagueMember {
   id: string;
   username: string;
+  display_name: string | null;
   avatar_url?: string;
   points_in_league: number;
   joined_at: string;
@@ -631,6 +638,7 @@ export interface AdminBet {
   question_text?: string;
   bet_type?: string;
   league_name?: string;
+  league_id?: string;
   league_bet_mode?: string;
   league_access_type?: string;
   exact_score_prediction?: string;
@@ -665,6 +673,7 @@ export interface AdminLeague {
   wa_group_id?: string | null;
   wa_invite_link?: string | null;
   wa_group_active?: boolean;
+  distribution?: { place: number; pct: number }[] | null;
 }
 
 export interface AdminQuizQuestion {
@@ -868,7 +877,11 @@ export interface AdminSupportInquiry {
   inquiry_number: number;
   user_id: string;
   username: string;
+  email: string;
   display_name: string | null;
+  phone_number: string | null;
+  phone_verified: boolean;
+  wa_opt_in: boolean;
   message: string;
   status: 'unread' | 'read_unhandled' | 'handled';
   reply_message?: string;

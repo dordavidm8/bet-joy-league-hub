@@ -622,7 +622,7 @@ const ProfilePage = () => {
                 </div>
                 <p className="text-sm line-clamp-2">{inq.message}</p>
                 {inq.reply_message && (
-                  <div className="bg-primary/5 p-2 rounded-lg border-r-2 border-primary mt-1">
+                  <div className="bg-primary/5 p-2 rounded-lg mt-1">
                     <p className="text-[10px] font-bold text-primary mb-0.5">תשובת המנהלים:</p>
                     <p className="text-[11px] italic text-muted-foreground">{inq.reply_message}</p>
                   </div>
@@ -727,7 +727,7 @@ const ProfilePage = () => {
                   </div>
                   <p className="text-xs">{inq.message}</p>
                   {inq.reply_message && (
-                    <div className="bg-primary/10 p-2 rounded-lg border-r-2 border-primary mt-1">
+                    <div className="bg-primary/10 p-2 rounded-lg mt-1">
                       <p className="text-[10px] font-bold text-primary mb-0.5">תשובה:</p>
                       <p className="text-[11px] italic text-card-foreground">{inq.reply_message}</p>
                       <p className="text-[9px] text-muted-foreground mt-1">{new Date(inq.replied_at!).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}</p>

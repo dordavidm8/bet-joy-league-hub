@@ -11,16 +11,22 @@ import {
 export const useGames = () =>
   useQuery({
     queryKey: ["games"],
-    queryFn: api.getGames,
-    placeholderData: mockGames,
+    queryFn: async () => {
+      const res = await api.getGames();
+      return res.games;
+    },
+    placeholderData: mockGames as any,
     retry: 1,
   });
 
 export const useGame = (id: string) =>
   useQuery({
     queryKey: ["game", id],
-    queryFn: () => api.getGameById(id),
-    placeholderData: mockGames.find((g) => g.id === id),
+    queryFn: async () => {
+      const res = await api.getGame(id);
+      return res.game;
+    },
+    placeholderData: mockGames.find((g) => g.id === id) as any,
     enabled: !!id,
     retry: 1,
   });
@@ -28,8 +34,11 @@ export const useGame = (id: string) =>
 export const useBetQuestions = (gameId: string) =>
   useQuery({
     queryKey: ["betQuestions", gameId],
-    queryFn: () => api.getBetQuestions(gameId),
-    placeholderData: mockBetQuestions[gameId] || [],
+    queryFn: async () => {
+      const res = await api.getGame(gameId);
+      return res.bet_questions;
+    },
+    placeholderData: (mockBetQuestions as any)[gameId] || [],
     enabled: !!gameId,
     retry: 1,
   });
@@ -37,45 +46,63 @@ export const useBetQuestions = (gameId: string) =>
 export const useActiveBets = () =>
   useQuery({
     queryKey: ["activeBets"],
-    queryFn: api.getActiveBets,
+    queryFn: async () => {
+      const res = await api.getMyBets({ status: 'pending' });
+      return res.bets;
+    },
     retry: 1,
   });
 
 export const useLeagues = () =>
   useQuery({
     queryKey: ["leagues"],
-    queryFn: api.getLeagues,
-    placeholderData: mockLeagues,
+    queryFn: async () => {
+      const res = await api.getPublicLeagues();
+      return res.leagues;
+    },
+    placeholderData: mockLeagues as any,
     retry: 1,
   });
 
 export const useLeaderboard = () =>
   useQuery({
     queryKey: ["leaderboard"],
-    queryFn: api.getLeaderboard,
-    placeholderData: mockLeaderboard,
+    queryFn: async () => {
+      const res = await api.getLeaderboard();
+      return res.leaderboard;
+    },
+    placeholderData: mockLeaderboard as any,
     retry: 1,
   });
 
 export const useQuizQuestions = () =>
   useQuery({
     queryKey: ["quiz"],
-    queryFn: api.getQuizQuestions,
-    placeholderData: mockQuizQuestions,
+    queryFn: async () => {
+      const res = await api.getNextQuestion();
+      return res.question;
+    },
+    placeholderData: mockQuizQuestions[0] as any,
     retry: 1,
   });
 
 export const useUserProfile = () =>
   useQuery({
     queryKey: ["userProfile"],
-    queryFn: api.getUserProfile,
+    queryFn: async () => {
+      const res = await api.getMe();
+      return res.user;
+    },
     retry: 1,
   });
 
 export const useUserBetHistory = () =>
   useQuery({
     queryKey: ["userBetHistory"],
-    queryFn: api.getUserBetHistory,
+    queryFn: async () => {
+      const res = await api.getMyBets();
+      return res.bets;
+    },
     retry: 1,
   });
 

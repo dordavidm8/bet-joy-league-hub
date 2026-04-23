@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getFinishedGames, getMyBets, Game } from "@/lib/api";
+import { getFinishedGames, getMyBets, Game, Bet } from "@/lib/api";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
@@ -14,9 +14,9 @@ const FinishedGamesPage = () => {
     queryFn: () => getFinishedGames(30),
   });
 
-  const { data: betsData } = useQuery({
+  const { data: betsData } = useQuery<{ bets: Bet[]; total: number }>({
     queryKey: ["my-bets"],
-    queryFn: getMyBets,
+    queryFn: () => getMyBets(),
   });
 
   const allGames: Game[] = gamesData?.games ?? [];
