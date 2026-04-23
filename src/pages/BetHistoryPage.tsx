@@ -5,7 +5,7 @@ import { ArrowRight, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { translateTeam } from "@/lib/teamNames";
+import { translateTeam, translateOutcomeLabel, translateQuestionText } from "@/lib/teamNames";
 
 const STATUS_TABS = [
   { value: "",              label: "הכל" },
@@ -179,14 +179,14 @@ const BetHistoryPage = () => {
               </div>
 
               {/* Teams */}
-              <p className="text-sm font-bold">{bet.home_team} נגד {bet.away_team}</p>
+              <p className="text-sm font-bold">{translateTeam(bet.home_team)} נגד {translateTeam(bet.away_team)}</p>
 
               {/* Question + selection */}
               {bet.question_text && (
-                <p className="text-xs text-muted-foreground">{bet.question_text}</p>
+                <p className="text-xs text-muted-foreground">{translateQuestionText(bet.question_text)}</p>
               )}
               <p className="text-xs font-semibold">
-                הבחירה שלי: <span className="text-foreground">{bet.selected_outcome}</span>
+                הבחירה שלי: <span className="text-foreground">{translateOutcomeLabel(bet.selected_outcome)}</span>
                 {bet.exact_score_prediction && <span className="text-foreground"> (תוצאה: {bet.exact_score_prediction})</span>}
                 <span className="text-muted-foreground ml-2">×{parseFloat(String(bet.odds)).toFixed(2)}</span>
               </p>
@@ -236,7 +236,7 @@ const BetHistoryPage = () => {
               {/* Final score if finished */}
               {bet.game_status === 'finished' && bet.score_home != null && bet.score_away != null && (
                 <p className="text-[11px] text-muted-foreground">
-                  תוצאה סופית: {bet.home_team} {bet.score_home} - {bet.score_away} {bet.away_team}
+                  תוצאה סופית: {translateTeam(bet.home_team)} {bet.score_home} - {bet.score_away} {translateTeam(bet.away_team)}
                 </p>
               )}
 
