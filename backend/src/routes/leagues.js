@@ -341,7 +341,7 @@ router.get('/:id/matches', authenticate, async (req, res, next) => {
       `SELECT DISTINCT ON (g.id)
               g.id, g.home_team, g.away_team, g.home_team_logo, g.away_team_logo,
               g.start_time, g.status, g.score_home, g.score_away,
-              b.id AS bet_id, b.selected_outcome, b.stake, b.odds AS bet_odds, b.status AS bet_status, b.actual_payout
+              b.id AS bet_id, b.selected_outcome, b.stake, b.odds AS bet_odds, b.status AS bet_status, b.actual_payout, b.exact_score_prediction
        FROM games g
        JOIN competitions c ON c.id = g.competition_id
        LEFT JOIN bets b ON b.game_id = g.id AND b.user_id = $2 AND b.league_id = $3 AND b.status != 'cancelled'

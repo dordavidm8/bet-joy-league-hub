@@ -755,7 +755,10 @@ const LeagueDetailPage = () => {
                             </span>
                           )}
                           {!isWon && !isLost && (
-                            <span className="text-green-600">שותף</span>
+                            <span className="text-green-600">
+                              {match.selected_outcome}
+                              {match.exact_score_prediction && ` (${match.exact_score_prediction})`}
+                            </span>
                           )}
                         </span>
                       )}

@@ -495,6 +495,7 @@ export interface TournamentMatch {
   bet_odds?: number | null;
   bet_status?: string | null;
   actual_payout?: number | null;
+  exact_score_prediction?: string | null;
 }
 
 export interface League {
