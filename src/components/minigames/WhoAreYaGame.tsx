@@ -89,7 +89,7 @@ const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, onSolve }) => {
                  className="w-full bg-card border-none rounded-full py-4 px-6 text-center focus:ring-2 focus:ring-primary text-foreground font-medium shadow-sm outline-none" 
                  placeholder="הקלד את השם כאן..." 
                />
-               <p className="text-[10px] text-center mt-2 text-primary/70 font-medium">✨ ניתן לענות בעברית או באנגלית</p>
+               <p className="text-[10px] text-center mt-2 text-primary/70 font-medium">✨ ניתן לענות באנגלית בלבד</p>
             </div>
            <button 
              onClick={handleSubmit}
