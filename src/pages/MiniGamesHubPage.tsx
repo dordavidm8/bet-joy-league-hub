@@ -22,14 +22,14 @@ const UI_MAP = {
 const MiniGamesHubPage: React.FC = () => {
   const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [gameStatuses, setGameStatuses] = useState<Record<string, { is_completed: boolean; attempt_count: number }>>({});
   const navigate = useNavigate();
   const { firebaseUser } = useAuth();
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const apiUrl = import.meta.env.VITE_API_URL || '';
         const res = await fetch(`${apiUrl}/api/minigames/today`);
         if (res.ok) {
           const data = await res.json();
@@ -43,11 +43,7 @@ const MiniGamesHubPage: React.FC = () => {
             });
             if (statusRes.ok) {
               const statusData = await statusRes.json();
-              const completed = new Set<string>();
-              for (const [puzzleId, status] of Object.entries(statusData.statuses as Record<string, any>)) {
-                if (status.is_completed) completed.add(puzzleId);
-              }
-              setCompletedIds(completed);
+              setGameStatuses(statusData.statuses || {});
             }
           }
         }
@@ -76,28 +72,48 @@ const MiniGamesHubPage: React.FC = () => {
           {puzzles.map((puzzle, index) => {
             const meta = UI_MAP[puzzle.game_type] || UI_MAP.who_are_ya;
             const Icon = meta.icon;
-            const completed = completedIds.has(puzzle.id);
+            
+            const status = gameStatuses[puzzle.id];
+            const completed = status?.is_completed;
+            const exhausted = !completed && (status?.attempt_count ?? 0) >= 3;
+            const isDisabled = completed || exhausted;
 
             return (
               <div
                 key={puzzle.id}
-                onClick={() => navigate(`/minigames/play/${puzzle.id}`)}
-                className="card-kickoff flex items-center justify-between group hover:-translate-y-1 transition-transform cursor-pointer"
+                onClick={() => !isDisabled && navigate(`/minigames/play/${puzzle.id}`)}
+                className={`card-kickoff flex items-center justify-between group transition-all ${
+                  isDisabled ? "opacity-70 grayscale-[0.3] cursor-default" : "hover:-translate-y-1 cursor-pointer"
+                }`}
               >
                 <div className="flex items-center gap-4 flex-1">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
+                    completed ? "bg-primary/10 text-primary" : 
+                    exhausted ? "bg-destructive/10 text-destructive" :
+                    "bg-primary/10 text-primary"
+                  }`}>
                     <Icon size={28} />
                   </div>
                   <div className="flex flex-col">
                     <h3 className="font-bold text-lg leading-tight">{meta.title}</h3>
                     <p className="text-muted-foreground text-sm leading-snug">{meta.desc}</p>
-                    <span className="text-primary font-bold text-xs mt-1">חידה #{index + 1}</span>
+                    <span className="text-primary/60 font-bold text-[10px] mt-1">חידה #{index + 1}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-center min-w-[48px] mr-2">
+                <div className="flex items-center justify-center min-w-[70px] mr-2">
                   {completed ? (
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <CheckCircle2 className="text-primary" size={24} />
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                        <CheckCircle2 className="text-primary" size={20} />
+                      </div>
+                      <span className="text-[9px] font-bold text-primary">הצלחת! ✅</span>
+                    </div>
+                  ) : exhausted ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-9 h-9 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+                        <ShieldAlert size={20} />
+                      </div>
+                      <span className="text-[9px] font-bold text-destructive">נגמרו הניסיונות</span>
                     </div>
                   ) : (
                     <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-1.5 rounded-full font-bold text-sm transition-transform active:scale-95">

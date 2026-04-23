@@ -59,7 +59,13 @@ const MiniGamePlayPage: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           const status = data.statuses?.[id!];
-          if (status) setAttemptCount(status.attempt_count);
+          if (status) {
+            setAttemptCount(status.attempt_count);
+            // If already solved or 3+ attempts used, don't allow play
+            if (status.is_completed || status.attempt_count >= MAX_ATTEMPTS) {
+              navigate('/minigames');
+            }
+          }
         }
       } catch (_) {}
     }
