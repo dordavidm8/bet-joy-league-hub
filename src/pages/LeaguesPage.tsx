@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague, searchUsers, getPublicLeagues, joinPublicLeague } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins, Flag } from "lucide-react";
@@ -34,6 +35,7 @@ const LeaguesPage = () => {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isGuest, exitGuest } = useAuth();
 
   // Create form state
   const [name, setName] = useState("");
@@ -163,10 +165,10 @@ const LeaguesPage = () => {
       {tab === "leagues" && (
         <div className="flex flex-col gap-4 px-5">
           <div className="flex items-center gap-2">
-            <Button variant="default" size="sm" onClick={() => { setShowCreate(!showCreate); setShowJoin(false); }}>
+            <Button variant="default" size="sm" onClick={() => { if (isGuest) { exitGuest(); return; } setShowCreate(!showCreate); setShowJoin(false); }}>
               <Plus size={16} /> צור ליגה
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { setShowJoin(!showJoin); setShowCreate(false); }}>
+            <Button variant="outline" size="sm" onClick={() => { if (isGuest) { exitGuest(); return; } setShowJoin(!showJoin); setShowCreate(false); }}>
               הצטרף לליגה
             </Button>
           </div>
@@ -445,7 +447,7 @@ const LeaguesPage = () => {
                   <Button size="sm" variant="outline"
                     className="shrink-0 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
                     disabled={joinPublicMutation.isPending}
-                    onClick={() => joinPublicMutation.mutate(league.id)}
+                    onClick={() => { if (isGuest) { exitGuest(); return; } joinPublicMutation.mutate(league.id); }}
                   >
                     הצטרף
                   </Button>
