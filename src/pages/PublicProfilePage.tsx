@@ -168,6 +168,60 @@ const PublicProfilePage = () => {
           <span className="text-xs text-muted-foreground">ליגות פעילות</span>
         </motion.div>
       </div>
+
+      {/* Recent Bets */}
+      {data.bets && data.bets.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <span className="section-label">הימורים אחרונים</span>
+          {data.bets.map((bet: any, i: number) => {
+            const isWon = bet.status === "won";
+            const isLost = bet.status === "lost";
+            const isPending = bet.status === "pending";
+            
+            return (
+              <motion.div
+                key={bet.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={`card-kickoff flex items-center justify-between transition-colors ${
+                  isWon ? "border-green-200 bg-green-50/50" : 
+                  isLost ? "border-red-200 bg-red-50/50" : 
+                  ""
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold truncate mb-0.5">
+                    <span className="truncate">{bet.home_team} נגד {bet.away_team}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {bet.question_text}: <span className="font-bold text-foreground/80">{bet.selected_outcome}</span>
+                  </p>
+                  <p className="text-[9px] text-primary/60 font-bold mt-0.5 uppercase tracking-tight">
+                    {bet.league_display_name}
+                  </p>
+                </div>
+                
+                <div className="text-left shrink-0 ml-2">
+                  <p className={`text-sm font-black ${
+                    isWon ? "text-green-600" : 
+                    isLost ? "text-red-500" : 
+                    "text-muted-foreground"
+                  }`}>
+                    {isWon ? `+${bet.actual_payout}` :
+                     isLost ? `0` : 
+                     `אפשרי: ${bet.potential_payout}`}
+                    <span className="text-[10px] mr-0.5">נק׳</span>
+                  </p>
+                  {isWon && <span className="text-[10px] text-green-600 font-bold block mt-[-2px]">נכון! ✅</span>}
+                  {isLost && <span className="text-[10px] text-red-500 font-bold block mt-[-2px]">✗</span>}
+                  {isPending && <span className="text-[10px] text-muted-foreground block mt-[-2px]">ממתין...</span>}
+                </div>
+              </motion.div>
+            );
+          })}
+        </section>
+      )}
     </div>
   );
 };

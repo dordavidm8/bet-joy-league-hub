@@ -380,6 +380,23 @@ router.get('/:username', optionalAuthenticate, async (req, res, next) => {
         following_count: parseInt(followingRes.rows[0].count),
         is_following,
       },
+      bets: await (async () => {
+        const betsRes = await pool.query(
+          `SELECT b.*, g.home_team, g.away_team, g.start_time, g.score_home, g.score_away, g.status AS game_status,
+                  bq.question_text, c.name AS competition_name,
+                  COALESCE(l.name, 'הימור חופשי') AS league_display_name
+           FROM bets b
+           JOIN games g ON g.id = b.game_id
+           JOIN bet_questions bq ON bq.id = b.bet_question_id
+           LEFT JOIN competitions c ON c.id = g.competition_id
+           LEFT JOIN leagues l ON l.id = b.league_id
+           WHERE b.user_id = $1 
+             AND (b.league_id IS NULL OR b.status != 'pending')
+           ORDER BY b.placed_at DESC LIMIT 10`,
+          [user.id]
+        );
+        return betsRes.rows;
+      })()
     });
   } catch (err) { next(err); }
 });
