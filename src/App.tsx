@@ -104,13 +104,29 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
 );
 
 function AuthGate() {
-  const { firebaseUser, loading } = useAuth();
+  const { firebaseUser, loading, isGuest } = useAuth();
   const [onboardingDone, setOnboardingDone] = useState(
     () => !!localStorage.getItem("kickoff_onboarding_done")
   );
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">טוען...</div>;
-  if (!firebaseUser) return <LoginPage />;
+  if (!firebaseUser && !isGuest) return <LoginPage />;
+
+  if (isGuest) {
+    return (
+      <Routes>
+        <Route path="/" element={<AppLayout><HomePage /></AppLayout>} />
+        <Route path="/game/:gameId" element={<AppLayout><GameDetailPage /></AppLayout>} />
+        <Route path="/games" element={<AppLayout><AllGamesPage /></AppLayout>} />
+        <Route path="/games/finished" element={<AppLayout><FinishedGamesPage /></AppLayout>} />
+        <Route path="/leagues" element={<AppLayout><LeaguesPage /></AppLayout>} />
+        <Route path="/leagues/:leagueId" element={<AppLayout><LeagueDetailPage /></AppLayout>} />
+        <Route path="/profile/:username" element={<AppLayout><PublicProfilePage /></AppLayout>} />
+        <Route path="/help" element={<AppLayout><HelpPage /></AppLayout>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
 
   if (!onboardingDone) return <OnboardingPage onDone={() => setOnboardingDone(true)} />;
 

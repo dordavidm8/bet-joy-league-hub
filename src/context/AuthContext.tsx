@@ -16,6 +16,9 @@ interface AuthState {
   firebaseUser: FirebaseUser | null;
   backendUser: BackendUser | null;
   loading: boolean;
+  isGuest: boolean;
+  continueAsGuest: () => void;
+  exitGuest: () => void;
   signIn: (emailOrUsername: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string, referralCode?: string, displayName?: string) => Promise<void>;
   signInWithGoogle: (username?: string, referralCode?: string) => Promise<void>;
@@ -30,6 +33,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [backendUser, setBackendUser] = useState<BackendUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
+  const continueAsGuest = () => setIsGuest(true);
+  const exitGuest = () => setIsGuest(false);
 
   // Helper to ensure username contains only English letters, numbers, and basic symbols
   const sanitizeUsername = (name: string): string => {
@@ -41,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
+        setIsGuest(false);
         try {
           const data = await getMe();
           setBackendUser(data.user);
@@ -161,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, backendUser, loading, signIn, signUp, signInWithGoogle, signOut, refreshUser, sendPasswordReset }}>
+    <AuthContext.Provider value={{ firebaseUser, backendUser, loading, isGuest, continueAsGuest, exitGuest, signIn, signUp, signInWithGoogle, signOut, refreshUser, sendPasswordReset }}>
       {children}
     </AuthContext.Provider>
   );

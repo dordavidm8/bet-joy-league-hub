@@ -354,32 +354,6 @@ const ProfilePage = () => {
           <span className="text-xs text-muted-foreground">לא ניתן לשינוי</span>
         </div>
 
-        {/* Password — only for email/password accounts */}
-        {firebaseUser?.providerData.some(p => p.providerId === 'password') && (
-          editField === 'password' ? (
-            <div className="card-kickoff flex flex-col gap-2">
-              <p className="text-xs font-bold text-muted-foreground">שינוי סיסמה</p>
-              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
-                className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="סיסמה נוכחית" />
-              <input type="password" value={fieldValue} onChange={e => setFieldValue(e.target.value)}
-                className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="סיסמה חדשה (מינ׳ 6 תווים)" />
-              {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
-              {fieldSuccess && <p className="text-xs text-green-600">{fieldSuccess}</p>}
-              <div className="flex gap-2">
-                <button onClick={saveField} disabled={fieldLoading || fieldValue.length < 6} className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm font-bold disabled:opacity-60">{fieldLoading ? 'שומר...' : 'שמור'}</button>
-                <button onClick={cancelEdit} className="px-3 py-2 rounded-lg bg-secondary text-sm"><X size={14} /></button>
-              </div>
-            </div>
-          ) : (
-            <button onClick={() => openEdit('password')} className="card-kickoff flex items-center justify-between">
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">שינוי סיסמה</p>
-                <p className="text-sm font-medium">••••••••</p>
-              </div>
-              <Pencil size={15} className="text-muted-foreground" />
-            </button>
-          )
-        )}
 
         {/* WhatsApp */}
         <div className="card-kickoff flex flex-col gap-3">
@@ -474,8 +448,35 @@ const ProfilePage = () => {
             </div>
           )}
         </div>
-      </section>
 
+        {/* Password — inside Settings section, below WhatsApp */}
+        {firebaseUser?.providerData.some(p => p.providerId === 'password') && (
+          editField === 'password' ? (
+            <div className="card-kickoff flex flex-col gap-2">
+              <p className="text-xs font-bold text-muted-foreground">שינוי סיסמה</p>
+              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+                className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="סיסמה נוכחית" />
+              <input type="password" value={fieldValue} onChange={e => setFieldValue(e.target.value)}
+                className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="סיסמה חדשה (מינ׳ 6 תווים)" />
+              {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
+              {fieldSuccess && <p className="text-xs text-green-600">{fieldSuccess}</p>}
+              <div className="flex gap-2">
+                <button onClick={saveField} disabled={fieldLoading || fieldValue.length < 6} className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm font-bold disabled:opacity-60">{fieldLoading ? 'שומר...' : 'שמור'}</button>
+                <button onClick={cancelEdit} className="px-3 py-2 rounded-lg bg-secondary text-sm"><X size={14} /></button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => openEdit('password')} className="card-kickoff flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">שינוי סיסמה</p>
+                <p className="text-sm font-medium">••••••••</p>
+              </div>
+              <Pencil size={15} className="text-muted-foreground" />
+            </button>
+          )
+        )}
+      </section>
+      
       {/* Referral */}
       {referralCode && (
         <div className="card-kickoff flex flex-col gap-3">

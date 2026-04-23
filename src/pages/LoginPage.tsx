@@ -45,7 +45,7 @@ const features = [
 ];
 
 export default function LoginPage() {
-  const { signIn, signUp, signInWithGoogle, sendPasswordReset } = useAuth();
+  const { signIn, signUp, signInWithGoogle, sendPasswordReset, continueAsGuest } = useAuth();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -253,6 +253,17 @@ export default function LoginPage() {
             <>יש לך חשבון?{' '}<button onClick={() => switchMode('login')} className="text-green-600 hover:underline">התחבר</button></>
           )}
         </p>
+
+        {mode === 'login' && (
+          <p className="text-center mt-3">
+            <button
+              onClick={continueAsGuest}
+              className="text-gray-400 hover:text-gray-600 text-xs transition-colors underline-offset-2 hover:underline"
+            >
+              המשך כאורח
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );

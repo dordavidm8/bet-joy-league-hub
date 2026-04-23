@@ -4,9 +4,13 @@ import { HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const TopBar = () => {
-  const { backendUser } = useAuth();
+  const { backendUser, isGuest, exitGuest } = useAuth();
   const navigate = useNavigate();
   const points = backendUser?.points_balance ?? 0;
+
+  const handleJoin = () => {
+    exitGuest();
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md">
@@ -22,11 +26,22 @@ const TopBar = () => {
           >
             <HelpCircle size={20} className="text-muted-foreground" />
           </button>
-          <NotificationBell />
-          <div className="flex items-center gap-1.5 bg-secondary rounded-full px-3 py-1.5">
-            <span className="text-sm font-bold">{Math.floor(points).toLocaleString()}</span>
-            <span className="text-xs text-muted-foreground">נקודות</span>
-          </div>
+          {isGuest ? (
+            <button
+              onClick={handleJoin}
+              className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity"
+            >
+              הצטרף
+            </button>
+          ) : (
+            <>
+              <NotificationBell />
+              <div className="flex items-center gap-1.5 bg-secondary rounded-full px-3 py-1.5">
+                <span className="text-sm font-bold">{Math.floor(points).toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">נקודות</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>

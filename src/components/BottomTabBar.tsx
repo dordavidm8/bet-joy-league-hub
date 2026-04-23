@@ -4,19 +4,19 @@ import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 
 const tabs = [
-  { path: "/", icon: Home, label: "בית" },
-  { path: "/leagues", icon: Trophy, label: "ליגות" },
-  { path: "/minigames", icon: Gamepad2, label: "אתגרים" },
-  { path: "/betslip", icon: FileText, label: "תלוש" },
-  { path: "/expert", icon: Bot, label: "מומחה" },
-  { path: "/profile", icon: User, label: "פרופיל" },
+  { path: "/", icon: Home, label: "בית", guestAllowed: true },
+  { path: "/leagues", icon: Trophy, label: "ליגות", guestAllowed: true },
+  { path: "/minigames", icon: Gamepad2, label: "אתגרים", guestAllowed: false },
+  { path: "/betslip", icon: FileText, label: "תלוש", guestAllowed: false },
+  { path: "/expert", icon: Bot, label: "מומחה", guestAllowed: false },
+  { path: "/profile", icon: User, label: "פרופיל", guestAllowed: false },
 ];
 
 const BottomTabBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { betSlip } = useApp();
-  const { backendUser } = useAuth();
+  const { backendUser, isGuest, exitGuest } = useAuth();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card shadow-elevated z-50 safe-area-bottom">
@@ -25,12 +25,17 @@ const BottomTabBar = () => {
           const isActive = location.pathname === tab.path;
           const Icon = tab.icon;
           const hasBadge = tab.path === "/betslip" && betSlip.length > 0;
-          const isAiLocked = tab.path === "/expert" && !['nirdahan', 'dordavidm8'].includes(backendUser?.username);
+          const isAiLocked = tab.path === "/expert" && !isGuest && !['nirdahan', 'dordavidm8'].includes(backendUser?.username);
+          const isGuestLocked = isGuest && !tab.guestAllowed;
 
           return (
             <button
               key={tab.path}
               onClick={() => {
+                if (isGuestLocked) {
+                  exitGuest();
+                  return;
+                }
                 if (isAiLocked) {
                   alert("תכונה זו בשלבי הרצה וזמינה כרגע למנהלים בלבד.");
                   return;
