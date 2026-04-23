@@ -504,7 +504,7 @@ const LeaguesPage = () => {
                     <p className="text-[10px] text-muted-foreground">@{u.username}</p>
                       <p className="text-xs text-muted-foreground">{u.total_wins}/{u.total_bets} ניצחונות</p>
                     </div>
-                    <span className="text-sm font-black text-primary">{u.points_balance.toLocaleString()} נק׳</span>
+                    <span className="text-sm font-black text-primary">{Math.floor(u.points_balance).toLocaleString()} נק׳</span>
                   </div>
                 ))
               )}
@@ -520,7 +520,7 @@ const LeaguesPage = () => {
               <span className="text-sm font-bold">הדירוג שלי</span>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-black text-primary">#{myRankData.rank}</span>
-                <span className="text-xs text-muted-foreground">{myRankData.points_balance?.toLocaleString()} נק׳</span>
+                <span className="text-xs text-muted-foreground">{Math.floor(myRankData.points_balance || 0).toLocaleString()} נק׳</span>
               </div>
             </div>
           )}
@@ -547,7 +547,7 @@ const LeaguesPage = () => {
                   <p className="text-[11px] text-muted-foreground/70">@{entry.username}</p>
                   <p className="text-xs text-muted-foreground">{entry.total_wins}/{entry.total_bets} ניצחונות</p>
                 </div>
-                <span className="text-sm font-black text-primary">{entry.points_balance?.toLocaleString()} נק׳</span>
+                <span className="text-sm font-black text-primary">{Math.floor(entry.points_balance || 0).toLocaleString()} נק׳</span>
               </motion.div>
             ))
           )}
