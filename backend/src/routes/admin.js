@@ -1128,3 +1128,95 @@ router.get('/advisor/playground', async (req, res) => {
 
 module.exports = router;
 module.exports.opsRouter = opsRouter;
+
+// ── Support Inquiries ─────────────────────────────────────────────────────────
+
+// GET /api/admin/support-inquiries
+router.get('/support-inquiries', async (req, res, next) => {
+  const { status } = req.query;
+  const params = [];
+  let where = '';
+  if (status) {
+    params.push(status);
+    where = 'WHERE s.status = ';
+  }
+  try {
+    const result = await pool.query(
+      `SELECT s.*, u.username, u.email, u.display_name, u.phone_number, u.phone_verified, u.wa_opt_in
+       FROM support_inquiries s
+       JOIN users u ON u.id = s.user_id
+       ${where}
+       ORDER BY s.created_at DESC`,
+      params
+    );
+    res.json({ inquiries: result.rows });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/support-inquiries/:id/status
+router.patch('/support-inquiries/:id/status', async (req, res, next) => {
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: 'status required' });
+  try {
+    const result = await pool.query(
+      'UPDATE support_inquiries SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [status, req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Inquiry not found' });
+    res.json({ inquiry: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/support-inquiries/:id/reply
+router.post('/support-inquiries/:id/reply', async (req, res, next) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: 'message required' });
+  
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // 1. Get Inquiry and User details
+    const inqRes = await client.query(
+      `SELECT s.*, u.id as user_id, u.phone_number, u.phone_verified, u.wa_opt_in 
+       FROM support_inquiries s 
+       JOIN users u ON u.id = s.user_id 
+       WHERE s.id = $1`,
+      [req.params.id]
+    );
+    const inquiry = inqRes.rows[0];
+    if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
+
+    // 2. Update inquiry status and reply
+    await client.query(
+      'UPDATE support_inquiries SET status = $1, reply_message = $2, replied_at = NOW(), updated_at = NOW() WHERE id = $3',
+      ['handled', message, req.params.id]
+    );
+
+    // 3. Create notification for user
+    const { createNotification } = require('../services/notificationService');
+    await createNotification(inquiry.user_id, {
+      type: 'admin_message',
+      title: 'תשובה מפנייה למנהלים',
+      body: message,
+      data: { inquiry_id: inquiry.id }
+    });
+
+    // 4. Send WhatsApp if opted in
+    if (inquiry.phone_number && inquiry.phone_verified && inquiry.wa_opt_in) {
+      const { sendDM } = require('../services/whatsappBotService');
+      const waText = `שלום, התקבלה תשובה מפנייה ששלחת למנהלי Kickoff:\n\n*תשובה:* ${message}`;
+      sendDM(inquiry.phone_number, waText).catch(e => console.error('[SupportReply] WA error:', e.message));
+    }
+
+    await client.query('COMMIT');
+    await logAdminAction(req.user.email, 'reply_support', 'support_inquiry', inquiry.id, { message });
+    
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+});

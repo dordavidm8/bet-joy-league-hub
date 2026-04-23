@@ -42,7 +42,7 @@ export const ADMIN_EMAILS = [
   "kickoffsportsapp@gmail.com",
 ];
 
-type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "advanced" | "advisor" | "social";
+type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "support" | "advanced" | "advisor" | "social";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "stats",         label: "סקירה",      icon: <BarChart2 size={14} /> },
@@ -51,6 +51,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "games",        label: "משחקים",     icon: <Trophy size={14} /> },
   { id: "leagues",      label: "ליגות",      icon: <Trophy size={14} /> },
   { id: "notifications",label: "התראות",     icon: <Bell size={14} /> },
+  { id: "support",      label: "פניות",      icon: <HelpCircle size={14} /> },
   { id: "minigames",    label: "אתגרים",     icon: <Target size={14} /> },
   { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
   { id: "advisor",      label: "יועץ AI",        icon: <Bot size={14} /> },
@@ -2014,6 +2015,147 @@ const MiniGamesTab = () => {
 };
 
 // ── Advanced Tab ──────────────────────────────────────────────────────────────
+
+// ── Support Tab ───────────────────────────────────────────────────────────────
+const SupportTab = () => {
+  const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [replyInquiry, setReplyInquiry] = useState<any | null>(null);
+  const [replyMsg, setReplyMsg] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [replyError, setReplyError] = useState("");
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-support", statusFilter],
+    queryFn: () => adminGetSupportInquiries(statusFilter || undefined),
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => adminUpdateSupportStatus(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-support"] }),
+  });
+
+  const replyMutation = useMutation({
+    mutationFn: () => adminReplyToSupport(replyInquiry!.id, replyMsg),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-support"] });
+      setReplyInquiry(null);
+      setReplyMsg("");
+      setReplyLoading(false);
+    },
+    onError: (e: any) => {
+      setReplyError(e.message);
+      setReplyLoading(false);
+    }
+  });
+
+  if (isLoading) return <Loader />;
+  if (isError) return <ErrorMsg />;
+
+  const inquiries = data?.inquiries ?? [];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2">
+        {(["", "unread", "read_unhandled", "handled"] as const).map(s => (
+          <button key={s} onClick={() => setStatusFilter(s)}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
+            {s === "" ? "הכל" : 
+             s === "unread" ? "טרם נקרא" : 
+             s === "read_unhandled" ? "נקרא וטרם טופל" : 
+             "טופל"}
+          </button>
+        ))}
+      </div>
+
+      <div className="border rounded-xl overflow-auto">
+        <table className="w-full text-xs min-w-[600px]">
+          <thead className="bg-muted/50"><tr>
+            {["משתמש", "תאריך ושעה", "תוכן הפנייה", "סטטוס", "פעולות"].map(h => (
+              <th key={h} className="text-right px-3 py-2 font-semibold text-muted-foreground">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {inquiries.map(inq => (
+              <tr key={inq.id} className="border-t border-border/50 hover:bg-muted/30 transition-colors">
+                <td className="px-3 py-2">
+                  <p className="font-bold">@{inq.username}</p>
+                  <p className="text-[10px] text-muted-foreground">{inq.email}</p>
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">{fmtTime(inq.created_at)}</td>
+                <td className="px-3 py-2 max-w-[300px]">
+                  <p className="line-clamp-2" title={inq.message}>{inq.message}</p>
+                </td>
+                <td className="px-3 py-2">
+                  <Select 
+                    value={inq.status} 
+                    onValueChange={(val) => updateStatusMutation.mutate({ id: inq.id, status: val })}
+                  >
+                    <SelectTrigger className="h-7 text-[11px] w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unread">🔴 טרם נקרא</SelectItem>
+                      <SelectItem value="read_unhandled">🟡 נקרא וטרם טופל</SelectItem>
+                      <SelectItem value="handled">🟢 טופל</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => { setReplyInquiry(inq); setReplyMsg(""); setReplyError(""); }}
+                      className="text-primary font-bold hover:underline"
+                    >
+                      השב
+                    </button>
+                    {inq.reply_message && (
+                      <span className="text-gray-400 cursor-help" title={`תשובה: ${inq.reply_message} (נשלח ב-\${fmtTime(inq.replied_at)})`}>💬</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {inquiries.length === 0 && <p className="text-center text-sm text-muted-foreground py-10">אין פניות במצב זה</p>}
+      </div>
+
+      {replyInquiry && (
+        <Modal onClose={() => setReplyInquiry(null)} title={`תשובה ל-@\${replyInquiry.username}`}>
+          <div className="flex flex-col gap-4">
+            <div className="bg-secondary p-3 rounded-xl">
+              <p className="text-[10px] text-muted-foreground mb-1 font-bold">הפנייה:</p>
+              <p className="text-xs italic">"\${replyInquiry.message}"</p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-muted-foreground">הודעת תשובה</label>
+              <textarea 
+                value={replyMsg}
+                onChange={e => setReplyMsg(e.target.value)}
+                placeholder="כתוב תשובה..."
+                className="w-full bg-secondary rounded-xl px-3 py-2 text-sm outline-none h-32 resize-none"
+              />
+              <p className="text-[10px] text-muted-foreground italic">ההודעה תשלח בהתראה פנימית ובוואטסאפ (במידה ומחובר).</p>
+            </div>
+            {replyError && <p className="text-xs text-destructive">{replyError}</p>}
+            <div className="flex gap-2">
+              <Button 
+                className="flex-1" 
+                onClick={() => { setReplyLoading(true); replyMutation.mutate(); }}
+                disabled={!replyMsg.trim() || replyLoading}
+              >
+                {replyLoading ? "שולח..." : "שלח תשובה"}
+              </Button>
+              <Button variant="outline" onClick={() => setReplyInquiry(null)}>ביטול</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+};
+
 const AdvancedTab = () => {
   const queryClient = useQueryClient();
   const [section, setSection] = useState<"competitions" | "log" | "admins" | "translations">("competitions");
@@ -2278,6 +2420,7 @@ const AdminDashboard = () => {
     minigames: <MiniGamesTab />, advanced: <AdvancedTab />,
     advisor: <AdvisorTab />,
     social:  <SocialAgentTab />,
+    support: <SupportTab />,
   };
 
   return (

@@ -859,3 +859,33 @@ export async function advisorPlaygroundStream(
     }
   }
 }
+
+// ── Support ──────────────────────────────────────────────────────────────────
+export interface AdminSupportInquiry {
+  id: string;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  message: string;
+  status: 'unread' | 'read_unhandled' | 'handled';
+  reply_message?: string;
+  replied_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const sendSupportInquiry = (message: string) =>
+  request<{ inquiry: any }>('/support', { method: 'POST', body: JSON.stringify({ message }) });
+
+export const adminGetSupportInquiries = (status?: string) =>
+  request<{ inquiries: AdminSupportInquiry[] }>(`/admin/support-inquiries${status ? `?status=${status}` : ''}`);
+
+export const adminUpdateSupportStatus = (id: string, status: string) =>
+  request<{ inquiry: AdminSupportInquiry }>(`/admin/support-inquiries/${id}/status`, { 
+    method: 'PATCH', body: JSON.stringify({ status }) 
+  });
+
+export const adminReplyToSupport = (id: string, message: string) =>
+  request<{ ok: boolean }>(`/admin/support-inquiries/${id}/reply`, { 
+    method: 'POST', body: JSON.stringify({ message }) 
+  });

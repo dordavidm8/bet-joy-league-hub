@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMyBets, getMyReferralCode, updateAvatar, updateProfile, deleteAccount, getMyAchievements, getDetailedStats, ACHIEVEMENTS, getWaStatus, linkPhone, verifyPhone, unlinkPhone, setWaOptIn } from "@/lib/api";
 import AvatarUploader from "@/components/AvatarUploader";
 import { motion } from "framer-motion";
-import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X, Smartphone, Share2 } from "lucide-react";
+import { LogOut, Copy, Check, Camera, ChevronRight, Pencil, X, Smartphone, Share2, MessageSquare, Send } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { sendSupportInquiry } from "@/lib/api";
 
 const ProfilePage = () => {
   const { backendUser, firebaseUser, signOut, refreshUser } = useAuth();
@@ -49,6 +50,13 @@ const ProfilePage = () => {
   const [waMsg, setWaMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [waTimer, setWaTimer] = useState(0);
   const [canResend, setCanResend] = useState(false);
+  
+  // Support state
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [supportMsg, setSupportMsg] = useState("");
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportSuccess, setSupportSuccess] = useState(false);
+  const [supportError, setSupportError] = useState("");
 
   // New timer effect
   useEffect(() => {
@@ -117,6 +125,27 @@ const ProfilePage = () => {
       setAvatarSaveError(err?.message || 'שמירת התמונה נכשלה — נסה שוב');
     },
   });
+
+  const supportMutation = useMutation({
+    mutationFn: (message: string) => sendSupportInquiry(message),
+    onSuccess: () => {
+      setSupportSuccess(true);
+      setSupportMsg("");
+      setTimeout(() => {
+        setShowSupportModal(false);
+        setSupportSuccess(false);
+      }, 3000);
+    },
+    onError: (err: any) => {
+      setSupportError(err?.message || "חלה שגיאה בשליחת הפנייה");
+    },
+  });
+
+  const handleSendSupport = () => {
+    if (!supportMsg.trim()) return;
+    setSupportError("");
+    supportMutation.mutate(supportMsg);
+  };
 
   const bets = betsData?.bets ?? [];
   const recentBets = bets.slice(0, 5);
@@ -531,6 +560,83 @@ const ProfilePage = () => {
             </motion.div>
           ))}
         </section>
+      )}
+
+      {/* Contact Admins */}
+      <section className="flex flex-col gap-2">
+        <span className="section-label">תמיכה</span>
+        <button 
+          onClick={() => setShowSupportModal(true)}
+          className="card-kickoff flex items-center justify-between group overflow-hidden relative"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+              <MessageSquare size={18} />
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold">פנה למנהלי האתר</p>
+              <p className="text-[11px] text-muted-foreground italic">יש לך שאלה? תקלה? אנחנו פה בשבילך</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-muted-foreground" />
+          
+          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-primary/5 to-transparent -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
+        </button>
+      </section>
+
+      {/* Support Modal */}
+      {showSupportModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-5" onClick={() => setShowSupportModal(false)}>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-2xl border border-border" 
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black">פנייה למנהלים</h3>
+              <button onClick={() => setShowSupportModal(false)} className="text-muted-foreground p-1 bg-secondary rounded-full">
+                <X size={16} />
+              </button>
+            </div>
+            
+            {supportSuccess ? (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-2xl animate-bounce">
+                  <Check size={32} />
+                </div>
+                <h4 className="text-base font-bold">הפנייה נשלחה בהצלחה!</h4>
+                <p className="text-sm text-muted-foreground">צוות האתר יחזור אלייך בהקדם בהתראה באתר ובוואטסאפ.</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">פרט כאן את פנייתך ונשתדל לחזור אליך תוך מספר שעות.</p>
+                <div className="flex flex-col gap-2">
+                  <textarea 
+                    value={supportMsg} 
+                    onChange={e => setSupportMsg(e.target.value)}
+                    placeholder="כתוב כאן..."
+                    rows={4}
+                    className="w-full bg-secondary rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary resize-none placeholder:italic"
+                  />
+                  {supportError && <p className="text-xs text-destructive font-bold">{supportError}</p>}
+                </div>
+                <button 
+                  onClick={handleSendSupport}
+                  disabled={!supportMsg.trim() || supportMutation.isPending}
+                  className="w-full bg-primary text-primary-foreground rounded-xl py-3 font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all active:scale-[0.98] shadow-lg shadow-primary/20"
+                >
+                  {supportMutation.isPending ? "שולח..." : (
+                    <>
+                      <span>שלח הודעה</span>
+                      <Send size={16} />
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </motion.div>
+        </div>
       )}
 
       {/* Sign out */}

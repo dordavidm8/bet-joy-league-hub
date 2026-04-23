@@ -24,6 +24,7 @@ const advisorRoutes = require('./routes/advisor');
 const notificationRoutes = require('./routes/notifications');
 const feedRoutes = require('./routes/feed');
 const whatsappRoutes = require('./routes/whatsapp');
+const supportRoutes = require('./routes/support');
 
 const app = express();
 const server = http.createServer(app);
@@ -70,6 +71,7 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 const socialRoutes = require('./routes/socialMedia');
 app.use('/api/social', socialRoutes);
+app.use('/api/support', supportRoutes);
 
 app.use(errorHandler);
 
