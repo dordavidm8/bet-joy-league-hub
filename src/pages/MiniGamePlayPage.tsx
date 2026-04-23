@@ -126,13 +126,14 @@ const MiniGamePlayPage: React.FC = () => {
   const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptCount);
 
   const renderGame = () => {
+    const key = `${id}-${attemptCount}`;
     switch (puzzle.game_type) {
-      case 'guess_club': return <GuessClubGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
-      case 'who_are_ya': return <WhoAreYaGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
-      case 'career_path': return <CareerPathGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
-      case 'box2box': return <Box2BoxGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
-      case 'missing_xi': return <MissingXIGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
-      case 'trivia': return <TriviaGame data={puzzle.puzzle_data} onSolve={handleSolve} />;
+      case 'guess_club': return <GuessClubGame key={key} data={puzzle.puzzle_data} onSolve={handleSolve} />;
+      case 'who_are_ya': return <WhoAreYaGame key={key} data={puzzle.puzzle_data} onSolve={handleSolve} />;
+      case 'career_path': return <CareerPathGame key={key} data={puzzle.puzzle_data} onSolve={handleSolve} />;
+      case 'box2box': return <Box2BoxGame key={key} data={puzzle.puzzle_data} onSolve={handleSolve} />;
+      case 'missing_xi': return <MissingXIGame key={key} data={puzzle.puzzle_data} onSolve={handleSolve} />;
+      case 'trivia': return <TriviaGame key={key} data={puzzle.puzzle_data} onSolve={handleSolve} />;
       default: return <div>סוג משחק לא נתמך</div>;
     }
   };
