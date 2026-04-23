@@ -11,7 +11,24 @@ import { sendSupportInquiry, getMySupportInquiries } from "@/lib/api";
 import { translateTeam, translateOutcomeLabel } from "@/lib/teamNames";
 
 
+const STATUS_COLOR: Record<string, string> = {
+  won:           "text-primary",
+  lost:          "text-destructive",
+  pending:       "text-amber-500",
+  cancelled:     "text-muted-foreground",
+  parlay_failed: "text-amber-600",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  won:           "ניצחון",
+  lost:          "הפסד",
+  pending:       "ממתין",
+  cancelled:     "בוטל",
+  parlay_failed: "פרליי נכשל",
+};
+
 const ProfilePage = () => {
+
   const { backendUser, firebaseUser, signOut, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -565,11 +582,16 @@ const ProfilePage = () => {
                 </p>
               </div>
               <div className="text-left">
-                <p className={`text-sm font-bold ${bet.status === "won" ? "text-primary" : bet.status === "lost" ? "text-destructive" : "text-amber-500"}`}>
+                <p className={`text-sm font-bold ${STATUS_COLOR[bet.status]}`}>
                   {bet.status === "won" ? `+${bet.actual_payout}` :
                    bet.status === "lost" ? `-${bet.stake}` : 
                    `אפשרי: ${(Number(bet.potential_payout) * (bet.exact_score_prediction ? 3 : 1)).toLocaleString()}`}
                 </p>
+                <div className="flex justify-end mt-1">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/50 ${STATUS_COLOR[bet.status]}`}>
+                    {STATUS_LABEL[bet.status] ?? bet.status}
+                  </span>
+                </div>
               </div>
             </motion.div>
           ))}
