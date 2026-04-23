@@ -1,3 +1,8 @@
+// AiAdvisor.tsx – קומפוננטת צ'אט יועץ AI
+// מציג היסטוריית שיחה ושדה קלט.
+// שולח הודעות ל-GET /advisor/:gameId/stream (SSE streaming).
+// מציג chunks של תגובה בזמן אמת כשה-LLM מייצר אותם.
+// מוגבל ל-20 הודעות ליום (מספר הודעות שנותרו מוצג).
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Sparkles, User } from "lucide-react";

@@ -1,3 +1,11 @@
+/**
+ * contentCreatorAgent.js – סוכן כתיבת תוכן
+ *
+ * createContent(context) –
+ *   כותב כיתוב לפוסט עבור כל פלטפורמה (LinkedIn, Instagram, TikTok).
+ *   משתמש ב: brand voice, נושא שבועי, אסטרטגיית צמיחה.
+ *   LinkedIn: מקצועי | Instagram: קליל | TikTok: טרנדי
+ */
 'use strict';
 
 const {

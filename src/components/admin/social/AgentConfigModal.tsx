@@ -1,3 +1,6 @@
+// admin/social/AgentConfigModal.tsx – הגדרות סוכן מדיה חברתית
+// Modal לעריכת: enabled, auto_approve, brand_voice, posting_time.
+// שמירה ב-social_agent_config table.
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';

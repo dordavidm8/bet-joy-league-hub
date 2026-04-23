@@ -1,3 +1,6 @@
+// ErrorBoundary.tsx – גבול שגיאות React
+// Class component שתופס שגיאות render של קומפוננטות ילדים.
+// מציג fallback UI במקום crash של כל העמוד.
 import { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props { children: ReactNode; }

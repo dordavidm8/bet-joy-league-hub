@@ -1,3 +1,6 @@
+// GameCard.tsx – כרטיס משחק מוצג (featured)
+// מציג משחק בולט עם: שמות קבוצות, לוגואים, ציון, odds.
+// מופיע ב-HomePage לחלק העליון (carousel / hero).
 import { Game } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";

@@ -1,3 +1,6 @@
+// GameListItem.tsx – שורת משחק ברשימה
+// תצוגה מאוחדת לכל המשחקים ברשימות (בית, ליגות, כל המשחקים).
+// מציג: קבוצות, שעה/ציון, live indicator, סטטוס.
 import { Game } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";

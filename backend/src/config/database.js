@@ -1,3 +1,10 @@
+/**
+ * database.js – חיבור PostgreSQL
+ *
+ * יוצר ומייצא connection pool (pg.Pool) לפי DATABASE_URL.
+ * במצב STUB_MODE מחזיר stubDb במקום.
+ * Pool מנהל עד 10 חיבורים במקביל.
+ */
 const { Pool } = require('pg');
 
 let pool;

@@ -1,3 +1,9 @@
+// admin/AdvisorTab.tsx – לשונית ניהול יועץ AI
+// מכילה 4 פאנלים פנימיים:
+//   ConfigPanel    – מודל, טמפרטורה, מגבלת הודעות, system prompt
+//   ApiKeysPanel   – ניהול מפתחות API מוצפנים (Groq, Odds API, etc.)
+//   PlaygroundPanel– בדיקת היועץ בזמן אמת מה-Admin Dashboard
+//   StatsPanel     – מדדי שימוש: הודעות, tokens, שגיאות
 import React, { useState } from 'react';
 import { Bot, BarChart2, Settings, Terminal, Key } from 'lucide-react';
 import { StatsPanel } from './advisor/StatsPanel';

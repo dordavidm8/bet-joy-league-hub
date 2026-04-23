@@ -1,3 +1,12 @@
+/**
+ * routes/notifications.js – התראות משתמש
+ *
+ * GET  /notifications               – כל התראות המשתמש (ממוינות לפי created_at DESC)
+ * POST /notifications/:id/mark-read – סימון התראה כנקראה
+ *
+ * התראות נוצרות על ידי notificationService.js ממספר מקורות:
+ * תוצאות הימורים, משחקים מוצגים, הזמנות לליגה, ועוד.
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

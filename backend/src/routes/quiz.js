@@ -1,3 +1,11 @@
+/**
+ * routes/quiz.js – שאלות טריוויה יומיות
+ *
+ * GET  /quiz/next         – השאלה הבאה שהמשתמש עדיין לא ענה עליה
+ * POST /quiz/:id/answer   – הגשת תשובה: מחשב ניקוד, מעדכן quiz_attempts
+ *
+ * שאלות נוצרות מראש (seedQuizzes.js) או על ידי AI ב-Admin Dashboard.
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

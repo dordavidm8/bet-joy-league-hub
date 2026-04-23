@@ -1,3 +1,12 @@
+/**
+ * aiAdminService.js – AI לפעולות ניהול
+ *
+ * שימוש ב-LLM (Groq/Claude) לפעולות ניהול מתקדמות:
+ *   verifyMiniGame(type, data) – אימות נכונות חידה שנוצרה על ידי AI
+ *   generateQuizQuestion()     – יצירת שאלת טריוויה חדשה
+ *
+ * שומר cache של תשובות LLM למניעת קריאות כפולות יקרות.
+ */
 const Groq = require('groq-sdk');
 
 let _groq = null;

@@ -1,3 +1,15 @@
+/**
+ * routes/games.js – routes משחקים
+ *
+ * Endpoints:
+ *   GET /games                   – רשימת משחקים (פילטור: status, date, competition, featured)
+ *   GET /games/live              – משחקים חיים בלבד
+ *   GET /games/results           – משחקים שהסתיימו
+ *   GET /games/:id               – פרטי משחק + שאלות הימור
+ *   GET /games/team-translations – תרגומי שמות קבוצות EN↔HE (מאושרים)
+ *
+ * נתוני משחקים מגיעים מ-ESPN API דרך syncGames cron job.
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

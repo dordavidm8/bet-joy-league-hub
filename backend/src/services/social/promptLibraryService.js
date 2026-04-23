@@ -1,3 +1,11 @@
+/**
+ * promptLibraryService.js – ספריית תבניות פרומפט
+ *
+ * מנהל תבניות פרומפט מוכנות מראש לכל הסוכנים.
+ * נטען מ-nano-banana-templates.json.
+ *   getPrompt(agentType, lang) – מחזיר תבנית מתאימה
+ *   listPrompts()              – כל התבניות הזמינות
+ */
 'use strict';
 
 const path = require('path');

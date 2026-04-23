@@ -1,3 +1,6 @@
+// useApi.ts – hook לקריאות API עם state management
+// מנהל loading, error, data לכל קריאת API.
+// שימוש: const { data, loading, error } = useApi(fetchFunction).
 import { useQuery, useMutation } from "@tanstack/react-query";
 import * as api from "@/lib/api";
 import {

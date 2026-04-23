@@ -1,3 +1,12 @@
+/**
+ * advisorMetrics.js – מדידת שימוש ביועץ AI
+ *
+ * logEvent(data) – רושם כל קריאת LLM ל-advisor_events table:
+ *   userId, gameId, model, prompt_tokens, completion_tokens,
+ *   duration_ms, tool_calls, error (אם יש)
+ *
+ * משמש לניתוח עלויות, ביצועים, וזיהוי שגיאות במודל.
+ */
 const { pool } = require('../config/database');
 
 async function logEvent(event) {

@@ -1,3 +1,15 @@
+/**
+ * syncGames.js – סנכרון משחקים מ-ESPN
+ *
+ * רץ כל דקה. מביא משחקים מ-ESPN API ומעדכן את ה-DB:
+ *   - יוצר משחקים חדשים (INSERT)
+ *   - מעדכן ציונים וסטטוס (UPDATE)
+ *   - מזהה שינויי שמות קבוצות (knockout stages)
+ *   - מייצר מחדש שאלות הימור אם שמות השתנו
+ *   - מחזיר הימורים ממתינים על שאלות שנשתנו
+ *
+ * מכסה: 7 ליגות מרכזיות (Premier League, La Liga, Champions League, etc.)
+ */
 const { pool } = require('../config/database');
 const { fetchAllOdds } = require('../services/oddsApi');
 const { setOddsCache } = require('../services/sportsApi');

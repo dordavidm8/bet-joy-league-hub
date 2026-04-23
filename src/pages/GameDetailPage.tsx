@@ -1,3 +1,7 @@
+// GameDetailPage.tsx – דף פרטי משחק
+// מציג: מידע על המשחק, ציון חי, שאלות הימור עם odds,
+// Live Penalty indicator (אם המשחק חי), יועץ AI (AiAdvisor component).
+// params: gameId מ-React Router.
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getGame, getMyLeagues } from "@/lib/api";

@@ -1,3 +1,6 @@
+// minigames/TriviaGame.tsx – שאלות טריוויה
+// מציג שאלה עם 4 אפשרויות. לחיצה → בדיקה מיידית + ניקוד.
+// שאלות מגיעות מ-quiz_questions table.
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 

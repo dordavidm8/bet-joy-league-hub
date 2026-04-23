@@ -1,3 +1,15 @@
+/**
+ * auth.js – middleware אימות Firebase
+ *
+ * authenticate: מאמת Firebase ID Token מה-Authorization header.
+ *   מחלץ uid, טוען את המשתמש מה-DB, מוסיף req.user.
+ *
+ * optionalAuthenticate: כמו authenticate אבל לא דורש token –
+ *   אם יש token תקין מוסיף req.user, אחרת ממשיך כאנונימי.
+ *
+ * requireAdmin: בודק שהמשתמש מנהל (ADMIN_EMAILS env var OR admin_users table).
+ *   במצב STUB_MODE עוקף את כל הבדיקות.
+ */
 const admin = require('../config/firebase');
 const { pool } = require('../config/database');
 

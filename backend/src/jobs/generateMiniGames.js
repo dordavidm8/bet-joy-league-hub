@@ -1,3 +1,15 @@
+/**
+ * generateMiniGames.js – יצירת חידות יומיות
+ *
+ * רץ בחצות (00:00 UTC). יוצר 5 חידות, אחת לכל סוג:
+ *   MissingXI  – מביא הרכב ממשחק ESPN אחרון
+ *   WhoAreYa   – שחקן אקראי מרשימה, מטשטש תמונה (sharp)
+ *   CareerPath – קריירת שחקן (מועדונים לפי שנים)
+ *   Box2Box    – זוג שחקנים עם היסטוריה משותפת (anti-repeat 30 יום)
+ *   GuessClub  – מטשטש לוגו קבוצה ממשחק אחרון
+ *
+ * שומר puzzle data + solution כ-JSONB ב-daily_mini_games table.
+ */
 const axios = require('axios');
 const cheerio = require('cheerio');
 const sharp = require('sharp');

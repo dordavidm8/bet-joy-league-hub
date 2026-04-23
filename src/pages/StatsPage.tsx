@@ -1,3 +1,6 @@
+// StatsPage.tsx – סטטיסטיקות הימורים
+// מציג: ROI, win rate, הימורים לפי תחרות, מגמות חודשיות.
+// ויזואליזציה עם Recharts (charts וגרפים).
 import { useQuery } from "@tanstack/react-query";
 import { getDetailedStats } from "@/lib/api";
 import { motion } from "framer-motion";

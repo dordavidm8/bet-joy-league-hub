@@ -1,3 +1,6 @@
+// use-mobile.tsx – hook לזיהוי מסך מובייל
+// מחזיר true אם רוחב המסך < 768px.
+// משמש להתאמת layout ל-mobile vs desktop.
 import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;

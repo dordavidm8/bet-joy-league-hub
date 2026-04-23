@@ -1,3 +1,11 @@
+/**
+ * routes/support.js – פניות תמיכה
+ *
+ * POST /support/inquiries          – יצירת פנייה חדשה (subject, message)
+ * GET  /support/inquiries          – פניות של המשתמש הנוכחי
+ * GET  /support/inquiries/all      – כל הפניות (מנהל בלבד)
+ * POST /support/inquiries/:id/reply – תגובת מנהל לפנייה
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

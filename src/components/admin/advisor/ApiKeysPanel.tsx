@@ -1,3 +1,6 @@
+// admin/advisor/ApiKeysPanel.tsx – ניהול מפתחות API מוצפנים
+// מאפשר: הוספה, עדכון, ומחיקה של מפתחות API ב-DB.
+// מפתחות מאוחסנים מוצפנים (AES-256-GCM) ב-encrypted_secrets table.
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { advisorGetSecrets, advisorUpdateSecret, advisorTestSecret } from '@/lib/api';

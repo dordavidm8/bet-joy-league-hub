@@ -1,3 +1,10 @@
+/**
+ * stubDb.js – מסד נתונים מדומה לפיתוח
+ *
+ * מחקה את interface של pg.Pool עם נתוני דמו hardcoded.
+ * מאפשר הרצת backend ללא PostgreSQL אמיתי (STUB_MODE=true).
+ * מכיל משתמשים, משחקים, הימורים, וליגות לצורך פיתוח UI.
+ */
 // In-memory mock database — used when STUB_MODE=true
 // Lets the server run without a real PostgreSQL instance
 

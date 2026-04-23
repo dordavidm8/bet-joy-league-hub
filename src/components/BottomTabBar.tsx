@@ -1,3 +1,6 @@
+// BottomTabBar.tsx – ניווט תחתון למובייל
+// 5 tabs: בית, ליגות, הימורים, מיני-גיימס, פרופיל.
+// מוצגת רק במסכים קטנים. מדגישה את ה-tab הפעיל.
 import { Home, Trophy, FileText, HelpCircle, User, Bot, Gamepad2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "@/context/AppContext";

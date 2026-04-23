@@ -1,3 +1,13 @@
+/**
+ * routes/socialMedia.js – שליטה ב-pipeline מדיה חברתית
+ *
+ * GET  /social/runs           – היסטוריית ריצות pipeline
+ * POST /social/runs/trigger   – הפעלה ידנית של pipeline
+ * GET  /social/posts          – רשימת פוסטים (פילטור לפי status, platform)
+ * PATCH /social/posts/:id     – אישור/דחייה/עריכת פוסט
+ * POST /social/config         – עדכון הגדרות סוכנים
+ * GET  /social/knowledge-base – בסיס ידע של הסוכנים
+ */
 'use strict';
 
 const express = require('express');

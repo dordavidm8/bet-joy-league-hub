@@ -1,3 +1,6 @@
+// MiniGamesHubPage.tsx – מרכז מיני-גיימס
+// מציג את 5 החידות היומיות עם סטטוס (פתור/לא פתור).
+// כל חידה מובילה ל-MiniGamePlayPage עם ה-gameType המתאים.
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldQuestion, UserSearch, Map, Grid, ShieldAlert, CheckCircle2, HelpCircle } from 'lucide-react';

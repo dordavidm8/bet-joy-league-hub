@@ -1,3 +1,7 @@
+// minigames/Box2BoxGame.tsx – משחק Box2Box
+// חיבור שני שחקנים דרך קריירה משותפת.
+// רשת NxN: כל תא = שחקן ששיחק לשני קצות השורה/עמודה.
+// אימות תשובות דרך POST /minigames/box2box/verify (LLM-based).
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, Shield, Plus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

@@ -1,3 +1,6 @@
+// BetHistoryPage.tsx – היסטוריית הימורים
+// מציג את כל הימורי המשתמש עם סטטוס (ממתין/ניצח/הפסיד/בוטל).
+// כולל pagination ופילטור לפי סטטוס.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMyBets, cancelBet } from "@/lib/api";
 import { motion } from "framer-motion";

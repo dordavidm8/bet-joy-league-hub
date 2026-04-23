@@ -1,3 +1,15 @@
+/**
+ * advisorTools.js – הגדרות כלים ליועץ AI
+ *
+ * מגדיר את ה-tools שה-LLM יכול להפעיל לאיסוף נתוני ספורט:
+ *   fetch_recent_form   – 5 משחקים אחרונים של קבוצה
+ *   fetch_head_to_head  – עימותים היסטוריים בין שתי קבוצות
+ *   fetch_team_stats    – סטטיסטיקות (win%, avg goals, possession)
+ *   fetch_injury_news   – מצב שחקנים ופציעות
+ *
+ * TOOL_SCHEMAS – מבנה JSON Schema לכל tool (שפת ה-LLM)
+ * TOOL_FN_MAP  – פונקציות JavaScript המקבילות לכל tool
+ */
 const { pool } = require('../config/database');
 const { fetchAllOdds } = require('./oddsApi');
 const { fetchAllGames } = require('./sportsApi');

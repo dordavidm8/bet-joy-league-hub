@@ -1,3 +1,10 @@
+/**
+ * firebase.js – אתחול Firebase Admin SDK
+ *
+ * מאתחל את Firebase Admin עם Service Account credentials מ-env vars.
+ * משמש לאימות JWT tokens של משתמשים בכל בקשה לשרת.
+ * מיוצא: admin (firebase-admin instance)
+ */
 const admin = require('firebase-admin');
 const path = require('path');
 

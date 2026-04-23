@@ -1,3 +1,6 @@
+// AppContext.tsx – Context גלובלי למצב אפליקציה
+// מנהל: מספר התראות לא-נקראות (badge על פעמון).
+// useApp() – hook לגישה מכל קומפוננטה.
 import React, { createContext, useContext, useState } from "react";
 
 export type BetMode = 'global' | 'minimum_stake' | 'initial_balance';

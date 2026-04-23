@@ -1,3 +1,10 @@
+/**
+ * scripts/cleanupTranslations.js – ניקוי תרגומים ממתינים
+ *
+ * סקריפט תחזוקה חד-פעמי. מוחק תרגומי שמות קבוצות ממצב 'pending'
+ * מ-team_name_translations table.
+ * הרצה: node backend/src/scripts/cleanupTranslations.js
+ */
 require('dotenv').config({ path: require('path').join(__dirname, '../../../whatsapp-bot/.env') });
 const { pool } = require('../config/database');
 

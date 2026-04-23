@@ -1,3 +1,7 @@
+// NotificationBell.tsx – פעמון התראות
+// מציג badge עם מספר התראות לא-נקראות (מ-AppContext).
+// לחיצה: פותח Popover עם רשימת ההתראות.
+// סימון קריאה אוטומטי בפתיחת הרשימה.
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

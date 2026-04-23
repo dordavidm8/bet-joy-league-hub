@@ -1,3 +1,19 @@
+/**
+ * advisorService.js – שירות יועץ AI (Groq LLM)
+ *
+ * מנהל שיחות עם מודל Llama 3.3-70b דרך Groq SDK.
+ * תמיכה ב-tool use: הסוכן יכול לקרוא לפונקציות (fetch_recent_form, etc.)
+ * כדי לאסוף נתוני ספורט לפני שהוא עונה.
+ *
+ * פונקציות מרכזיות:
+ *   chat(gameId, userId, messages)           – תגובת JSON מלאה
+ *   chatStream(gameId, userId, msgs, sendFn) – SSE streaming (chunk אחרי chunk)
+ *   getGameContext(gameId)                   – מביא נתוני משחק + שאלות
+ *   incrementUsage(userId)                   – מעדכן מונה יומי (max 20)
+ *
+ * מגבלה: 20 הודעות ליום למשתמש (advisor_usage table).
+ * לוג: כל קריאת LLM נרשמת ב-advisor_events table.
+ */
 const Groq = require('groq-sdk');
 const { pool } = require('../config/database');
 const { getSecret } = require('../lib/secrets');

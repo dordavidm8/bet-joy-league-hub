@@ -1,3 +1,11 @@
+/**
+ * visualCreatorAgent.js – סוכן יצירת ויזואל
+ *
+ * createVisualPrompt(context) –
+ *   יוצר הנחיות מפורטות לתמונה/וידאו לפוסט.
+ *   מתחשב ב: זהות המותג, צבעים, סגנון, תוכן המשחק.
+ *   מפרט: מידות, רכיבים ויזואליים, overlays טקסט.
+ */
 'use strict';
 
 const { getGeminiClient, callClaude, parseJsonResponse, getGroqClient } = require('./socialMediaUtils');

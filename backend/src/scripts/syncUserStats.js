@@ -1,3 +1,11 @@
+/**
+ * scripts/syncUserStats.js – רענון סטטיסטיקות משתמשים
+ *
+ * סקריפט תחזוקה. מחשב מחדש total_bets, total_wins לכל המשתמשים
+ * מתוך טבלת bets ומעדכן את טבלת users.
+ * שימושי לאחר migrations או תיקוני נתונים.
+ * הרצה: node backend/src/scripts/syncUserStats.js
+ */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../../whatsapp-bot/.env') });
 const { pool } = require('../config/database');

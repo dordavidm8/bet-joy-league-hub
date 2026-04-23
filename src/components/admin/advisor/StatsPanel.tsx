@@ -1,3 +1,6 @@
+// admin/advisor/StatsPanel.tsx – סטטיסטיקות שימוש ביועץ
+// מציג: מספר הודעות, tokens בשימוש, שגיאות, עלות משוערת.
+// נתונים מ-advisor_events table.
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { advisorGetStats, advisorGetToolStats, advisorGetTopUsers, advisorGetEvents } from '@/lib/api';

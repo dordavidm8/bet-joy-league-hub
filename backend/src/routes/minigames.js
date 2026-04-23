@@ -1,3 +1,13 @@
+/**
+ * routes/minigames.js – מיני-גיימס יומיים
+ *
+ * GET  /minigames/today            – 5 חידות היום (אחת לכל סוג)
+ * POST /minigames/:id/submit       – הגשת תשובה + בדיקת נכונות
+ * POST /minigames/box2box/verify   – אימות שחקן לתא Box2Box (LLM-based)
+ *
+ * סוגי חידות: MissingXI, WhoAreYa, CareerPath, Box2Box, GuessClub.
+ * נוצרות מדי לילה על ידי generateMiniGames cron job.
+ */
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');

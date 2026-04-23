@@ -1,3 +1,6 @@
+// admin/social/AgentStatusGrid.tsx – רשת סטטוס סוכנים
+// מציג grid עם כל 8 הסוכנים, סטטוס אחרון, ופעולות.
+// אפשרות הפעלה/כיבוי לכל סוכן בנפרד.
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, CheckCircle2, XCircle, Clock, Zap } from 'lucide-react';

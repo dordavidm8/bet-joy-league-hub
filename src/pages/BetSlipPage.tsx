@@ -1,3 +1,7 @@
+// BetSlipPage.tsx – דף הנחת הימור
+// תומך ב: הימור בודד (single bet) ופרלי (parlay – מספר הימורים יחד).
+// מאפשר בחירת ליגה (הימור בתוך ליגה פרטית או גלובלי).
+// מחשב ומציג: potential payout, Live Penalty אם רלוונטי.
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { placeBet, placeParlay } from "@/lib/api";

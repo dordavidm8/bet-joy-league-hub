@@ -1,3 +1,14 @@
+/**
+ * secrets.js – ניהול מפתחות API מוצפנים
+ *
+ * getSecret(name)           – מביא ומפענח secret לפי שם מה-DB
+ * setSecret(name, value)    – מצפין ושומר secret ב-DB
+ * deleteSecret(name)        – מוחק secret
+ * listSecretNames()         – רשימת שמות (ללא ערכים)
+ *
+ * כל secrets מאוחסנים מוצפנים ב-encrypted_secrets table.
+ * מפתח ה-AES מגיע מ-SECRETS_MASTER_KEY env var.
+ */
 const { pool } = require('../config/database');
 const { decrypt } = require('./crypto');
 

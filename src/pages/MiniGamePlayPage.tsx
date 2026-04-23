@@ -1,3 +1,7 @@
+// MiniGamePlayPage.tsx – משחק מיני-גיים בודד
+// מנתב לקומפוננטת המשחק הנכונה לפי gameType:
+// MissingXI, WhoAreYa, CareerPath, Box2Box, GuessClub.
+// params: gameId מ-React Router.
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';

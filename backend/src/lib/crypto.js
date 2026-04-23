@@ -1,3 +1,16 @@
+/**
+ * crypto.js – הצפנת AES-256-GCM
+ *
+ * encrypt(plaintext, masterKey) –
+ *   מצפין טקסט עם AES-256-GCM. מחזיר: iv:authTag:encrypted (hex)
+ *   IV אקראי לכל הצפנה (16 bytes) למניעת pattern matching.
+ *
+ * decrypt(encryptedData, masterKey) –
+ *   מפענח נתון שנוצר על ידי encrypt().
+ *
+ * masterKey: מגיע מ-SECRETS_MASTER_KEY env var (32 bytes hex).
+ * משמש לאחסון מוצפן של מפתחות API ב-DB (encrypted_secrets table).
+ */
 const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-gcm';

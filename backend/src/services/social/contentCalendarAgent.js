@@ -1,3 +1,11 @@
+/**
+ * contentCalendarAgent.js – סוכן תכנון לוח שנה תוכן
+ *
+ * planWeeklyTheme(context) –
+ *   משתמש ב-LLM לתכנון נושא שבועי לפוסטים.
+ *   מתחשב ב: משחקים קרובים, מגמות, עונה בכדורגל.
+ *   מוסיף ל-context: weeklyTheme, contentAngles
+ */
 'use strict';
 
 const { pool } = require('../../config/database');

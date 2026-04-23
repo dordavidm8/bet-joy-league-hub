@@ -1,3 +1,13 @@
+/**
+ * app.js – שרת Express הראשי
+ *
+ * נקודת הכניסה של ה-backend. מאתחל את שרת Express, Socket.io ל-real-time,
+ * מגדיר middleware (Helmet, CORS, Morgan, JSON parser), מחבר את כל 17 ה-routers,
+ * ומפעיל את Cron Jobs.
+ *
+ * יציאה: 4000 (PORT מ-env var)
+ * WebSocket: Socket.io rooms לפי gameId לעדכוני ציון חיים
+ */
 require('dotenv').config();
 const express = require('express');
 const http = require('http');

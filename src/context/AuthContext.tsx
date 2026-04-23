@@ -1,3 +1,8 @@
+// AuthContext.tsx – Context גלובלי לאימות משתמש
+// מנהל את Firebase Auth ואת נתוני המשתמש מהבאקנד.
+// מספק: user (Firebase), backendUser, login, logout, register.
+// שומר נתוני משתמש ב-localStorage לביצועים טובים יותר.
+// useAuth() – hook לגישה ל-context מכל קומפוננטה.
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   onAuthStateChanged,

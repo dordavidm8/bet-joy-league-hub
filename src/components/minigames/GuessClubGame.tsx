@@ -1,3 +1,7 @@
+// minigames/GuessClubGame.tsx – ניחוש קבוצה
+// מציג לוגו קבוצה מטושטש (sharp עיבוד ב-backend).
+// עם כל ניחוש שגוי הטשטוש פוחת.
+// ניחוש נכון = ניקוד מלא, ניחוש מאוחר = ניקוד חלקי.
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

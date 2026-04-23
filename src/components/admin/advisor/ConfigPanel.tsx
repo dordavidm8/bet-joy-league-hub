@@ -1,3 +1,6 @@
+// admin/advisor/ConfigPanel.tsx – הגדרות יועץ AI
+// עורך: שם מודל LLM, טמפרטורה, max_tokens, מגבלת הודעות יומית, system prompt.
+// שינויים נשמרים ב-advisor_config table ונכנסים לתוקף מיידית.
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { advisorGetConfig, advisorPatchConfig } from '@/lib/api';

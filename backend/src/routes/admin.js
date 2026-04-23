@@ -1,3 +1,17 @@
+/**
+ * routes/admin.js – routes ניהול (מוגן)
+ *
+ * כל ה-routes דורשים middleware requireAdmin.
+ * Endpoints מרכזיים:
+ *   GET  /admin/me           – בדיקת סטטוס מנהל
+ *   GET  /admin/stats        – KPIs: משתמשים, הימורים, הכנסה
+ *   GET  /admin/users        – ניהול משתמשים (חיפוש, התאמת נקודות, מחיקה)
+ *   GET  /admin/games        – ניהול משחקים (featured, lock, odds)
+ *   GET  /admin/leagues      – ניהול ליגות (pause, stop)
+ *   POST /admin/notify       – שליחת התראה לכל/מישהו
+ *   GET  /admin/log          – audit log של פעולות מנהל
+ *   POST /ops/generate-minigames – ייצור ידני של חידות
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

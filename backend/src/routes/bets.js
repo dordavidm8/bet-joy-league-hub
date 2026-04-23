@@ -1,3 +1,15 @@
+/**
+ * routes/bets.js – הנחת ובדיקת הימורים
+ *
+ * Endpoints:
+ *   POST /bets          – הנחת הימור בודד (single bet)
+ *   POST /bets/parlay   – הנחת פרלי (multi-leg bet)
+ *   GET  /bets/:id      – פרטי הימור ספציפי
+ *   GET  /bets          – הימורים של משתמש (param: userId)
+ *
+ * ולידציות: חלון זמן, מצב משחק, יתרת נקודות, קנס live.
+ * כל הנחת הימור עטופה ב-transaction (BEGIN/COMMIT/ROLLBACK).
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

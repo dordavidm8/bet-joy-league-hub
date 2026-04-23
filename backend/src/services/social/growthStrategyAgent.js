@@ -1,3 +1,11 @@
+/**
+ * growthStrategyAgent.js – סוכן אסטרטגיית צמיחה
+ *
+ * analyzeGrowth(context) –
+ *   מנתח ביצועי פוסטים קודמים ומגבש המלצות לצמיחה.
+ *   מזהה: סוגי תוכן שמצליחים, שעות פרסום אופטימליות,
+ *   קהל יעד, מתחרים.
+ */
 'use strict';
 
 const { pool } = require('../../config/database');

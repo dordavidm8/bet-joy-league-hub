@@ -1,3 +1,14 @@
+/**
+ * socialMediaUtils.js – כלי עזר ל-social media agents
+ *
+ * פונקציות DB לכל ה-social agents:
+ *   getSocialConfig()      – הגדרות הסוכנים (enabled, auto_approve, etc.)
+ *   savePipelineRun()      – שמירת לוג ריצת pipeline
+ *   savePost()             – שמירת פוסט שנוצר
+ *   loadKnowledgeBase()    – בסיס ידע המותג
+ *   loadTopMemories()      – זיכרונות מצטברים של הסוכנים
+ *   getTodaysGames()       – משחקים של היום כ-context
+ */
 'use strict';
 
 const { pool } = require('../../config/database');

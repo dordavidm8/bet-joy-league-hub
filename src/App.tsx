@@ -1,3 +1,7 @@
+// App.tsx – ראוטינג ראשי של האפליקציה
+// מגדיר את כל 20 ה-routes עם React Router v6.
+// כולל: AdminRoute (בדיקת הרשאת admin), ScrollToTop, ErrorBoundary.
+// בטעינה: טוען תרגומי שמות קבוצות מהשרת ומאחסן ב-teamNames.ts.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";

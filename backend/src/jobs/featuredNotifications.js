@@ -1,3 +1,10 @@
+/**
+ * featuredNotifications.js – התראות משחקים מוצגים
+ *
+ * רץ כל 15 דקות. בודק אם יש משחקים featured שמתחילים
+ * בעוד hours_before שעות. שולח התראה לכל המשתמשים.
+ * שומר מי כבר קיבל התראה (למניעת כפילויות).
+ */
 const { pool } = require('../config/database');
 const { createNotification } = require('../services/notificationService');
 const { translateTeam } = require('../lib/teamNames');

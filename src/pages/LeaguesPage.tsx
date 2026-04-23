@@ -1,3 +1,6 @@
+// LeaguesPage.tsx – דף ליגות
+// מציג: ליגות שהמשתמש חבר בהן, ליגות ציבוריות לחיפוש.
+// אפשרויות: יצירת ליגה חדשה, הצטרפות לליגה קיימת דרך קוד הזמנה.
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";

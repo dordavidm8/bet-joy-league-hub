@@ -1,3 +1,6 @@
+// admin/social/ManagementChat.tsx – צ'אט עם סוכנים
+// ממשק צ'אט לשיחה ישירה עם managementChatAgent.
+// הסוכן עונה על שאלות ניהול: ביצועים, המלצות, מצב pipeline.
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Bot, User } from 'lucide-react';
 

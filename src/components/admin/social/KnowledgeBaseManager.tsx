@@ -1,3 +1,6 @@
+// admin/social/KnowledgeBaseManager.tsx – ניהול בסיס ידע
+// CRUD לרשומות בסיס הידע (social_knowledge_base table).
+// כל רשומה: title, content, category (brand/product/tone/etc.).
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Edit2, Check, X, Loader2 } from 'lucide-react';

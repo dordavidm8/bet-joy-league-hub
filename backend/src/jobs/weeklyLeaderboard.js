@@ -1,3 +1,13 @@
+/**
+ * weeklyLeaderboard.js – בונוס נקודות שבועי
+ *
+ * רץ שבת 21:00 UTC (ראשון 00:00 IST).
+ * מעניק בונוס נקודות למובילים בכל ליגה:
+ *   מקום 1: 500 נקודות
+ *   מקום 2: 300 נקודות
+ *   מקום 3: 100 נקודות
+ * שולח התראה לזוכים.
+ */
 const { pool } = require('../config/database');
 const { createNotification } = require('../services/notificationService');
 

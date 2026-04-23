@@ -1,3 +1,12 @@
+/**
+ * routes/feed.js – פיד פעילות חברתי
+ *
+ * GET /feed – מחזיר סטרים של פעילות: הימורים שניצחו, הישגים, הצטרפות לליגות.
+ * פרמטרים:
+ *   filter – 'all' (כולם) | 'following' (רק עוקבים)
+ *   limit  – גבול תוצאות (ברירת מחדל 20)
+ *   offset – pagination
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

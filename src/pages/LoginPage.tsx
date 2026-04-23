@@ -1,3 +1,6 @@
+// LoginPage.tsx – דף כניסה והרשמה
+// טפסי: כניסה עם אימייל+סיסמה, הרשמה, כניסה עם Google.
+// לאחר כניסה מוצלחת: קריאת /api/auth/register לאתחול משתמש בבאקנד.
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 

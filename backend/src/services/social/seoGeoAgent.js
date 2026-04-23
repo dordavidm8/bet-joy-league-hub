@@ -1,3 +1,10 @@
+/**
+ * seoGeoAgent.js – סוכן SEO ו-Geo Targeting
+ *
+ * optimizeContent(context) –
+ *   מוסיף hashtags מאופטמים, keywords, ו-CTAs מותאמים לאזור גיאוגרפי.
+ *   ממקד ל: ישראל (עברית), אנגלית (קהל כדורגל בינלאומי).
+ */
 'use strict';
 
 const { callClaude, parseJsonResponse } = require('./socialMediaUtils');

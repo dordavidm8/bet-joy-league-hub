@@ -1,3 +1,12 @@
+/**
+ * achievementService.js – מערכת הישגים ומדליות
+ *
+ * בודק ומעניק הישגים אוטומטית לאחר אירועי הימור:
+ *   checkAndAward(userId, event) – בודק כל ההישגים הרלוונטיים ומעניק
+ *
+ * דוגמאות הישגים: FirstBet, FirstWin, Win10, Points1000, etc.
+ * הישגים שנפתחו נשמרים ב-user_achievements table ונשלחת התראה.
+ */
 const { pool } = require('../config/database');
 
 const ACHIEVEMENTS = {

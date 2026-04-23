@@ -1,3 +1,12 @@
+/**
+ * routes/whatsapp.js – webhook לבוט WhatsApp
+ *
+ * POST /whatsapp/webhook     – מקבל הודעות מהבוט (מאובטח עם INTERNAL_API_KEY)
+ * POST /whatsapp/send-message – שולח הודעה דרך הבוט (backend → bot)
+ * GET  /whatsapp/health      – בדיקת חיבור הבוט
+ *
+ * הבוט רץ על VPS נפרד ומתקשר עם הבאקנד דרך HTTP פנימי.
+ */
 'use strict';
 
 const express = require('express');

@@ -1,3 +1,18 @@
+/**
+ * bettingService.js – לוגיקת הימורים ו-Live Penalty
+ *
+ * מגדיר את מדרגות הקנס להימורים בזמן משחק חי:
+ *   0-45 דקות:  0%  (ללא קנס)
+ *   46-60 דקות: 10% קנס
+ *   61-70 דקות: 25% קנס
+ *   71-75 דקות: 40% קנס
+ *   76+ דקות:   נעול (לא ניתן להמר)
+ *
+ * פונקציות מיוצאות:
+ *   getLivePenalty(minute)          – מחזיר אחוז קנס לפי דקה
+ *   calculatePayout(stake, odds, p) – מחשב תשלום: floor(stake × odds × (1 - p))
+ *   isLiveBettingAllowed(minute)    – האם הימורים מותרים בדקה זו
+ */
 // Live betting penalty tiers
 // 0–45min: 0% | 46–60min: 10% | 61–70min: 25% | 71–75min: 40% | 76+: locked
 const LIVE_LOCK_MINUTE = 75;

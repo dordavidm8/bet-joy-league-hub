@@ -1,3 +1,6 @@
+// minigames/WhoAreYaGame.tsx – ניחוש שחקן מתמונה
+// תמונת שחקן מטושטשת. מחפש לפי שם ועם כל ניחוש שגוי רמזים מתגלים.
+// רמזים: ליגה, מדינה, גיל, מועדון נוכחי.
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, Flag, Shield, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

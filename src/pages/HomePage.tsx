@@ -1,3 +1,7 @@
+// HomePage.tsx – דף הבית / דאשבורד
+// מציג: משחקים מוצגים (featured), משחקים חיים, רשימת משחקים קרובים,
+// פיד פעילות חברתי, הישגים אחרונים.
+// רענון אוטומטי כל 30 שניות לעדכוני ציון חי (useQuery refetchInterval).
 import { useQuery } from "@tanstack/react-query";
 import { getGames, getLiveGames, getFeed, ACHIEVEMENTS } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";

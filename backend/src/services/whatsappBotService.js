@@ -1,3 +1,12 @@
+/**
+ * whatsappBotService.js – גשר backend ↔ WhatsApp Bot
+ *
+ * sendMessage(phone, message) –
+ *   שולח HTTP POST לבוט WhatsApp (port 4001) עם טלפון וטקסט.
+ *   הבוט רץ על VPS נפרד ומחובר דרך WHATSAPP_BOT_URL + INTERNAL_API_KEY.
+ *
+ * checkBotHealth() – בדיקת חיבור הבוט.
+ */
 'use strict';
 
 const { pool } = require('../config/database');

@@ -1,3 +1,18 @@
+/**
+ * jobs/index.js – מנהל Cron Jobs
+ *
+ * מאתחל ומריץ את כל ה-cron jobs באמצעות node-cron.
+ * לוחות זמנים:
+ *   כל דקה:       syncGames          – ESPN → DB
+ *   כל 5 דקות:    settleBets         – סגירת הימורים
+ *   כל 15 דקות:   featuredNotifications
+ *   4:00 UTC:      daily fixture refresh + safety settlement
+ *   00:00 UTC:     generateMiniGames  – 5 חידות יומיות
+ *   06:00 UTC:     dailyReminder      – תזכורת טריוויה
+ *   שבת 21:00 UTC: weeklyLeaderboard  – בונוס נקודות שבועי
+ *   05:00 UTC:     socialMediaPost    – pipeline מדיה חברתית
+ *   08:00 UTC:     socialAnalytics    – רענון מדדי engagement
+ */
 const cron = require('node-cron');
 const { syncGames }  = require('./syncGames');
 const { settleBets } = require('./settleBets');

@@ -1,3 +1,9 @@
+/**
+ * dailyReminder.js – תזכורת טריוויה יומית
+ *
+ * רץ ב-6:00 UTC (9:00 IST). שולח התראה לכל המשתמשים
+ * שעדיין לא ענו על שאלת הטריוויה של היום.
+ */
 const { pool } = require('../config/database');
 const { createNotification } = require('../services/notificationService');
 

@@ -1,3 +1,8 @@
+// api.ts – לקוח API מרכזי
+// כל הפונקציות לתקשורת עם ה-backend (typed).
+// מוסיף Firebase ID Token אוטומטית לכל בקשה מאומתת.
+// API_BASE: VITE_API_URL + '/api'
+// יצוא: getGames, placeBet, getAdvisor, getLiveGames, getLeagues, etc.
 import { auth } from './firebase';
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '') + '/api';

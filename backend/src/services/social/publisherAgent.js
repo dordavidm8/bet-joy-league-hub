@@ -1,3 +1,11 @@
+/**
+ * publisherAgent.js – סוכן פרסום
+ *
+ * publishPost(context) –
+ *   מפרסם פוסטים מאושרים לפלטפורמות מדיה חברתית.
+ *   תומך ב: LinkedIn API, Instagram Graph API, TikTok API.
+ *   שומר post ID מהפלטפורמה לצורך tracking analytics בהמשך.
+ */
 'use strict';
 
 const { getSecret } = require('../../lib/secrets');

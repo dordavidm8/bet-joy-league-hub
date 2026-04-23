@@ -1,3 +1,10 @@
+/**
+ * migrate.js – מנהל migrations של מסד הנתונים
+ *
+ * מריץ את schema.sql ואז את כל קבצי ה-SQL מתיקיית migrations/
+ * לפי סדר אלפביתי. עוקב אחרי מה כבר הורץ בטבלת schema_migrations.
+ * נקרא אוטומטית לפני הפעלת השרת (ראה startCommand ב-railway.json).
+ */
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');

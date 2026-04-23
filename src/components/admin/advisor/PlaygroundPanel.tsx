@@ -1,3 +1,6 @@
+// admin/advisor/PlaygroundPanel.tsx – סביבת בדיקת יועץ
+// מאפשר שליחת הודעות ליועץ AI ישירות מה-Admin Dashboard.
+// שימושי לבדיקת system prompt ושינויי הגדרות לפני שחרור.
 import React, { useRef, useState } from 'react';
 import { advisorPlaygroundStream } from '@/lib/api';
 import { Send, Loader2, Wrench } from 'lucide-react';

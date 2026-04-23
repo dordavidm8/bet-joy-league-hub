@@ -1,3 +1,6 @@
+// firebase.ts – אתחול Firebase SDK
+// מאתחל Firebase App עם credentials מ-env vars (VITE_FIREBASE_*).
+// מיוצא: auth (getAuth), storage (getStorage) לשימוש בכל האפליקציה.
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';

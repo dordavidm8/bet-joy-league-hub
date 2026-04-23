@@ -1,3 +1,13 @@
+/**
+ * teamNames.js – מילון תרגום שמות קבוצות (backend)
+ *
+ * מכיל מיפוי EN → HE לכל קבוצות הכדורגל.
+ * תומך ב-aliases (Manchester City → מנצ'סטר סיטי).
+ *
+ * translateTeam(name) –
+ *   מחפש תרגום מדויק, ואם לא נמצא מנסה normalize (הסרת accents, lowercase).
+ *   מחזיר את השם המקורי אם אין תרגום.
+ */
 // Same map as src/lib/teamNames.ts — keep in sync
 const TEAM_NAMES_HE = {
   // ── World Cup national teams ──────────────────────────────────────────────

@@ -1,3 +1,6 @@
+// admin/social/PostHistoryGallery.tsx – גלריית פוסטים
+// מציג ארכיון של פוסטים שנוצרו עם: כיתוב, פלטפורמה, סטטוס, מדדי engagement.
+// אפשרויות: אישור, דחייה, עריכה של פוסטים ממתינים.
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, ExternalLink, Filter } from 'lucide-react';

@@ -1,3 +1,6 @@
+// AllGamesPage.tsx – כל המשחקים
+// מציג רשימה הניתנת לחיפוש של כל המשחקים עם פילטרים:
+// תחרות, תאריך, סטטוס (scheduled/live/finished).
 import { useQuery } from "@tanstack/react-query";
 import { getGames } from "@/lib/api";
 import GameListItem from "@/components/GameListItem";

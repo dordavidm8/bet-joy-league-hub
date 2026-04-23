@@ -1,3 +1,14 @@
+/**
+ * adminLogService.js – audit log פעולות מנהל
+ *
+ * logAdminAction(adminEmail, action, entityType, entityId, details) –
+ *   רושם כל פעולת מנהל ל-admin_action_log table.
+ *
+ * פעולות מתועדות: feature_game, cancel_bet, adjust_points,
+ *   lock_game, pause_league, add_admin, toggle_competition, etc.
+ *
+ * מאפשר audit trail מלא: מי עשה מה ומתי.
+ */
 const { pool } = require('../config/database');
 
 async function logAdminAction(adminEmail, action, entityType, entityId, details) {

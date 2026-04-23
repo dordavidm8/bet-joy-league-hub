@@ -1,3 +1,11 @@
+/**
+ * oddsApi.js – אינטגרציה עם The Odds API
+ *
+ * מביא odds מ-api.the-odds-api.com לכל משחקי כדורגל.
+ * ממיר American Odds ל-Decimal: (+150 → 2.5, -200 → 1.5)
+ * שומר תוצאות ב-cache בזיכרון למשך 5 דקות להפחתת קריאות API.
+ * תואם שמות קבוצות עם accent-insensitive matching.
+ */
 // The Odds API integration — https://the-odds-api.com
 // Set THE_ODDS_API_KEY in Railway env vars to enable real odds
 const axios = require('axios');

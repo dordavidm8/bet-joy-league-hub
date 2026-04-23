@@ -1,3 +1,6 @@
+// minigames/ResultModal.tsx – מסך תוצאת משחק
+// Modal שמוצג לאחר סיום כל מיני-גיים.
+// מציג: ניצחת/הפסדת, נקודות שנצברו, תשובה נכונה.
 import React from 'react';
 import { CheckCircle2, XCircle, ArrowRight, RotateCcw, AlertCircle } from 'lucide-react';
 

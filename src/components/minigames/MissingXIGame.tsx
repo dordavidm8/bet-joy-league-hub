@@ -1,3 +1,6 @@
+// minigames/MissingXIGame.tsx – השלמת הרכב
+// מציג מגרש כדורגל עם הרכב ממשחק אחרון, חלק מהשחקנים חסרים.
+// המשתמש צריך להכניס שמות שחקנים חסרים.
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

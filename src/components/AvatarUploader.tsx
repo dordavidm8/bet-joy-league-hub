@@ -1,3 +1,6 @@
+// AvatarUploader.tsx – העלאת תמונת פרופיל
+// מאפשר בחירת תמונה, חיתוך, והעלאה ל-Firebase Storage.
+// לאחר העלאה: שומר avatar_url דרך PATCH /users/me/avatar.
 import { useState, useCallback, useRef } from "react";
 import Cropper from "react-easy-crop";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";

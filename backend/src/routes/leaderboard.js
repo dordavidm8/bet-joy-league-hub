@@ -1,3 +1,9 @@
+/**
+ * routes/leaderboard.js – טבלת דירוג גלובלית
+ *
+ * GET /leaderboard/global – 100 המובילים לפי points_balance
+ * GET /leaderboard/me     – דירוג המשתמש הנוכחי + שכניו בטבלה
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

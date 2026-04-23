@@ -1,3 +1,6 @@
+// minigames/CareerPathGame.tsx – משחק Career Path
+// ניחוש שחקן לפי רצף המועדונים בקריירתו.
+// רמות: מתחיל בהצגת מועדון אחד, מגלה יותר עם כל ניחוש שגוי.
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, History, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

@@ -1,3 +1,6 @@
+// admin/social/SocialListeningFeed.tsx – פיד ניטור אזכורים
+// מציג אזכורי המותג שנמצאו ברשת (social_mentions table).
+// כולל: URL, sentiment (חיובי/שלילי/ניטרלי), PR risk flag.
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, AlertTriangle, TrendingUp, Eye } from 'lucide-react';

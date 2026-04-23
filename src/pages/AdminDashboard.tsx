@@ -1,3 +1,7 @@
+// AdminDashboard.tsx – לוח ניהול
+// גישה: admin בלבד (AdminRoute ב-App.tsx).
+// 8 לשוניות: סקירה, משתמשים, הימורים, משחקים, ליגות, התראות, אתגרים, מתקדם.
+// כולל: AdvisorTab (הגדרות AI), SocialAgentTab (pipeline מדיה חברתית).
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";

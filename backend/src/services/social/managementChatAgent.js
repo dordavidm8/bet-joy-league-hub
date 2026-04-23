@@ -1,3 +1,10 @@
+/**
+ * managementChatAgent.js – סוכן צ'אט ניהולי
+ *
+ * chat(message, context) –
+ *   מאפשר למנהל לשוחח עם הסוכנים בזמן אמת מה-Admin Dashboard.
+ *   הסוכן יכול לתת עדכונים על pipeline, לשנות אסטרטגיה, לדווח על ביצועים.
+ */
 const { pool } = require('../../config/database');
 const { getGroqClient, getSocialConfig, updateSocialConfig } = require('./socialMediaUtils');
 const { runDailySocialMediaPipeline } = require('./orchestratorAgent');

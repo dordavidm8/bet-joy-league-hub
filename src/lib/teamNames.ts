@@ -1,3 +1,7 @@
+// teamNames.ts – תרגום שמות קבוצות EN↔HE (frontend)
+// מכיל מיפוי סטטי + טוען תרגומים מאושרים מה-DB.
+// loadTeamTranslations() – קריאת API פעם אחת בהפעלה (App.tsx).
+// translateTeam(name) – מחזיר שם עברי אם קיים, אחרת מקורי.
 // English → Hebrew team name translations
 // Covers: FIFA World Cup, UEFA Champions League, Premier League, La Liga, Bundesliga, Serie A, Ligue 1
 // ESPN displayName variants are included as separate keys

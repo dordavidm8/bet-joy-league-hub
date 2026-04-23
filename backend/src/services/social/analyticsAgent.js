@@ -1,3 +1,11 @@
+/**
+ * analyticsAgent.js – סוכן אנליטיקה
+ *
+ * analyzePerformance() –
+ *   מביא מדדי engagement מהפלטפורמות (impressions, likes, shares).
+ *   מחשב engagement rate לכל פוסט.
+ *   שומר ב-social_post_analytics table.
+ */
 const { pool } = require('../../config/database');
 const { getGroqClient, getSocialConfig } = require('./socialMediaUtils');
 

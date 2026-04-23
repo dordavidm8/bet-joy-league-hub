@@ -1,3 +1,6 @@
+// use-toast.ts – hook להצגת toast notifications
+// wrapper של shadcn/ui toast.
+// useToast() – מחזיר { toast } לשליחת הודעות מיידיות.
 import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";

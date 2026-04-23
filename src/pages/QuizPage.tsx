@@ -1,3 +1,6 @@
+// QuizPage.tsx – שאלות טריוויה
+// מציג שאלה אחת בכל פעם. לאחר תשובה: מציג נכון/לא נכון + נקודות שנצברו.
+// מאפשר המשך לשאלה הבאה.
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getNextQuestion, answerQuestion } from "@/lib/api";
 import { useState } from "react";

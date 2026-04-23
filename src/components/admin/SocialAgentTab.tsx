@@ -1,3 +1,10 @@
+// admin/SocialAgentTab.tsx – לשונית ניהול סוכני מדיה חברתית
+// מכילה ממשק שליטה מלא ב-pipeline מדיה חברתית:
+//   AgentStatusGrid     – סטטוס כל סוכן
+//   LiveWorkFeed        – לוג pipeline בזמן אמת
+//   PostHistoryGallery  – ארכיון פוסטים שנוצרו
+//   KnowledgeBaseManager– ניהול בסיס הידע
+//   ManagementChat      – צ'אט עם הסוכנים
 import React, { useState } from 'react';
 import { Bot, Layers, MessageSquare, BarChart2, BookOpen, Eye, Settings, Zap } from 'lucide-react';
 import { LiveWorkFeed } from './social/LiveWorkFeed';

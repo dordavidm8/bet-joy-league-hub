@@ -1,3 +1,12 @@
+/**
+ * routes/auth.js – routes אימות והרשמה
+ *
+ * POST /api/auth/register – יוצר/מעדכן משתמש ב-DB לאחר Firebase sign-in.
+ *   קורא ל-Firebase Admin לאמת token, בודק אם המשתמש קיים, יוצר אם לא.
+ *   מחזיר את אובייקט המשתמש המלא כולל points_balance.
+ *
+ * GET  /api/auth/me – מחזיר את המשתמש המחובר הנוכחי.
+ */
 const express = require('express');
 const router = express.Router();
 const admin = require('../config/firebase');

@@ -1,3 +1,6 @@
+// admin/social/LiveWorkFeed.tsx – פיד ריצת pipeline בזמן אמת
+// מציג log של ריצת pipeline פעילה: שלבים, סוכנים, שגיאות.
+// polling מ-/social/runs עם refetchInterval.
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, X, Edit2, Loader2, Image, RefreshCw, ExternalLink, Wand2 } from 'lucide-react';

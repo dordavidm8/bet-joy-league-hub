@@ -1,3 +1,7 @@
+// ProfilePage.tsx – פרופיל אישי ועריכה
+// מציג: תמונת פרופיל, שם, נקודות, סטטיסטיקות, הישגים.
+// עריכה: שם משתמש, תמונת פרופיל (AvatarUploader).
+// קוד הפניה (referral) + כפתור שיתוף.
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMyBets, getMyReferralCode, updateAvatar, updateProfile, deleteAccount, getMyAchievements, getDetailedStats, ACHIEVEMENTS, getWaStatus, linkPhone, verifyPhone, unlinkPhone, setWaOptIn } from "@/lib/api";

@@ -1,3 +1,17 @@
+/**
+ * routes/leagues.js – ניהול ליגות פרטיות
+ *
+ * Endpoints:
+ *   POST /leagues              – יצירת ליגה חדשה
+ *   POST /leagues/join         – הצטרפות לפי קוד הזמנה
+ *   POST /leagues/:id/leave    – עזיבת ליגה
+ *   GET  /leagues/my/list      – ליגות המשתמש
+ *   GET  /leagues/:id          – פרטי ליגה + דירוג
+ *   POST /leagues/:id/settle   – סגירת עונה + חלוקת פרסים (יוצר בלבד)
+ *   GET  /leagues/:id/leaderboard – טבלת דירוג הליגה
+ *
+ * ליגה יכולה להיות בפורמט: pool (קופה משותפת), per_game (לפי משחק), tournament.
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

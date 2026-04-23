@@ -1,3 +1,15 @@
+/**
+ * notificationService.js – שירות שליחת התראות
+ *
+ * sendNotification(userId, type, title, body, data) –
+ *   כותב התראה ל-notifications table.
+ *   data הוא JSONB שרירותי (לדוגמה: { bet_id, game_id }).
+ *
+ * sendToAll(type, title, body) – שולח לכל המשתמשים.
+ *
+ * סוגי התראות: bet_result, game_starting, league_invite,
+ *   achievement, admin_message, special_offer, etc.
+ */
 const { pool } = require('../config/database');
 
 async function createNotification(userId, { type, title, body, data }) {

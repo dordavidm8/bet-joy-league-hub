@@ -1,3 +1,6 @@
+// mockData.ts – נתוני דמו למצב פיתוח
+// משמש כאשר ה-backend לא זמין.
+// מכיל: משחקים, ליגות, הימורים, משתמש לדוגמה.
 export interface Team {
   id: string;
   name: string;

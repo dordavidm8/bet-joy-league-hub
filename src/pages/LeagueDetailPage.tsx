@@ -1,3 +1,7 @@
+// LeagueDetailPage.tsx – דף פרטי ליגה
+// מציג: פרטי הליגה, טבלת דירוג (leaderboard), חברים, פרמטרי ליגה.
+// אם יוצר הליגה: כפתור 'סגור עונה' לחלוקת פרסים.
+// params: leagueId מ-React Router.
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, searchUsers, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, refreshWaInviteLink, setWaInviteLink, broadcastToLeague, TournamentMatch } from "@/lib/api";

@@ -1,3 +1,6 @@
+// admin/social/MagicSwitchModal.tsx – Toggle תכונות
+// Modal עם switches לכל תכונות ה-social agents:
+// auto_approve, LinkedIn enabled, Instagram enabled, TikTok enabled, etc.
 import React, { useState } from 'react';
 import { Wand2, Loader2, Copy, Check } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';

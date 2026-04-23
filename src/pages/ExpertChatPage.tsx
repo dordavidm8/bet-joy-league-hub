@@ -1,3 +1,6 @@
+// ExpertChatPage.tsx – דף צ'אט יועץ AI
+// מציג את AiAdvisor component בתצוגה מסך מלא.
+// דף ייעודי לשיחה מרחיבה עם היועץ ללא הסחות דעת.
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Sparkles, User, ChevronDown } from "lucide-react";

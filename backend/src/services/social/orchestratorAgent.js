@@ -1,3 +1,18 @@
+/**
+ * orchestratorAgent.js – מתאם pipeline מדיה חברתית
+ *
+ * runDailySocialMediaPipeline() –
+ *   מריץ את כל הסוכנים ברצף ליצירת פוסטים יומיים:
+ *   1. בדיקת idempotency (לא לרוץ פעמיים באותו יום)
+ *   2. טעינת context: משחקים היום, בסיס ידע, זיכרונות
+ *   3. contentCalendarAgent → נושא שבועי
+ *   4. growthStrategyAgent  → זווית צמיחה
+ *   5. contentCreatorAgent  → כתיבת כיתוב
+ *   6. visualCreatorAgent   → תיאור תמונה/וידאו
+ *   7. seoGeoAgent          → hashtags ואופטימיזציה
+ *   8. publisherAgent       → פרסום לפלטפורמות
+ *   9. שמירת הפוסט ולוג הריצה ב-DB
+ */
 'use strict';
 
 const { v4: uuidv4 } = require('uuid');

@@ -1,3 +1,13 @@
+/**
+ * unifiedMemoryService.js – זיכרון מצטבר של סוכנים
+ *
+ * הסוכנים לומדים מפוסטים קודמים ושומרים תובנות:
+ *   saveMemory(insight, type, score) – שמירת תובנה חדשה (1-10 חשיבות)
+ *   loadTopMemories(limit)           – טעינת התובנות החשובות ביותר
+ *   cleanupOldMemories()             – מחיקת זיכרונות ישנים (TTL מוגדר)
+ *
+ * סוגי זיכרון: engagement, audience, trend, performance
+ */
 const { pool } = require('../../config/database');
 const { getGroqClient, getSocialConfig } = require('./socialMediaUtils');
 

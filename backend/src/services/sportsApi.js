@@ -1,3 +1,15 @@
+/**
+ * sportsApi.js – אינטגרציה עם ESPN API ו-The Odds API
+ *
+ * fetchAllGames()        – מביא כל המשחקים מ-ESPN (7 ליגות מרכזיות)
+ * fetchScoreboard(slug)  – מביא משחקים לליגה ספציפית
+ * buildBetQuestions(game)– בונה 3-4 שאלות הימור לכל משחק:
+ *                          match_winner, btts, over_under, exact_score
+ * getOdds(home, away)    – מביא odds מ-The Odds API (cache 5 דקות)
+ *
+ * המרת odds: American → Decimal
+ * תרגום שמות קבוצות: EN → HE דרך teamNames.js
+ */
 const axios = require('axios');
 const { translateTeam } = require('../lib/teamNames');
 

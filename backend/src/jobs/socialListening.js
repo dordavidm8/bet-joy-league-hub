@@ -1,3 +1,9 @@
+/**
+ * socialListening.js – ניטור אזכורים ברשת
+ *
+ * מחפש אזכורי המותג ברשתות חברתיות.
+ * שומר ב-social_mentions table עם sentiment ו-PR risk flag.
+ */
 'use strict';
 
 const { pool } = require('../config/database');

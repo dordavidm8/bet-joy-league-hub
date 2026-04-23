@@ -1,3 +1,5 @@
+// NotFound.tsx – דף 404
+// מוצג כאשר הנתיב לא קיים. כפתור חזרה לדף הבית.
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 

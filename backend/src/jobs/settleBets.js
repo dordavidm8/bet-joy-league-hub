@@ -1,3 +1,14 @@
+/**
+ * settleBets.js – סגירת הימורים אוטומטית
+ *
+ * רץ כל 5 דקות. מוצא משחקים שהסתיימו ומסגיר את כל ההימורים עליהם:
+ *   - מחשב תוצאת כל שאלה (מנצח, BTTS, over/under, exact score)
+ *   - לכל הימור שניצח: מחשב payout (stake × odds × (1 - penalty))
+ *   - מעדכן points_balance של המשתמש
+ *   - רושם point_transaction
+ *   - מסגיר פרלי (רק אם כל ה-legs ניצחו)
+ *   - מסגיר הימורי ליגה בנפרד מהימורים גלובליים
+ */
 const { pool } = require('../config/database');
 const { calculatePayout } = require('../services/bettingService');
 const { settleLeaguePool } = require('../routes/leagues');

@@ -1,3 +1,6 @@
+// OnboardingPage.tsx – מדריך למשתמש חדש
+// מוצג לאחר הרשמה ראשונה. מסביר: איך מהמרים, נקודות, ליגות.
+// Slides interactives עם Framer Motion animations.
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";

@@ -1,3 +1,13 @@
+/**
+ * routes/advisor.js – יועץ AI
+ *
+ * POST /advisor/:gameId         – שיחה עם יועץ AI (תגובת JSON מלאה)
+ * GET  /advisor/:gameId/stream  – שיחה עם יועץ AI (Server-Sent Events streaming)
+ *
+ * מגבלה: 20 הודעות ליום לכל משתמש (נספרות ב-advisor_usage table).
+ * הנתיב stream שולח chunks בזמן אמת כשה-LLM מייצר תגובה.
+ * משתמש ב-advisorService.js לכל לוגיקת ה-LLM.
+ */
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');

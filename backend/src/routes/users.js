@@ -1,3 +1,15 @@
+/**
+ * routes/users.js – ניהול פרופיל משתמש
+ *
+ * Endpoints:
+ *   GET  /users/me/stats          – סטטיסטיקות הימורים (ניצחונות, ROI, etc.)
+ *   GET  /users/me/bets           – היסטוריית הימורים (paginated)
+ *   GET  /users/me/transactions   – יומן עסקאות נקודות
+ *   GET  /users/me/referral-code  – קוד הפניה
+ *   GET  /users/:id               – פרופיל ציבורי של משתמש אחר
+ *   PUT  /users/me/avatar         – עדכון תמונת פרופיל
+ *   POST /users/:username/follow  – עקוב/הפסק לעקוב
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');

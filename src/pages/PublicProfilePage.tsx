@@ -1,3 +1,7 @@
+// PublicProfilePage.tsx – פרופיל ציבורי של משתמש אחר
+// מציג: נתוני משתמש פומביים, סטטיסטיקות, הישגים, הימורים אחרונים.
+// עקוב / הפסק לעקוב.
+// params: username מ-React Router.
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPublicProfile, followUser, unfollowUser, ACHIEVEMENTS } from "@/lib/api";

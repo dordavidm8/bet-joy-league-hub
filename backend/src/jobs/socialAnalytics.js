@@ -1,3 +1,9 @@
+/**
+ * socialAnalytics.js – רענון מדדי engagement
+ *
+ * רץ 8:00 UTC. מביא engagement metrics לכל הפוסטים שפורסמו
+ * ושומר ב-social_post_analytics table.
+ */
 'use strict';
 
 const { pool } = require('../config/database');

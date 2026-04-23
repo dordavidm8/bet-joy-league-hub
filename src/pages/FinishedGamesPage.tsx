@@ -1,3 +1,5 @@
+// FinishedGamesPage.tsx – תוצאות משחקים שהסתיימו
+// מציג תוצאות מהימים האחרונים עם ציונים סופיים.
 import { useQuery } from "@tanstack/react-query";
 import { getFinishedGames, getMyBets, Game, Bet } from "@/lib/api";
 import { motion } from "framer-motion";
