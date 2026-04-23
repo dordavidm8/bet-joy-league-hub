@@ -193,6 +193,7 @@ async function handleGroupMessage(client, msg, chat) {
     );
 
     await msg.react('👍');
+    await msg.reply(`🔄 ההימור שלך על *${bet.home_team} - ${bet.away_team}* עודכן בהצלחה!`);
     return;
   }
 
@@ -387,21 +388,6 @@ async function processBetCorrection(client, msg, senderPhone, prevBet) {
 
   const { resultLine } = parsed;
   if (!['1', 'X', '2', 'תיקו'].includes(resultLine)) return; // silent ignore
-
-  // Refund stake on old match_winner bet
-  if (!prevBet.is_free_bet && prevBet.stake > 0) {
-    await pool.query(
-      `UPDATE users SET points_balance = points_balance + $1 WHERE id = $2`,
-      [prevBet.stake, prevBet.user_id]
-    );
-  }
-
-  // Delete ALL pending bets for this game from this user (match_winner + exact_score)
-  await pool.query(
-    `DELETE FROM bets
-     WHERE user_id = $1 AND game_id = $2 AND wa_bet = true AND status IN ('pending', 'cancelled')`,
-    [prevBet.user_id, prevBet.game_id]
-  );
 
   // Re-run the normal bet flow using the original game message
   const gameMsgRes = await pool.query(
