@@ -126,7 +126,7 @@ const HomePage = () => {
           onClick={() => navigate("/profile?section=whatsapp")}
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#25D366]/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-[#25D366]/10 transition-colors" />
-          
+
           <div className="flex items-center gap-4 relative z-10">
             <div className="w-12 h-12 rounded-xl bg-[#25D366] flex items-center justify-center shrink-0 shadow-lg shadow-[#25D366]/20">
               <svg viewBox="0 0 24 24" className="w-7 h-7 fill-white" xmlns="http://www.w3.org/2000/svg">
