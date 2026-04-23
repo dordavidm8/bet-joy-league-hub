@@ -92,7 +92,8 @@ async function processBetReply(client, msg, phone, user, gameMsgRecord, content,
     [user.id, game.id, gameMsgRecord.league_id]
   );
 
-  if (existing.rows[0]) {
+  const isUpdate = !!existing.rows[0];
+  if (isUpdate) {
     const old = existing.rows[0];
     // Return old stake if fixed mode
     if (!old.is_free_bet && old.stake > 0) {
@@ -101,12 +102,14 @@ async function processBetReply(client, msg, phone, user, gameMsgRecord, content,
     await pool.query(`UPDATE bets SET status = 'cancelled' WHERE id = $1`, [old.id]);
   }
 
-  // Deduct stake
+  // Deduct stake + increment total_bets
   if (!isFreeBet && stake > 0) {
     await pool.query(
-      `UPDATE users SET points_balance = points_balance - $1 WHERE id = $2 AND points_balance >= $1`,
-      [stake, user.id]
+      `UPDATE users SET points_balance = points_balance - $1, total_bets = total_bets + $2 WHERE id = $3 AND points_balance >= $1`,
+      [stake, isUpdate ? 0 : 1, user.id]
     );
+  } else if (!isUpdate) {
+    await pool.query(`UPDATE users SET total_bets = total_bets + 1 WHERE id = $1`, [user.id]);
   }
 
   const wa_msg_id = msg.id._serialized;

@@ -163,6 +163,8 @@ async function settleBets() {
                WHERE league_id = $2 AND user_id = $3 AND is_active = true`,
               [leaguePointsPayout, bet.league_id, bet.user_id]
             );
+            // Also increment global win counter for stats
+            await client.query(`UPDATE users SET total_wins = total_wins + 1 WHERE id = $1`, [bet.user_id]);
           } else if (bet.league_id) {
             // minimum_stake league: credit global balance + this league's standings
             await client.query(

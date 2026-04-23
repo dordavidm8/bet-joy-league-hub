@@ -370,14 +370,19 @@ async function processBetReply(client, msg, senderPhone, gameMsg, source) {
   const isFree = game.bet_mode === 'prediction';
   const stake = isFree ? 0 : (game.stake_amount || 0);
 
-  // Check balance if needed
   if (!isFree && stake > 0) {
     const balRes = await pool.query(`SELECT points_balance FROM users WHERE id = $1`, [user.id]);
     if (balRes.rows[0].points_balance < stake) {
       await msg.reply(`❌ אין לך מספיק נקודות. יתרה: ${balRes.rows[0].points_balance} | נדרש: ${stake}`);
       return;
     }
-    await pool.query(`UPDATE users SET points_balance = points_balance - $1 WHERE id = $2`, [stake, user.id]);
+    await pool.query(
+      `UPDATE users SET points_balance = points_balance - $1${isUpdate ? '' : ', total_bets = total_bets + 1'} WHERE id = $2`,
+      [stake, user.id]
+    );
+  } else if (!isUpdate) {
+    // Prediction bet or stake 0: still increment total_bets if not an update
+    await pool.query(`UPDATE users SET total_bets = total_bets + 1 WHERE id = $1`, [user.id]);
   }
 
   const potentialPayout = (isFree ? 1 : stake) * odds;
