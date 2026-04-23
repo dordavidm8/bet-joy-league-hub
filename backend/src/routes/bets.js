@@ -283,9 +283,13 @@ router.post('/parlay', authenticate, async (req, res, next) => {
         throw Object.assign(new Error(`כבר המרת על שאלה זו בהימור חופשי`), { status: 409 });
       }
 
+      const cleanExactScore = sel.exact_score_prediction?.trim() || null;
+      const multiplier = cleanExactScore ? 3 : 1;
+      const featuredMult = game.is_featured ? (1 + (game.featured_bonus_pct || 0) / 100) : 1;
+
       const odds = parseFloat(chosen.odds);
-      weightedOddsSum += sel.stake * odds;
-      betData.push({ ...sel, odds, questionText: question.question_text });
+      weightedOddsSum += sel.stake * odds * multiplier * featuredMult;
+      betData.push({ ...sel, odds, multiplier, featuredMult, exact_score_prediction: cleanExactScore, questionText: question.question_text });
     }
 
     // Potential payout = sum(stake × odds) × 1.1
@@ -309,14 +313,14 @@ router.post('/parlay', authenticate, async (req, res, next) => {
 
     // Insert one bet per leg — store individual stake in bets.stake
     for (const b of betData) {
-      const legPotentialPayout = Math.floor(b.stake * b.odds * 1.1);
+      const legPotentialPayout = Math.floor(b.stake * b.odds * b.multiplier * b.featuredMult * 1.1);
       await client.query(
         `INSERT INTO bets
            (user_id, game_id, bet_question_id, selected_outcome, stake, odds,
-            live_penalty_pct, potential_payout, is_live_bet, match_minute_placed, parlay_id, league_id)
-         VALUES ($1,$2,$3,$4,$5,$6,0,$7,false,NULL,$8,NULL)`,
+            live_penalty_pct, potential_payout, is_live_bet, match_minute_placed, parlay_id, league_id, exact_score_prediction)
+         VALUES ($1,$2,$3,$4,$5,$6,0,$7,false,NULL,$8,NULL,$9)`,
         [req.user.id, b.game_id, b.bet_question_id, b.selected_outcome,
-         b.stake, b.odds, legPotentialPayout, parlay.id]
+         b.stake, b.odds, legPotentialPayout, parlay.id, b.exact_score_prediction]
       );
     }
 

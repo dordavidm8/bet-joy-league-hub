@@ -206,23 +206,22 @@ async function sendMyBets(msg, user) {
 
     if (b.status === 'pending') {
       const isParlay = !!b.parlay_number;
+      const multiplier = b.exact_score_prediction ? 3 : 1;
+      const featuredMult = b.is_featured ? (1 + (b.featured_bonus_pct || 0) / 100) : 1;
+      
+      const parts = [];
+      if (!isShared) parts.push(b.stake);
+      parts.push(parseFloat(String(b.odds)).toFixed(2));
+      if (multiplier > 1) parts.push(`${multiplier}🎯`);
+      if (featuredMult > 1) parts.push(`${featuredMult}✨`);
+      
       if (isParlay) {
         // For parlay legs, we show the total parlay potential payout
         payoutValueStr = Math.floor(parseFloat(String(b.parlay_potential_payout))).toLocaleString();
-        // Formula shows the parlay bonus
-        formula = ` (פרליי ×1.1🔗)`;
+        // Formula shows leg factors + parlay bonus
+        formula = ` (${parts.join(' × ')} × 1.1🔗)`;
       } else {
-        const multiplier = b.exact_score_prediction ? 3 : 1;
-        const featuredMult = b.is_featured ? (1 + (b.featured_bonus_pct || 0) / 100) : 1;
-        
-        const parts = [];
-        if (!isShared) parts.push(b.stake);
-        parts.push(parseFloat(String(b.odds)).toFixed(2));
-        if (multiplier > 1) parts.push(`${multiplier}🎯`);
-        if (featuredMult > 1) parts.push(`${featuredMult}✨`);
-        
         formula = ` (${parts.join(' × ')})`;
-
         // RE-CALCULATE strictly from components to ensure formula == result
         const baseStake = isShared ? 1 : parseFloat(String(b.stake));
         const val = baseStake * parseFloat(String(b.odds)) * multiplier * featuredMult;
