@@ -106,7 +106,6 @@ const MiniGamesHubPage: React.FC = () => {
                       <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                         <CheckCircle2 className="text-primary" size={20} />
                       </div>
-                      <span className="text-[9px] font-bold text-primary">הצלחת! ✅</span>
                     </div>
                   ) : exhausted ? (
                     <div className="flex flex-col items-center gap-1">
