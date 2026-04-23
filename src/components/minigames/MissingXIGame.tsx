@@ -77,7 +77,7 @@ const MissingXIGame: React.FC<MissingXIGameProps> = ({ data, onSolve }) => {
                 )}
              </div>
           </div>
-         <button className="p-2 bg-card rounded-full shadow-sm"><HelpCircle size={20} /></button>
+         <div className="w-10 h-10" />
       </header>
 
       <section className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-soft mb-6 bg-green-700 bg-gradient-to-t from-green-800 to-green-600 border border-white/10 mx-auto max-w-sm">

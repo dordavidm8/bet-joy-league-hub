@@ -140,9 +140,9 @@ const MiniGamePlayPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20 font-hebrew" dir="rtl">
-      {attemptsLeft < MAX_ATTEMPTS && attemptsLeft > 0 && (
+      {attemptCount < MAX_ATTEMPTS && (
         <div className="text-center pt-3 text-xs text-muted-foreground">
-          נסיון {attemptCount} מתוך {MAX_ATTEMPTS} — נשארו {attemptsLeft} ניסיונות
+          ניסיון {attemptCount + 1}/{MAX_ATTEMPTS} — {MAX_ATTEMPTS - attemptCount === 1 ? 'נותר ניסיון 1' : `נותרו ${MAX_ATTEMPTS - attemptCount} ניסיונות`}
         </div>
       )}
       {renderGame()}

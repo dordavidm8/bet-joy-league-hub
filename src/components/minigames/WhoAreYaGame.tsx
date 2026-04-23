@@ -35,7 +35,7 @@ const WhoAreYaGame: React.FC<WhoAreYaGameProps> = ({ data, onSolve }) => {
             <h1 className="font-bold text-lg text-primary leading-tight">מי אתה?</h1>
             <p className="text-[10px] text-muted-foreground uppercase">זהו את השחקן</p>
          </div>
-         <button className="p-2 bg-card rounded-full shadow-sm"><HelpCircle size={20} /></button>
+         <div className="w-10 h-10" />
       </header>
 
       <main className="px-4 pb-8 max-w-sm mx-auto w-full flex flex-col gap-6">

@@ -32,7 +32,7 @@ const CareerPathGame: React.FC<CareerPathGameProps> = ({ data, onSolve }) => {
             <p className="text-[10px] text-muted-foreground uppercase">זהו את השחקן לפי התחנות</p>
             <p className="text-[10px] text-primary/70 font-semibold mt-1">English</p>
          </div>
-         <button className="p-2 bg-card rounded-full shadow-sm"><HelpCircle size={20} /></button>
+         <div className="w-10 h-10" />
       </header>
 
       <main className="px-4 pb-8 max-w-sm mx-auto w-full flex flex-col gap-6">

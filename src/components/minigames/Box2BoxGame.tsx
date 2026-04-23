@@ -33,7 +33,7 @@ const Box2BoxGame: React.FC<Box2BoxGameProps> = ({ data, onSolve }) => {
             <h1 className="font-bold text-lg text-primary leading-tight">בוקס2בוקס</h1>
             <p className="text-[10px] text-muted-foreground uppercase">מצאו שחקן ששיחק בשני המועדונים</p>
          </div>
-         <button className="p-2 bg-card rounded-full shadow-sm"><HelpCircle size={20} /></button>
+         <div className="w-10 h-10" />
       </header>
 
       <main className="px-4 pb-8 max-w-sm mx-auto w-full flex flex-col gap-8">
