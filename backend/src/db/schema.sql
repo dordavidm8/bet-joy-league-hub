@@ -474,6 +474,7 @@ ALTER TABLE parlays ALTER COLUMN potential_payout TYPE DECIMAL(10,2);
 -- Support Inquiries Table
 CREATE TABLE IF NOT EXISTS support_inquiries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  inquiry_number SERIAL,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   message TEXT NOT NULL,
   status VARCHAR(50) NOT NULL DEFAULT 'unread', -- 'unread', 'read_unhandled', 'handled'

@@ -2071,13 +2071,14 @@ const SupportTab = () => {
       <div className="border rounded-xl overflow-auto">
         <table className="w-full text-xs min-w-[600px]">
           <thead className="bg-muted/50"><tr>
-            {["משתמש", "תאריך ושעה", "תוכן הפנייה", "סטטוס", "פעולות"].map(h => (
+            {["#", "משתמש", "תאריך ושעה", "תוכן הפנייה", "סטטוס", "פעולות"].map(h => (
               <th key={h} className="text-right px-3 py-2 font-semibold text-muted-foreground">{h}</th>
             ))}
           </tr></thead>
           <tbody>
             {inquiries.map(inq => (
               <tr key={inq.id} className="border-t border-border/50 hover:bg-muted/30 transition-colors">
+                <td className="px-3 py-2 font-mono font-bold text-muted-foreground">{inq.inquiry_number}</td>
                 <td className="px-3 py-2">
                   <p className="font-bold">@{inq.username}</p>
                   <p className="text-[10px] text-muted-foreground">{inq.email}</p>
@@ -2122,7 +2123,7 @@ const SupportTab = () => {
       </div>
 
       {replyInquiry && (
-        <Modal onClose={() => setReplyInquiry(null)} title={`תשובה ל-@\${replyInquiry.username}`}>
+        <Modal onClose={() => setReplyInquiry(null)} title={`תשובה לפנייה מס׳ \${replyInquiry.inquiry_number} (@\${replyInquiry.username})`}>
           <div className="flex flex-col gap-4">
             <div className="bg-secondary p-3 rounded-xl">
               <p className="text-[10px] text-muted-foreground mb-1 font-bold">הפנייה:</p>

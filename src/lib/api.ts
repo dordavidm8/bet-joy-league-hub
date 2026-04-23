@@ -863,6 +863,7 @@ export async function advisorPlaygroundStream(
 // ── Support ──────────────────────────────────────────────────────────────────
 export interface AdminSupportInquiry {
   id: string;
+  inquiry_number: number;
   user_id: string;
   username: string;
   display_name: string | null;

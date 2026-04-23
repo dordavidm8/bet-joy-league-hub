@@ -56,6 +56,7 @@ const ProfilePage = () => {
   const [supportMsg, setSupportMsg] = useState("");
   const [supportLoading, setSupportLoading] = useState(false);
   const [supportSuccess, setSupportSuccess] = useState(false);
+  const [supportNumber, setSupportNumber] = useState<number | null>(null);
   const [supportError, setSupportError] = useState("");
 
   // New timer effect
@@ -128,13 +129,15 @@ const ProfilePage = () => {
 
   const supportMutation = useMutation({
     mutationFn: (message: string) => sendSupportInquiry(message),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setSupportSuccess(true);
+      setSupportNumber(data.inquiry.inquiry_number);
       setSupportMsg("");
       setTimeout(() => {
         setShowSupportModal(false);
         setSupportSuccess(false);
-      }, 3000);
+        setSupportNumber(null);
+      }, 5000);
     },
     onError: (err: any) => {
       setSupportError(err?.message || "חלה שגיאה בשליחת הפנייה");
@@ -606,6 +609,11 @@ const ProfilePage = () => {
                   <Check size={32} />
                 </div>
                 <h4 className="text-base font-bold">הפנייה נשלחה בהצלחה!</h4>
+                {supportNumber && (
+                  <p className="text-sm font-mono font-black bg-primary/10 text-primary px-3 py-1 rounded-full">
+                    פנייה מס׳ {supportNumber}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">צוות האתר יחזור אלייך בהקדם בהתראה באתר ובוואטסאפ.</p>
               </div>
             ) : (
