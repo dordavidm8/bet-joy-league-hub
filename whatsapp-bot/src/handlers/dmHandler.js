@@ -103,6 +103,7 @@ async function sendMyBets(msg, user) {
   const { translateTeam } = require('../utils/teamNames');
   const betsRes = await pool.query(
     `SELECT b.*, g.home_team, g.away_team, g.score_home, g.score_away, g.status AS game_status, bq.type AS bet_type, bq.question_text,
+            g.is_featured, g.featured_bonus_pct,
             l.name AS league_name, l.bet_mode AS league_bet_mode, l.access_type AS league_access_type,
             p.parlay_number, p.status AS parlay_status,
             t1.name_he as home_he_db, t2.name_he as away_he_db
@@ -201,19 +202,31 @@ async function sendMyBets(msg, user) {
     const stakeDisplay = isShared ? '💎 קופה משותפת' : `${b.stake} נק'`;
     
     let payoutValue = b.potential_payout;
+    let formula = '';
+
     if (b.status === 'pending') {
       const multiplier = b.exact_score_prediction ? 3 : 1;
+      const featuredMult = b.is_featured ? (1 + (b.featured_bonus_pct || 0) / 100) : 1;
+      
+      const parts = [];
+      if (!isShared) parts.push(b.stake);
+      parts.push(parseFloat(String(b.odds)).toFixed(2));
+      if (multiplier > 1) parts.push(`×${multiplier}🎯`);
+      if (featuredMult > 1) parts.push(`×${featuredMult}✨`);
+      
+      formula = ` (${parts.join(' × ')})`;
+
       if (isShared) {
-        payoutValue = (parseFloat(String(b.odds)) * multiplier).toFixed(2);
+        payoutValue = (parseFloat(String(b.odds)) * multiplier * featuredMult).toFixed(2);
       } else {
-        payoutValue = (parseFloat(String(b.potential_payout)) * multiplier).toLocaleString();
+        payoutValue = Math.floor(parseFloat(String(b.potential_payout)) * multiplier * featuredMult).toLocaleString();
       }
     }
 
     const isExactHit = b.status === 'won' && parseFloat(String(b.actual_payout)) > (parseFloat(String(b.odds)) * 1.5);
     const showPayout = b.status === 'won' && b.actual_payout != null && !isParlayLoss;
     const payoutInfo = showPayout ? ` | זכייה: *${parseFloat(String(b.actual_payout)).toFixed(isShared ? 1 : 0)}*${isExactHit ? ' 🎯' : ''}` :
-                       (b.status === 'pending') ? ` | אפשרי: *${payoutValue}*` : '';
+                       (b.status === 'pending') ? ` | אפשרי: *${payoutValue}*${formula}` : '';
 
     return `${statusIcon} ${betDetail} | ${contextLabel} | ${stakeDisplay}${payoutInfo}\n`;
   };

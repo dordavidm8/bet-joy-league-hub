@@ -107,13 +107,13 @@ const TEAM_NAMES_HE = {
   'Paris Saint Germain': 'פ.ס.ז\'',
   'PSG': 'פ.ס.ז\'',
   'Juventus': 'יובנטוס',
-  'Inter Milan': 'אינטר מילאן',
-  'Inter': 'אינטר מילאן',
+  'Inter Milan': 'אינטר',
+  'Inter': 'אינטר',
   'AC Milan': 'מילאן',
   'Milan': 'מילאן',
   'Borussia Dortmund': 'בורוסיה דורטמונד',
   'RB Leipzig': 'לייפציג',
-  'Bayer Leverkusen': 'באיירן לברקוזן',
+  'Bayer Leverkusen': 'באייר לברקוזן',
   'Eintracht Frankfurt': 'איינטרכט פרנקפורט',
   'Benfica': 'בנפיקה',
   'SL Benfica': 'בנפיקה',
@@ -170,8 +170,8 @@ const TEAM_NAMES_HE = {
   'Nottingham Forest': 'נוטינגהאם פורסט',
   'Sheffield United': 'שפילד יונייטד',
   'West Ham United': 'ווסט האם',
-  'Wolverhampton Wanderers': 'וולברהמפטון',
-  'Wolves': 'וולברהמפטון',
+  'Wolverhampton Wanderers': 'וולבס',
+  'Wolves': 'וולבס',
   'Leicester City': 'לסטר סיטי',
   'Leeds United': 'לידס יונייטד',
   'Southampton': 'סאות\'המפטון',
@@ -321,12 +321,12 @@ const TEAM_NAMES_HE = {
 
 function translateTeam(name, approvedDynamic = {}) {
   if (!name) return name;
-  if (TEAM_NAMES_HE[name]) return TEAM_NAMES_HE[name];
   if (approvedDynamic[name]) return approvedDynamic[name];
+  if (TEAM_NAMES_HE[name]) return TEAM_NAMES_HE[name];
   const lower = name.toLowerCase();
-  const found = Object.keys(TEAM_NAMES_HE).find((k) => k.toLowerCase() === lower)
-    ?? Object.keys(approvedDynamic).find((k) => k.toLowerCase() === lower);
-  if (found) return TEAM_NAMES_HE[found] ?? approvedDynamic[found];
+  const found = Object.keys(approvedDynamic).find((k) => k.toLowerCase() === lower)
+    ?? Object.keys(TEAM_NAMES_HE).find((k) => k.toLowerCase() === lower);
+  if (found) return approvedDynamic[found] ?? TEAM_NAMES_HE[found];
   return name;
 }
 
