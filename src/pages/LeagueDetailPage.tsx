@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, searchUsers, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, refreshWaInviteLink, setWaInviteLink, broadcastToLeague, TournamentMatch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
-import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone } from "lucide-react";
+import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { translateTeam } from "@/lib/teamNames";
@@ -670,12 +670,19 @@ const LeagueDetailPage = () => {
                   ? m.status === "scheduled" || m.status === "live"
                   : m.status === "finished"
               )
+              .sort((a, b) => 
+                matchTab === "finished" 
+                  ? new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+                  : new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+              )
               .map((match: TournamentMatch) => {
               const hasBet = !!match.bet_id;
               const isScheduled = match.status === 'scheduled';
               const isLive = match.status === 'live';
               const canBet = isScheduled || isLive;
               const isInitialBalanceLeague = league.bet_mode === 'initial_balance';
+              const isWon = match.bet_status === 'won';
+              const isLost = match.bet_status === 'lost';
               return (
                 <button
                   key={match.id}
@@ -684,18 +691,26 @@ const LeagueDetailPage = () => {
                     : alert('לא ניתן להמר על משחק זה — חלון ההימורים נסגר')
                   }
                   className={`w-full flex items-center gap-3 p-3 rounded-xl border text-right transition-colors ${
-                    hasBet ? 'border-green-200 bg-green-50/50 active:bg-green-100/50'
+                    isWon ? 'border-green-200 bg-green-50/50 active:bg-green-100/50'
+                    : isLost ? 'border-red-200 bg-red-50/50 active:bg-red-100/50'
+                    : hasBet && canBet ? 'border-green-200 bg-green-50/50'
                     : !canBet ? 'border-border bg-card opacity-60'
                     : 'border-border bg-card hover:bg-secondary/50 active:bg-secondary/80'
                   }`}
                 >
                   {/* Status icon */}
                   <div className="shrink-0">
-                    {hasBet
-                      ? <CheckCircle2 size={18} className="text-green-500" />
-                      : isScheduled
-                        ? <Circle size={18} className="text-muted-foreground/40" />
-                        : <Clock size={18} className="text-muted-foreground/40" />}
+                    {isWon ? (
+                      <CheckCircle2 size={18} className="text-green-500" />
+                    ) : isLost ? (
+                      <XCircle size={18} className="text-red-500" />
+                    ) : hasBet ? (
+                      <CheckCircle2 size={18} className="text-green-500" />
+                    ) : isScheduled ? (
+                      <Circle size={18} className="text-muted-foreground/40" />
+                    ) : (
+                      <Clock size={18} className="text-muted-foreground/40" />
+                    )}
                   </div>
 
                   {/* Teams */}
@@ -716,15 +731,27 @@ const LeagueDetailPage = () => {
                         )}
                       </span>
                       {hasBet && (
-                        <span className="text-[10px] font-bold text-green-600">
-                          {match.bet_status === "won" && isInitialBalanceLeague && match.actual_payout && (
-                            <span className="text-[10px] font-bold text-green-600">
-                              {match.selected_outcome} · +{parseFloat(String(match.actual_payout)).toFixed(1)} נק׳
-                              {(parseFloat(String(match.actual_payout)) > (parseFloat(String(match.bet_odds || 0)) * 1.5)) && " 🎯"}
+                        <span className="text-[10px] font-bold">
+                          {isWon && (
+                            <span className="text-green-600">
+                              {isInitialBalanceLeague && match.actual_payout != null ? (
+                                <>
+                                  {match.selected_outcome} · +{parseFloat(String(match.actual_payout)).toFixed(1)} נק׳
+                                  {(parseFloat(String(match.actual_payout)) > (parseFloat(String(match.bet_odds || 0)) * 1.5)) && " 🎯"}
+                                </>
+                              ) : (
+                                ` +${match.actual_payout} נק׳`
+                              )}
                             </span>
                           )}
-                          {match.bet_status === "won" && !isInitialBalanceLeague && ` +${match.actual_payout} נק׳`}
-                          {match.bet_status === "lost" && " ✗"}
+                          {isLost && (
+                            <span className="text-red-500">
+                              {match.selected_outcome} · 0 נק׳
+                            </span>
+                          )}
+                          {!isWon && !isLost && (
+                            <span className="text-green-600">שותף</span>
+                          )}
                         </span>
                       )}
                     </div>

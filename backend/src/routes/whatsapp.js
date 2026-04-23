@@ -227,7 +227,7 @@ router.post('/leagues/:id/refresh-invite-link', authenticate, async (req, res, n
     );
     if (!groupRes.rows[0]) return res.status(404).json({ error: 'No active WA group' });
 
-    const result = await callBot('/internal/get-invite-link', { 
+    const result = await callBot('/internal/get-invite-link', {
       groupJid: groupRes.rows[0].wa_group_id,
       inviteCode: leagueRes.rows[0].invite_code
     });
@@ -251,8 +251,8 @@ router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
     if (leagueRes.rows[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
 
     if (invite_link) {
-      const joinRes = await callBot('/internal/join-group-by-link', { 
-        link: invite_link, 
+      const joinRes = await callBot('/internal/join-group-by-link', {
+        link: invite_link,
         leagueId,
         leagueName: leagueRes.rows[0].name,
         inviteCode: leagueRes.rows[0].invite_code
@@ -273,7 +273,7 @@ router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
              invite_link=$3`,
           [joinRes.wa_group_id, leagueId, invite_link]
         );
-        
+
         await pool.query(
           `INSERT INTO wa_league_settings (league_id, bet_mode, stake_amount, exact_score_enabled, morning_message_time, leaderboard_frequency, leaderboard_time, leaderboard_day)
            VALUES ($1, 'prediction', 0, false, '09:00', 'weekly', '10:00', 0)
@@ -294,7 +294,7 @@ router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
         [null, leagueId]
       );
     }
-    
+
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -377,8 +377,8 @@ router.put('/leagues/:id/settings', authenticate, async (req, res, next) => {
          leaderboard_time = EXCLUDED.leaderboard_time,
          leaderboard_day = EXCLUDED.leaderboard_day`,
       [leagueId, bet_mode || 'prediction', stake_amount || 0, exact_score_enabled || false,
-       morning_message_time || '09:00', reminder_hours_before || null,
-       leaderboard_frequency || 'weekly', leaderboard_time || '10:00', leaderboard_day ?? 0]
+        morning_message_time || '09:00', reminder_hours_before || null,
+        leaderboard_frequency || 'weekly', leaderboard_time || '10:00', leaderboard_day ?? 0]
     );
 
     res.json({ message: 'הגדרות נשמרו' });
