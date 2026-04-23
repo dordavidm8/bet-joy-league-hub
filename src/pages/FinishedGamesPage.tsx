@@ -130,7 +130,7 @@ const FinishedGamesPage = () => {
                               </>
                             )}
                             {bet.status === "pending" && (
-                              <span className="text-xs text-muted-foreground">ממתין</span>
+                              <span className="text-xs text-amber-500 font-bold">ממתין</span>
                             )}
                           </div>
                         </div>

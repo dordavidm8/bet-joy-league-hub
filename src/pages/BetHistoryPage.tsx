@@ -19,7 +19,7 @@ const STATUS_TABS = [
 const STATUS_COLOR: Record<string, string> = {
   won:           "text-primary",
   lost:          "text-destructive",
-  pending:       "text-muted-foreground",
+  pending:       "text-amber-500",
   cancelled:     "text-muted-foreground",
   parlay_failed: "text-amber-600",
 };
@@ -209,7 +209,7 @@ const BetHistoryPage = () => {
                     <span className="text-xs font-bold text-destructive">-{Number(bet.stake).toLocaleString()} נק׳</span>
                   )}
                   {bet.status === "pending" && (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-amber-500 font-bold">
                       אפשרי: {
                         bet.league_bet_mode === 'initial_balance' 
                           ? `סה״כ ×${(parseFloat(String(bet.odds)) * (bet.exact_score_prediction ? 3 : 1)).toFixed(2)}`

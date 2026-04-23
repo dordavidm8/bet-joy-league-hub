@@ -208,7 +208,7 @@ const PublicProfilePage = () => {
                   <p className={`text-sm font-black ${
                     isWon ? "text-green-600" : 
                     isLost ? "text-red-500" : 
-                    "text-muted-foreground"
+                    "text-amber-500"
                   }`}>
                     {isWon ? `+${bet.actual_payout}` :
                      isLost ? `0` : 
@@ -217,7 +217,7 @@ const PublicProfilePage = () => {
                   </p>
                   {isWon && <span className="text-[10px] text-green-600 font-bold block mt-[-2px]">נכון! ✅</span>}
                   {isLost && <span className="text-[10px] text-red-500 font-bold block mt-[-2px]">✗</span>}
-                  {isPending && <span className="text-[10px] text-muted-foreground block mt-[-2px]">ממתין...</span>}
+                  {isPending && <span className="text-[10px] text-amber-500 font-bold block mt-[-2px]">ממתין...</span>}
                 </div>
               </motion.div>
             );
