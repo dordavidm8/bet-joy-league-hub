@@ -102,7 +102,15 @@ async function handleDmMessage(client, msg) {
 }
 
 async function sendBalance(msg, user) {
-  await msg.reply(`💰 *${user.username}*, יתרתך: *${formatPoints(user.points_balance, false)} נקודות*`);
+  const rankRes = await pool.query(
+    `SELECT rank FROM (
+       SELECT id, RANK() OVER (ORDER BY points_balance DESC) AS rank
+       FROM users WHERE phone_verified = true
+     ) ranked WHERE id = $1`,
+    [user.id]
+  );
+  const rank = rankRes.rows[0]?.rank ?? '—';
+  await msg.reply(`💰 *${user.username}*, יתרתך: *${formatPoints(user.points_balance, false)} נקודות*\n🏆 מיקומך בלידרבורד: *#${rank}*`);
 }
 
 
