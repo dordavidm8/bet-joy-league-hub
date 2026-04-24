@@ -51,6 +51,13 @@ async function handleDmMessage(client, msg) {
   
   const user = userRes.rows[0];
   if (!user) {
+    // Don't respond if user is mid-verification (bot sent them an OTP and they haven't confirmed yet)
+    const pendingOtp = await pool.query(
+      `SELECT id FROM wa_verification_codes WHERE phone = $1 AND used = false AND expires_at > NOW() LIMIT 1`,
+      [phone]
+    );
+    if (pendingOtp.rows[0]) return;
+
     await client.sendMessage(msg.from, `❌ אני לא מזהה את המשתמש.\n\nיש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://kickoff-bet.app/profile`, { linkPreview: false });
     return;
   }

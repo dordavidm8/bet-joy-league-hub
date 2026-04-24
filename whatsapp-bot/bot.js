@@ -84,6 +84,8 @@ client.on('disconnected', (reason) => {
 client.on('message', async (msg) => {
   // Ignore messages sent by the bot itself
   if (msg.fromMe) return;
+  // Ignore system/ACK messages with no text content
+  if (!msg.body || !msg.body.trim()) return;
 
   try {
     const chat = await msg.getChat();
