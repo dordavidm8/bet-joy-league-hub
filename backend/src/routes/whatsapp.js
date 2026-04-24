@@ -85,6 +85,13 @@ router.post('/verify', authenticate, async (req, res, next) => {
     const record = r.rows[0];
     if (!record) return res.status(400).json({ error: 'קוד שגוי או פג תוקף' });
 
+    // Re-check that the phone hasn't been taken by another user since the OTP was sent
+    const taken = await pool.query(
+      `SELECT id FROM users WHERE phone_number = $1 AND id != $2 AND phone_verified = true`,
+      [record.phone, req.user.id]
+    );
+    if (taken.rows[0]) return res.status(409).json({ error: 'מספר זה כבר מקושר לחשבון אחר, לא ניתן להשלים את הפעולה' });
+
     await pool.query(`UPDATE wa_verification_codes SET used = true WHERE id = $1`, [record.id]);
     const userRes = await pool.query(
       `UPDATE users SET phone_number = $1, phone_verified = true WHERE id = $2 RETURNING username`,
