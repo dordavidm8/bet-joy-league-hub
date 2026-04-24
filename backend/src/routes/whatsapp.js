@@ -19,6 +19,19 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function getHelpText() {
+  return `👋 *שלום! אני הבוט של Kickoff* ⚽\n\n` +
+    `*פקודות בפרטי:* ✉️\n` +
+    `• *יתרה* — הצג את יתרת הנקודות שלך\n` +
+    `• *הימורים* — ההימורים האחרונים שלך\n` +
+    `• *עזרה* / *?* — תפריט זה\n\n` +
+    `*בקבוצת הליגה:* ⚽\n` +
+    `• "שלח טבלה גבר" — צפייה בטבלה\n` +
+    `• הימור: השב להודעת משחק עם *1*, *X*, *תיקו* או *2* (ניתן להוסיף גם תוצאה מדויקת)\n` +
+    `• תיקון: השב להודעת האישור עם ההימור המעודכן\n\n` +
+    `כדי להמר בפרטי — השב להודעת המשחק שנשלחה אליך 🎯`;
+}
+
 function normalizePhone(raw) {
   const digits = raw.replace(/\D/g, '');
   if (digits.startsWith('0972')) return digits.slice(1); // 0972... → 972...
@@ -107,7 +120,7 @@ router.post('/verify', authenticate, async (req, res, next) => {
     );
 
     // Send the confirmation welcome message
-    await sendDM(record.phone, `המשתמש ${username} חובר בהצלחה לטלפון זה!`);
+    await sendDM(record.phone, `✅ המשתמש *${username}* חובר בהצלחה לטלפון זה!\n\n${getHelpText()}`);
 
     res.json({ message: 'מספר אומת בהצלחה', phone: record.phone });
   } catch (err) { next(err); }
