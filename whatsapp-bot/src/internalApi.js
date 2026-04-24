@@ -1,3 +1,10 @@
+/**
+ * internalApi.js – API פנימי (port 4001)
+ *
+ * Express server שמקבל בקשות מהבאקנד הראשי.
+ * Endpoint: POST /send-message – שולח הודעה WhatsApp.
+ * מאובטח עם x-api-key header (INTERNAL_API_KEY env var).
+ */
 'use strict';
 
 const express = require('express');

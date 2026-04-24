@@ -1,3 +1,10 @@
+/**
+ * notifications/reminderNotifier.js – תזכורות הימורים
+ *
+ * sendBetReminders() –
+ *   שולח תזכורת לפני שהחלון נסגר (לפי ליגה).
+ *   בודק wa_reminders_sent למניעת כפילויות.
+ */
 'use strict';
 
 const { pool } = require('../utils/db');

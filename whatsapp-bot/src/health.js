@@ -1,3 +1,9 @@
+/**
+ * health.js – בדיקת בריאות הבוט
+ *
+ * GET /health – מחזיר: { status: 'connected'/'disconnected', ... }
+ * נקרא מהבאקנד ב-GET /api/whatsapp/health.
+ */
 'use strict';
 const os = require('os');
 const { pool } = require('./utils/db');

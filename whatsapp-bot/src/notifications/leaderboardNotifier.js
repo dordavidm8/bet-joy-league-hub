@@ -1,3 +1,10 @@
+/**
+ * notifications/leaderboardNotifier.js – הודעות טבלת דירוג שבועית
+ *
+ * sendWeeklyLeaderboard() –
+ *   שולח טבלת דירוג שבועית לכל הקבוצות ביום ראשון.
+ *   מציין שינויי דירוג (▲▼) ביחס לשבוע קודם.
+ */
 'use strict';
 
 const { pool } = require('../utils/db');

@@ -1,3 +1,10 @@
+/**
+ * commands/infoCommands.js – פקודות מידע
+ *
+ * sendHelp(msg)       – שולח הוראות שימוש
+ * sendRules(msg)      – שולח חוקי ההימורים
+ * sendHowToJoin(msg)  – הסבר על הצטרפות לליגה
+ */
 'use strict';
 
 const pool = require('../utils/db');

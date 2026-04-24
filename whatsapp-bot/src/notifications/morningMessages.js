@@ -1,3 +1,11 @@
+/**
+ * notifications/morningMessages.js – הודעות בוקר
+ *
+ * sendMorningMessages() –
+ *   שולח לכל הקבוצות המחוברות רשימת משחקי היום.
+ *   כל הודעה מוצגת כ-wa_game_messages לצורך reply tracking.
+ *   רץ ב-9:00 IST דרך scheduledJobs.js.
+ */
 'use strict';
 
 const { pool } = require('../utils/db');

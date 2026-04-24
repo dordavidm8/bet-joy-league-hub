@@ -1,3 +1,11 @@
+/**
+ * scheduledJobs.js – Cron Jobs של הבוט
+ *
+ * משתמש ב-node-cron להרצת:
+ *   09:00 IST: הודעות בוקר (משחקי היום)
+ *   ראשון 00:00 IST: טבלת דירוג שבועית
+ *   כל 5 דקות: בדיקת תוצאות ושליחת notifications
+ */
 'use strict';
 
 const cron = require('node-cron');

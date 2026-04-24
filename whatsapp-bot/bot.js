@@ -1,3 +1,17 @@
+/**
+ * bot.js – נקודת כניסה של בוט WhatsApp
+ *
+ * מאתחל לקוח whatsapp-web.js (Puppeteer/Chrome headless).
+ * מציג QR בהפעלה ראשונה לסריקה. session נשמרת ב-.wwebjs_auth/.
+ *
+ * אירועים:
+ *   ready    – הבוט מחובר, מפעיל jobs, שולח הודעה למפתח
+ *   message  – מפנה לgroupHandler או dmHandler
+ *   qr       – מציג QR לסריקה בטרמינל
+ *
+ * שרת פנימי: port 4001 דרך internalApi.js (backend → bot HTTP).
+ * שרת PM2: מנוהל על ידי ecosystem.config.js על VPS (IONOS).
+ */
 'use strict';
 require('dotenv').config();
 

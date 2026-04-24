@@ -1,3 +1,10 @@
+/**
+ * handlers/dmHandler.js – עיבוד הודעות פרטיות (DM)
+ *
+ * מנהל שיחות אחד-על-אחד עם משתמשים דרך מכונת מצבים.
+ * מצבים: idle, waiting_bet, waiting_league, confirm_bet, etc.
+ * מצב השיחה מאוחסן ב-wa_sessions table (לפי מספר טלפון).
+ */
 'use strict';
 
 const { pool } = require('../utils/db');

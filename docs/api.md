@@ -1,6 +1,6 @@
-# API Reference
+# עיון ב-API – API Reference
 
-Base URL: `https://imaginative-surprise-production-4964.up.railway.app/api`
+כתובת בסיס: `https://bet-joy-league-hub-production-6e04.up.railway.app/api`
 
 כל endpoint מלבד `/api/auth/register` דורש header:
 ```
@@ -23,16 +23,16 @@ response: { "user": { "id", "username", "points_balance", ... } }
 
 ---
 
-## Users
+## Users (משתמשים)
 
 ### GET /users/search?q=username
 חיפוש משתמשים לפי username (לצורך הזמנה לליגה / follow).
 
 ### GET /users/me/stats
-סטטיסטיקות הניחוש של המשתמש המחובר.
+סטטיסטיקות ההימורים של המשתמש המחובר.
 
 ### GET /users/me/bets?page=1&status=won
-היסטוריית הניחושים (paginated). status: pending | won | lost | cancelled
+היסטוריית ההימורים (paginated). status: pending | won | lost | cancelled
 
 ### GET /users/me/transactions
 יומן עסקאות נקודות.
@@ -73,17 +73,17 @@ body: { "avatar_url": "..." }
 
 ---
 
-## Games
+## Games (משחקים)
 
 ### GET /games?status=live&competition=12&featured=true
 ```
 params:
   status       – scheduled | live | finished | cancelled
-  competition  – competition ID
+  competition  – מזהה תחרות
   featured     – true/false
-  from         – ISO date
-  to           – ISO date
-  limit        – default 20
+  from         – תאריך ISO
+  to           – תאריך ISO
+  limit        – ברירת מחדל 20
   offset       – pagination
 ```
 
@@ -94,11 +94,14 @@ params:
 תוצאות אחרונות (status=finished).
 
 ### GET /games/:id
-פרטי משחק + שאלות ניחוש.
+פרטי משחק + שאלות הימור.
+
+### GET /games/team-translations
+תרגומי שמות קבוצות EN↔HE (מאושרים בלבד).
 
 ---
 
-## Bets
+## Bets (הימורים)
 
 ### POST /bets
 ```json
@@ -121,11 +124,14 @@ body: {
 ```
 
 ### GET /bets/:id
-פרטי ניחוש ספציפי.
+פרטי הימור ספציפי.
+
+### GET /bets?userId=...
+כל הימורי משתמש.
 
 ---
 
-## Leagues
+## Leagues (ליגות)
 
 ### POST /leagues
 ```json
@@ -148,7 +154,7 @@ body: {
 ליגות שאני חבר בהן.
 
 ### GET /leagues/:id
-פרטי ליגה + חברים + סטנדינגס.
+פרטי ליגה + חברים + standings.
 
 ### POST /leagues/join
 ```json
@@ -159,10 +165,10 @@ body: { "invite_code": "ABC123" }
 עזיבת ליגה.
 
 ### POST /leagues/:id/settle
-סגירת ליגה וחלוקת פרסים (מנהל בלבד).
+סגירת ליגה וחלוקת פרסים (יוצר בלבד).
 
-### GET /leagues/:id/matches
-מחזורי משחקים בליגת tournament.
+### GET /leagues/:id/leaderboard
+טבלת דירוג של הליגה.
 
 ### POST /leagues/:id/invite
 ```json
@@ -171,17 +177,17 @@ body: { "username": "john_doe" }
 
 ---
 
-## Leaderboard
+## Leaderboard (טבלת דירוג)
 
 ### GET /leaderboard/global
 50 המובילים לפי points_balance.
 
 ### GET /leaderboard/me
-דירוג המשתמש המחובר.
+דירוג המשתמש המחובר + משתמשים סביבו.
 
 ---
 
-## Quiz
+## Quiz (טריוויה)
 
 ### GET /quiz/next
 השאלה הבאה שלא נענתה על ידי המשתמש.
@@ -194,23 +200,26 @@ response: { "is_correct": true, "points_earned": 50, "correct_option": "A" }
 
 ---
 
-## AI Advisor
+## AI Advisor (יועץ AI)
 
 ### POST /advisor/:gameId
 ```json
 body: { "message": "מה הסיכויים שמנצ'סטר סיטי תנצח?" }
 response: { "reply": "...", "messages_left": 17 }
 ```
-מגבלה: 20 הודעות ליום.
+מגבלה: 20 הודעות ליום לכל משתמש.
+
+### GET /advisor/:gameId/stream?messages=...
+תגובת AI בזמן אמת (Server-Sent Events / SSE streaming).
 
 ---
 
-## Mini-Games
+## Mini-Games (מיני-גיימס)
 
 ### GET /minigames/today
-כל החידות של היום (5–6 אובייקטים).
+כל החידות של היום (5 אובייקטים, סוג אחד לכל סוג).
 
-### POST /minigames/:id/attempt
+### POST /minigames/:id/submit
 ```json
 body: { "answer": { ... } }  // מבנה לפי סוג החידה
 response: { "is_correct": true, "points_earned": 80, "correct_answer": {...} }
@@ -224,35 +233,58 @@ response: { "valid": true }
 
 ---
 
-## Notifications
+## Notifications (התראות)
 
 ### GET /notifications
 כל ההתראות של המשתמש (ממוינות לפי created_at DESC).
 
-### PATCH /notifications/:id/read
+### POST /notifications/:id/mark-read
 סימון התראה כנקראה.
-
-### PATCH /notifications/read-all
-סימון כל ההתראות כנקראות.
 
 ---
 
-## Feed
+## Feed (פיד)
 
 ### GET /feed?filter=following&limit=20
 ```
 params:
-  filter  – all (default) | following
-  limit   – default 20
+  filter  – all (ברירת מחדל) | following
+  limit   – ברירת מחדל 20
   offset  – pagination
 ```
 
 ---
 
-## Admin (אדמין בלבד)
+## Support (תמיכה)
+
+### POST /support/inquiries
+יצירת פנייה לתמיכה.
+```json
+body: { "subject": "...", "message": "..." }
+```
+
+### GET /support/inquiries
+פניות התמיכה של המשתמש הנוכחי.
+
+---
+
+## WhatsApp
+
+### POST /whatsapp/webhook
+קבלת הודעות מהבוט (מאובטח עם API key).
+
+### POST /whatsapp/send-message
+שליחת הודעה דרך הבוט.
+
+### GET /whatsapp/health
+בדיקת חיבור הבוט.
+
+---
+
+## Admin (מנהל בלבד)
 
 ### GET /admin/stats
-נתוני dashboard: משתמשים פעילים, הניחושים, הכנסה.
+נתוני dashboard: משתמשים פעילים, הימורים, הכנסה.
 
 ### GET /admin/users?search=nir
 רשימת משתמשים עם אפשרות חיפוש.
@@ -265,25 +297,19 @@ body: { "amount": 500, "reason": "פרס מיוחד" }
 ### POST /admin/notify
 ```json
 body: {
-  "user_id"?: 5,           // null = כל המשתמשים
-  "type": "announcement",
+  "user_id"?: "uuid",        // null = כל המשתמשים
+  "type": "admin_message",
   "title": "...",
   "body": "..."
 }
 ```
 
 ### GET /admin/bets
-סטטיסטיקות הניחושים.
-
-### GET/POST/DELETE /admin/quiz
-ניהול שאלות קוויז.
-
-### POST /admin/quiz/generate
-ייצור שאלה אוטומטית עם AI.
+סקירת הימורים.
 
 ### POST /admin/games/:id/feature
 ```json
-body: { "bonus_pct": 15 }
+body: { "bonus_pct": 15, "hours_before": 2 }
 ```
 
 ### DELETE /admin/games/:id/feature
@@ -296,29 +322,29 @@ body: { "bonus_pct": 15 }
 הפעלה/כיבוי תחרות.
 
 ### GET /admin/log
-יומן פעולות אדמין.
+יומן פעולות מנהל (100 אחרונות).
 
 ---
 
 ## Ops
 
 ### POST /ops/generate-minigames
-ייצור ידני של חידות (אדמין).
+ייצור ידני של חידות (מנהל).
 
 ### POST /ops/reset-minigame-attempts
 איפוס ניסיונות חידות (לפיתוח).
 
 ---
 
-## Socket.io Events
+## Socket.io Events (עדכונים בזמן אמת)
 
-### client → server
+### לקוח → שרת
 ```js
-socket.emit('subscribe_game', { gameId: 42 })
-socket.emit('unsubscribe_game', { gameId: 42 })
+socket.emit('subscribe_game', { gameId: 'uuid' })
+socket.emit('unsubscribe_game', { gameId: 'uuid' })
 ```
 
-### server → client
+### שרת → לקוח
 ```js
 socket.on('game:update', (data) => {
   // { gameId, homeScore, awayScore, status, minute }

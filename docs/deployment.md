@@ -1,4 +1,6 @@
-# Deployment Guide
+# מדריך פריסה – Deployment
+
+> **הערה:** לתיעוד פריסה מפורט יותר ראה [deployment-guide.md](deployment-guide.md).
 
 ## סביבות
 
@@ -16,7 +18,7 @@
 {
   "build": {
     "env": {
-      "VITE_API_URL": "https://imaginative-surprise-production-4964.up.railway.app"
+      "VITE_API_URL": "https://bet-joy-league-hub-production-6e04.up.railway.app"
     }
   },
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
@@ -42,14 +44,14 @@ VITE_FIREBASE_MEASUREMENT_ID=...
 ## Backend – Railway
 
 ### railway.json
-קובץ ריק – Railway מזהה Node.js אוטומטית.
-
-### פקודת build + start
 ```json
-// backend/package.json
-"scripts": {
-  "start": "node src/app.js",
-  "dev": "nodemon src/app.js"
+{
+  "build": { "builder": "NIXPACKS" },
+  "deploy": {
+    "startCommand": "npm run migrate && node src/app.js",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
 }
 ```
 
@@ -57,39 +59,32 @@ VITE_FIREBASE_MEASUREMENT_ID=...
 ```json
 "engines": { "node": ">=18" }
 ```
-נדרש ≥18 בגלל Sharp (image processing).
+נדרש ≥18 בגלל Sharp (עיבוד תמונות).
 
 ### משתני סביבה (Railway Dashboard)
 ```
 NODE_ENV=production
 PORT=4000
-FRONTEND_URL=https://your-vercel-url.vercel.app
+FRONTEND_URL=https://bet-joy-league-hub.vercel.app
 DATABASE_URL=postgresql://user:pass@host:5432/db
-
-# Firebase Admin
 FIREBASE_PROJECT_ID=kickoff-c1b6a
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@kickoff-c1b6a.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-
-# Admin access
 ADMIN_EMAILS=nir@example.com,admin2@example.com
-
-# AI Advisor
 GROQ_API_KEY=gsk_...
-
-# Dev mode (mock data instead of real API)
 STUB_MODE=false
+SECRETS_MASTER_KEY=<32 bytes hex>
 ```
 
 ---
 
-## Database – PostgreSQL on Railway
+## מסד נתונים – PostgreSQL ב-Railway
 
 ### הרצת הסכמה לראשונה
 ```bash
 cd backend
-node src/db/migrate.js
-# או ישירות:
+npm run migrate
+# או:
 psql $DATABASE_URL -f src/db/schema.sql
 ```
 
@@ -103,14 +98,13 @@ pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql
 
 ## Firebase
 
-### Firebase Console הגדרות נדרשות
+### הגדרות נדרשות ב-Firebase Console
 
-1. **Authentication** → Enable providers:
+1. **Authentication** → הפעל ספקים:
    - Email/Password
    - Google
-   - Facebook
 
-2. **Storage** → Rules:
+2. **Storage** → חוקים:
 ```
 rules_version = '2';
 service firebase.storage {
@@ -123,7 +117,7 @@ service firebase.storage {
 }
 ```
 
-3. **Service Account** → Generate Private Key → שמור ב-Railway env vars
+3. **Service Account** → ייצא Private Key → שמור ב-Railway env vars
 
 ---
 
@@ -132,7 +126,7 @@ service firebase.storage {
 ### Frontend
 ```bash
 cp .env.local.example .env.local
-# מלא את ה-Firebase credentials
+# מלא Firebase credentials
 npm install
 npm run dev
 # → localhost:5173
@@ -158,8 +152,29 @@ docker run -d \
   postgres:15
 
 export DATABASE_URL=postgresql://postgres:password@localhost:5432/kickoff
-cd backend && node src/db/migrate.js
+cd backend && npm run migrate
 ```
+
+### מצב Stub (ללא DB)
+```bash
+STUB_MODE=true node src/app.js
+```
+מחליף את ה-DB האמיתי בנתוני דמו מ-`config/stubDb.js`.
+
+---
+
+## WhatsApp Bot – VPS (IONOS)
+
+```bash
+# deploy ידני:
+ssh shabbat
+cd /root/kickoff-bot/whatsapp-bot
+git pull origin main
+npm install --production
+pm2 restart kickoff-wa-bot
+```
+
+לתיעוד מלא ראה [deployment-guide.md](deployment-guide.md).
 
 ---
 
@@ -167,15 +182,7 @@ cd backend && node src/db/migrate.js
 
 - **Vercel** – deploy אוטומטי על push ל-`main`
 - **Railway** – deploy אוטומטי על push ל-`main`
-- אין pipeline CI/CD נפרד כרגע
-
----
-
-## Monitoring
-
-- **Railway Logs** – לוגים של backend + cron jobs
-- **Vercel Analytics** – page views, performance
-- **Firebase Console** – auth events, errors
+- **WhatsApp Bot** – deploy ידני דרך SSH
 
 ---
 
@@ -189,5 +196,5 @@ app.use(cors({
 }))
 ```
 
-בפיתוח: `FRONTEND_URL=http://localhost:5173`
-בייצור: `FRONTEND_URL=https://your-app.vercel.app`
+- פיתוח: `FRONTEND_URL=http://localhost:5173`
+- ייצור: `FRONTEND_URL=https://bet-joy-league-hub.vercel.app`

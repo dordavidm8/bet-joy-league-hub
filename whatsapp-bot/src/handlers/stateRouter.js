@@ -1,3 +1,9 @@
+/**
+ * handlers/stateRouter.js – router מצבי שיחה
+ *
+ * מנתב הודעות DM לפי מצב השיחה הנוכחי (session state).
+ * מאחזר session מ-DB, בוחר handler מתאים, מעדכן מצב.
+ */
 'use strict';
 
 const { pool } = require('../utils/db');

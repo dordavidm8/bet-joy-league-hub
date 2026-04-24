@@ -1,3 +1,10 @@
+/**
+ * utils/formatters.js – עיצוב הודעות WhatsApp
+ *
+ * formatLeaderboard(rows) – מחרוזת טבלת דירוג מעוצבת
+ * formatGame(game)         – מחרוזת פרטי משחק (שעה, קבוצות, odds)
+ * formatBetConfirm(bet)    – אישור הנחת הימור
+ */
 'use strict';
 
 function formatHHMM(date) {

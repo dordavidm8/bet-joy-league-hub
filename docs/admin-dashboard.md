@@ -1,155 +1,155 @@
-# Admin Dashboard
+# לוח ניהול – Admin Dashboard
 
-## Overview
+## סקירה כללית
 
-The admin dashboard is a dedicated management interface for Kickoff platform administrators.
-It lives at `/admin` (no AppLayout wrapper) with its own header: "קיקאוף ניהול" + "חזור לאפליקציה" button.
+לוח הניהול הוא ממשק ניהול ייעודי למנהלי פלטפורמת Kickoff.  
+נמצא בנתיב `/admin` (ללא AppLayout wrapper) עם כותרת משלו: "קיקאוף ניהול" + כפתור "חזור לאפליקציה".
 
-Frontend: `src/pages/AdminDashboard.tsx`
-Backend routes: `backend/src/routes/admin.js`
-
----
-
-## Access Control
-
-- `AdminRoute` in `App.tsx` calls `GET /api/admin/me` on load — redirects to `/` if not admin
-- `requireAdmin` middleware checks `ADMIN_EMAILS` env var first, then `admin_users` DB table
-- Railway env var: `ADMIN_EMAILS=nir.dahan2001@gmail.com,dordavidm8@gmail.com,kickoffsportsapp@gmail.com`
-- New admins added via dashboard are stored in `admin_users` table — take effect immediately, no redeploy needed
+- **Frontend:** `src/pages/AdminDashboard.tsx`
+- **Backend routes:** `backend/src/routes/admin.js`
 
 ---
 
-## Tabs
+## בקרת גישה
+
+- `AdminRoute` ב-`App.tsx` קורא ל-`GET /api/admin/me` בטעינה — מפנה ל-`/` אם לא מנהל
+- Middleware `requireAdmin` בודק תחילה את env var `ADMIN_EMAILS`, ואז את טבלת `admin_users` ב-DB
+- env var ב-Railway: `ADMIN_EMAILS=nir.dahan2001@gmail.com,admin2@example.com`
+- מנהלים חדשים שנוספים דרך הדאשבורד מאוחסנים בטבלת `admin_users` — נכנסים לתוקף מיידית, ללא deploy מחדש
+
+---
+
+## לשוניות
 
 ### 1. סקירה (Stats)
 
-KPI cards:
-- Total users (+ new today, + new this month)
-- Total bets (+ pending, + live)
-- Wins / losses + win rate
-- Active leagues (+ total leagues)
-- Total staked points (+ total paid out)
-- Platform profit = total_staked − total_paid_out
+כרטיסי KPI:
+- סה"כ משתמשים (+ חדשים היום, + חדשים החודש)
+- סה"כ הימורים (+ ממתינים, + חיים)
+- ניצחונות / הפסדות + אחוז ניצחון
+- ליגות פעילות (+ סה"כ ליגות)
+- סה"כ נקודות שהוהמרו (+ סה"כ שולם)
+- רווח פלטפורמה = total_staked − total_paid_out
 
-Transactions by type table: type, count, volume (points)
-
----
-
-### 2. משתמשים (Users)
-
-- Search by username or email (live filter, up to 200 results)
-- **Adjust points** — modal: amount (positive/negative) + reason text → `POST /admin/users/:id/adjust-points`
-- **View bets** — modal: all user bets with status badges, cancel button for pending bets
-- **Edit user** — modal: change username and/or display name → `PATCH /admin/users/:id`
-- **Delete user** — confirmation required, permanent → `DELETE /admin/users/:id`
-- **Unlink phone** — removes phone binding from user → `POST /admin/users/:id/unlink-phone`
+טבלת עסקאות לפי סוג: type, count, volume (נקודות)
 
 ---
 
-### 3. הימורים (Bets)
+### 2. משתמשים
 
-- Status filter: all | pending | won | lost | cancelled
-- Cancel button per row (pending only) — refunds stake, cancels associated parlay → `POST /admin/bets/:id/cancel`
-
----
-
-### 4. משחקים (Games)
-
-Sub-tabs: upcoming / finished
-
-Filters:
-- Team name search
-- League (competition)
-- Status (scheduled / live / finished / postponed)
-- Blocked / open
-- Odds source (espn / api / default / admin)
-- Date range
-
-Sortable columns: time, bet count, score
-
-Per-row actions:
-- **⭐ Feature game** — set bonus % and hours_before cutoff, live payout preview shown → `POST /admin/games/:id/feature`
-- **Unfeature** — removes featured status → `DELETE /admin/games/:id/feature`
-- **Lock / Unlock** — blocks or re-enables betting → `POST /admin/games/:id/lock` / `unlock`
-- **Edit odds** — modal to override home/draw/away odds manually → `PATCH /admin/games/:id/odds`
-- **Expand row (⌄)** — inline analytics: outcome breakdown (bet_count, total_staked, %) → `GET /admin/games/:id/analytics`
+- חיפוש לפי שם משתמש או אימייל (מסנן חי, עד 200 תוצאות)
+- **התאמת נקודות** — modal: סכום (חיובי/שלילי) + סיבה → `POST /admin/users/:id/adjust-points`
+- **צפייה בהימורים** — modal: כל הימורי המשתמש עם badges של סטטוס, כפתור ביטול להימורים ממתינים
+- **עריכת משתמש** — modal: שינוי שם משתמש ו/או שם תצוגה → `PATCH /admin/users/:id`
+- **מחיקת משתמש** — דורש אישור, בלתי הפיך → `DELETE /admin/users/:id`
+- **ניתוק טלפון** — מסיר קישור הטלפון של המשתמש → `POST /admin/users/:id/unlink-phone`
 
 ---
 
-### 5. ליגות (Leagues)
+### 3. הימורים
 
-- Search by league name or creator username
-- Status filter: active | paused | finished
-- **Pause league** — confirmation required → `POST /admin/leagues/:id/pause`
-- **Stop league** — option to distribute prize pool or not → `POST /admin/leagues/:id/stop`
-- **WhatsApp group** — per league: view/edit invite link, remove WA group → `POST/DELETE /admin/leagues/:id/wa-group`
-- **Create public league** — form: name, description, format (pool / per_game), entry fee, max members
-- Click row → navigates to `/leagues/:id` (read-only view in main app)
+- מסנן סטטוס: הכל | ממתין | ניצח | הפסיד | בוטל
+- כפתור ביטול לכל שורה (ממתינים בלבד) — מחזיר stake, מבטל פרלי קשור → `POST /admin/bets/:id/cancel`
 
 ---
 
-### 6. התראות (Notifications)
+### 4. משחקים
 
-- Type: `admin_message` | `special_offer`
-- Target: all users OR specific username
-- Title + body → `POST /admin/notify`
+תת-לשוניות: עתידיים / מסוימים
+
+פילטרים:
+- חיפוש שם קבוצה
+- ליגה (תחרות)
+- סטטוס (scheduled / live / finished / postponed)
+- חסום / פתוח
+- מקור odds (espn / api / default / admin)
+- טווח תאריכים
+
+עמודות הניתנות למיון: זמן, ספירת הימורים, ציון
+
+פעולות לכל שורה:
+- **⭐ Featured game** — הגדרת אחוז בונוס וזמן לפני (hours_before), תצוגה מקדימה של payout → `POST /admin/games/:id/feature`
+- **הסרת featured** — `DELETE /admin/games/:id/feature`
+- **נעילה / שחרור** — חסימה או שחרור של הימורים → `POST /admin/games/:id/lock` / `unlock`
+- **עריכת odds** — modal לעקיפת odds ידנית (בית/שיוויון/חוץ) → `PATCH /admin/games/:id/odds`
+- **הרחבת שורה (⌄)** — אנליטיקה inline: פירוט outcomes (bet_count, total_staked, %) → `GET /admin/games/:id/analytics`
 
 ---
 
-### 7. אתגרים (Mini Games / Challenges)
+### 5. ליגות
 
-Supported mini game types:
-| ID | Name |
-|----|------|
-| `trivia` | טריוויה יומית (AI-generated) |
+- חיפוש לפי שם ליגה או שם יוצר
+- מסנן סטטוס: פעיל | מושהה | הסתיים
+- **השהיית ליגה** — דורש אישור → `POST /admin/leagues/:id/pause`
+- **עצירת ליגה** — אפשרות לחלק פרס pool או לא → `POST /admin/leagues/:id/stop`
+- **קבוצת WhatsApp** — לכל ליגה: צפייה/עריכת קישור הזמנה, הסרת קבוצה WA → `POST/DELETE /admin/leagues/:id/wa-group`
+- **יצירת ליגה ציבורית** — טופס: שם, תיאור, פורמט (pool / per_game), דמי כניסה, מקסימום חברים
+- לחיצה על שורה → ניווט ל-`/leagues/:id` (תצוגה read-only באפליקציה הראשית)
+
+---
+
+### 6. התראות
+
+- סוג: `admin_message` | `special_offer`
+- יעד: כל המשתמשים OR שם משתמש ספציפי
+- כותרת + גוף → `POST /admin/notify`
+
+---
+
+### 7. אתגרים (Mini Games)
+
+סוגי מיני-גיימס נתמכים:
+| ID | שם |
+|----|-----|
+| `trivia` | טריוויה יומית (מיוצר ב-AI) |
 | `missing_xi` | Missing XI |
 | `who_are_ya` | Who Are Ya? |
 | `career_path` | Career Path |
 | `box2box` | Box2Box |
 | `guess_club` | Guess Club |
 
-Workflow:
-1. Select game type → configure options (trivia: category, custom topic, type free/premium)
-2. Generate draft → preview result
-3. Save to queue → `POST /admin/mini-game-draft`
+תהליך עבודה:
+1. בחר סוג משחק → הגדר אפשרויות (טריוויה: קטגוריה, נושא מותאם, סוג חינמי/פרמיום)
+2. ייצר טיוטה → תצוגה מקדימה של תוצאה
+3. שמור לתור → `POST /admin/mini-game-draft`
 
-Queue management:
-- View all upcoming scheduled items
-- Change play date → `PATCH /admin/mini-game-queue/:id`
-- Delete from queue → `DELETE /admin/mini-game-queue/:id`
+ניהול תור:
+- צפייה בכל הפריטים המתוכננים
+- שינוי תאריך משחק → `PATCH /admin/mini-game-queue/:id`
+- מחיקה מהתור → `DELETE /admin/mini-game-queue/:id`
 
-Each day the cron job pulls the first item in queue per category.
+בכל יום ה-cron job שולף את הפריט הראשון בתור לכל קטגוריה.
 
 ---
 
-### 8. מתקדם (Advanced)
+### 8. מתקדם
 
-Four sub-sections:
+ארבעה תת-חלקים:
 
 **⚽ תחרויות**
-- Table of all competitions
-- Toggle `is_active` per competition → `PATCH /admin/competitions/:id/toggle`
+- טבלת כל התחרויות
+- toggle `is_active` לכל תחרות → `PATCH /admin/competitions/:id/toggle`
 
 **🔑 מנהלים**
-- List current admins (env-based = ראשי label, DB-based = removable)
-- Add admin by email → `POST /admin/admins`
-- Remove admin → `DELETE /admin/admins/:email`
+- רשימת מנהלים נוכחיים (env-based = תווית "ראשי", DB-based = ניתן להסרה)
+- הוספת מנהל לפי אימייל → `POST /admin/admins`
+- הסרת מנהל → `DELETE /admin/admins/:email`
 
 **🌐 תרגומי קבוצות**
-- Table of pending AI-suggested Hebrew team name translations
-- Approve → `POST /admin/team-translations/approve`
-- Dismiss → `POST /admin/team-translations/dismiss`
-- Regenerate bet questions → `POST /admin/regenerate-bet-questions`
+- טבלת תרגומים עבריים שהוצעו על ידי AI וממתינים לאישור
+- אישור → `POST /admin/team-translations/approve`
+- דחייה → `POST /admin/team-translations/dismiss`
+- ייצור מחדש שאלות הימור → `POST /admin/regenerate-bet-questions`
 
 **📋 לוג פעולות**
-- Last 100 admin actions with Hebrew labels, admin email, and timestamp
-- Actions logged: feature/unfeature game, cancel bet, adjust points, lock/unlock game, pause/stop league, add/remove admin, toggle competition
+- 100 פעולות ניהול אחרונות עם תוויות עבריות, אימייל מנהל, וחותמת זמן
+- פעולות מתועדות: feature/unfeature game, cancel bet, adjust points, lock/unlock game, pause/stop league, add/remove admin, toggle competition
 
 ---
 
-## Backend Routes
+## Routes Backend
 
-All routes require `requireAdmin` middleware.
+כל ה-routes דורשים middleware `requireAdmin`.
 
 ```
 GET    /admin/me
@@ -194,19 +194,19 @@ GET    /admin/log
 
 ---
 
-## Database Tables
+## טבלאות מסד נתונים
 
 ### `admin_users`
-| Column | Type |
-|--------|------|
+| עמודה | סוג |
+|-------|-----|
 | id | UUID PK |
 | email | VARCHAR(200) UNIQUE |
 | added_by | VARCHAR(200) |
 | added_at | TIMESTAMPTZ DEFAULT NOW() |
 
 ### `admin_action_log`
-| Column | Type |
-|--------|------|
+| עמודה | סוג |
+|-------|-----|
 | id | UUID PK |
 | admin_email | VARCHAR(200) |
 | action | VARCHAR(100) |
@@ -215,16 +215,16 @@ GET    /admin/log
 | details | JSONB |
 | created_at | TIMESTAMPTZ DEFAULT NOW() |
 
-Index: `idx_admin_log_created` on `created_at DESC`
+אינדקס: `idx_admin_log_created` על `created_at DESC`
 
 ---
 
-## Services
+## שירותים
 
-`backend/src/services/adminLogService.js`
+**`backend/src/services/adminLogService.js`**
 
 ```js
 logAdminAction(adminEmail, action, entityType, entityId, details)
 ```
 
-Called after every admin mutation. Action strings: `feature_game`, `unfeature_game`, `cancel_bet`, `adjust_points`, `lock_game`, `unlock_game`, `pause_league`, `stop_league`, `toggle_competition`, `add_admin`, `remove_admin`.
+נקרא לאחר כל פעולת ניהול. מחרוזות פעולה: `feature_game`, `unfeature_game`, `cancel_bet`, `adjust_points`, `lock_game`, `unlock_game`, `pause_league`, `stop_league`, `toggle_competition`, `add_admin`, `remove_admin`

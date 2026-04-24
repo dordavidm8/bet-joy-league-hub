@@ -1,3 +1,15 @@
+/**
+ * handlers/groupHandler.js – עיבוד הודעות קבוצה
+ *
+ * מקבל הודעות מקבוצות WhatsApp המקושרות לליגה.
+ * זרימת עיבוד:
+ *   1. מוצא את הליגה המקושרת ל-wa_group_id
+ *   2. מזהה patterns:
+ *      - reply ל-game message + '1'/'X'/'2' → הנחת הימור
+ *      - 'שלח טבלה גבר' → שליחת טבלת דירוג
+ *      - reply + 'תיקון' → עדכון הימור
+ *   3. rate limiting לפי קבוצה
+ */
 'use strict';
 
 const { pool } = require('../utils/db');

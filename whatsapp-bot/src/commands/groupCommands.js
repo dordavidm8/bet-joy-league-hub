@@ -1,3 +1,10 @@
+/**
+ * commands/groupCommands.js – פקודות ניהול קבוצה
+ *
+ * sendLeaderboard(groupId) – שולח טבלת דירוג מעוצבת לקבוצה
+ * sendStandings(groupId)   – שולח standings נוכחי
+ * handleSettings(msg)      – עדכון הגדרות בוט לקבוצה
+ */
 'use strict';
 
 const { pool } = require('../utils/db');

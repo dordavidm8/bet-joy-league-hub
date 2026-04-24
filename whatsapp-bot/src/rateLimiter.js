@@ -1,3 +1,11 @@
+/**
+ * rateLimiter.js – הגבלת קצב הודעות
+ *
+ * מגביל מספר הודעות:
+ *   - לפי מספר טלפון (per user)
+ *   - לפי קבוצה (per group)
+ * מונע spam ושימוש לרעה בבוט.
+ */
 'use strict';
 
 // Simple in-memory rate limiter: 10 commands/minute per JID

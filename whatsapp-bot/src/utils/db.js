@@ -1,3 +1,9 @@
+/**
+ * utils/db.js – חיבור PostgreSQL של הבוט
+ *
+ * connection pool ל-PostgreSQL (אותו DB כמו הבאקנד הראשי).
+ * DATABASE_URL מגיע מ-env var.
+ */
 'use strict';
 const { Pool } = require('pg');
 

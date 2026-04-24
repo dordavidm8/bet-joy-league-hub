@@ -1,3 +1,10 @@
+/**
+ * commands/betCommands.js – פקודות הימור בבוט
+ *
+ * handleBetCommand(msg, phone, leagueId) –
+ *   עיבוד הנחת הימור דרך WhatsApp reply.
+ *   מחלץ outcome מהתגובה (1/X/2), מאמת ומבצע POST /bets לבאקנד.
+ */
 'use strict';
 
 const pool = require('../utils/db');

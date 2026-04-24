@@ -1,3 +1,9 @@
+/**
+ * utils/phoneUtils.js – עיבוד מספרי טלפון
+ *
+ * normalizePhone(phone) – ממיר מספר ישראלי לפורמט WhatsApp (972XXXXXXXXX@c.us)
+ * parsePhone(waId)       – מחלץ מספר מ-WhatsApp ID
+ */
 'use strict';
 
 // '972501234567@c.us' → '972501234567'
