@@ -50,6 +50,17 @@ async function handleSetupCommand(client, msg, chat, parts) {
     return msg.reply(`✅ הקבוצה כבר מחוברת לליגה "${league.name}".`);
   }
 
+  // Check if group is already linked to ANOTHER active league
+  const otherLeagueRes = await pool.query(
+    `SELECT l.name FROM wa_groups g 
+     JOIN leagues l ON l.id = g.league_id 
+     WHERE g.wa_group_id = $1 AND g.league_id != $2 AND g.is_active = true`,
+    [groupJid, league.id]
+  );
+  if (otherLeagueRes.rows.length > 0) {
+    return msg.reply(`❌ קבוצה זו כבר מחוברת לליגה פעילה אחרת: "${otherLeagueRes.rows[0].name}". קבוצה יכולה להיות מחוברת לליגה אחת בלבד.`);
+  }
+
   // 2. Link in DB
   await pool.query('UPDATE leagues SET wa_enabled = true WHERE id = $1', [league.id]);
   await pool.query(

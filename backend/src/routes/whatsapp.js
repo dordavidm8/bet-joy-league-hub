@@ -224,6 +224,17 @@ router.post('/leagues/:id/link-group', authenticate, async (req, res, next) => {
     if (league.access_type === 'public') return res.status(403).json({ error: 'ליגות ציבוריות אינן יכולות להתחבר לקבוצת ווטסאפ' });
     if (league.creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
 
+    // Check if group is already linked to ANOTHER active league
+    const takenRes = await pool.query(
+      `SELECT l.name FROM wa_groups g 
+       JOIN leagues l ON l.id = g.league_id 
+       WHERE g.wa_group_id = $1 AND g.league_id != $2 AND g.is_active = true`,
+      [wa_group_id, leagueId]
+    );
+    if (takenRes.rows[0]) {
+      return res.status(409).json({ error: `קבוצה זו כבר מחוברת לליגה פעילה אחרת: "${takenRes.rows[0].name}". קבוצה יכולה להיות מחוברת לליגה אחת בלבד.` });
+    }
+
     await pool.query(
       `INSERT INTO wa_groups (wa_group_id, league_id)
        VALUES ($1,$2) ON CONFLICT (wa_group_id) DO UPDATE SET 
@@ -292,6 +303,17 @@ router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
       }
 
       if (joinRes && joinRes.wa_group_id) {
+        // Check if group is already linked up to ANOTHER active league
+        const takenRes = await pool.query(
+          `SELECT l.name FROM wa_groups g 
+           JOIN leagues l ON l.id = g.league_id 
+           WHERE g.wa_group_id = $1 AND g.league_id != $2 AND g.is_active = true`,
+          [joinRes.wa_group_id, leagueId]
+        );
+        if (takenRes.rows[0]) {
+          return res.status(409).json({ error: `קבוצה זו כבר מחוברת לליגה פעילה אחרת: "${takenRes.rows[0].name}".` });
+        }
+
         // Upsert group tracking
         await pool.query(
           `INSERT INTO wa_groups (wa_group_id, league_id, is_active, invite_link)
