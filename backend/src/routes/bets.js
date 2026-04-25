@@ -16,6 +16,7 @@ const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { calculatePayout } = require('../services/bettingService');
 const { checkAndAwardAchievements } = require('../services/achievementService');
+const { translateTeam } = require('../lib/teamNames');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -96,11 +97,16 @@ router.post('/', authenticate, async (req, res, next) => {
       const sh = parseInt(scoreMatch[1]);
       const sa = parseInt(scoreMatch[2]);
       if (question.type === 'match_winner') {
-        if (selected_outcome === game.home_team && sh <= sa)
-          throw Object.assign(new Error(`תוצאה מדויקת לא מתאימה — ${game.home_team} חייבת לנצח`), { status: 400 });
-        if (selected_outcome === game.away_team && sa <= sh)
-          throw Object.assign(new Error(`תוצאה מדויקת לא מתאימה — ${game.away_team} חייבת לנצח`), { status: 400 });
-        if (selected_outcome === 'Draw' && sh !== sa)
+        const heHome = translateTeam(game.home_team);
+        const heAway = translateTeam(game.away_team);
+        const isHome = selected_outcome === game.home_team || selected_outcome === heHome;
+        const isAway = selected_outcome === game.away_team || selected_outcome === heAway;
+        const isDraw = selected_outcome === 'Draw' || selected_outcome === 'תיקו';
+        if (isHome && sh <= sa)
+          throw Object.assign(new Error(`תוצאה מדויקת לא מתאימה — ${heHome} חייבת לנצח`), { status: 400 });
+        if (isAway && sa <= sh)
+          throw Object.assign(new Error(`תוצאה מדויקת לא מתאימה — ${heAway} חייבת לנצח`), { status: 400 });
+        if (isDraw && sh !== sa)
           throw Object.assign(new Error('תוצאה מדויקת לא מתאימה — תיקו דורש מספרים שווים'), { status: 400 });
       }
     }

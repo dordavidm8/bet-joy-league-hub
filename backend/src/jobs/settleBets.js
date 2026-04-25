@@ -129,11 +129,17 @@ async function settleBets() {
       let settledWon = 0, settledLost = 0;
       const userBetResults = {}; // userId → { won, lost, totalPayout, leaguePoints }
 
+      // Fixed outcome label aliases: English → Hebrew. Used for bets placed when labels were in English.
+      const OUTCOME_EN_TO_HE = { 'Draw': 'תיקו', 'Yes': 'כן', 'No': 'לא' };
+
       for (const bet of betsRes.rows) {
         const correctOutcome = correctOutcomeMap[bet.bet_question_id];
         if (correctOutcome === undefined) continue; // question not resolved yet
 
-        const won = bet.selected_outcome === correctOutcome;
+        // Language-agnostic comparison: translate English→Hebrew in case the bet was placed when
+        // outcome labels were still in English but the question was later re-seeded with Hebrew labels.
+        const heSelectedOutcome = OUTCOME_EN_TO_HE[bet.selected_outcome] ?? translateTeam(bet.selected_outcome);
+        const won = bet.selected_outcome === correctOutcome || heSelectedOutcome === correctOutcome;
         const betMode = bet.league_id ? (leagueModes[bet.league_id] ?? 'minimum_stake') : null;
         const isInitialBalance = betMode === 'initial_balance';
 
