@@ -1,5 +1,5 @@
 // TopBar.tsx – כותרת עליונה (Header)
-// מציג: לוגו Kickoff, לינקים לניווט (desktop), NotificationBell, תפריט משתמש.
+// מציג: לוגו DerbyUp, לינקים לניווט (desktop), NotificationBell, תפריט משתמש.
 // כולל כפתור לוח ניהול אם המשתמש הוא admin.
 import { useAuth } from "@/context/AuthContext";
 import NotificationBell from "@/components/NotificationBell";

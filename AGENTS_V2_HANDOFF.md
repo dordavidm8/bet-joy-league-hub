@@ -1,4 +1,4 @@
-# KickOff Social Agents — Project Handoff
+# DerbyUp Social Agents — Project Handoff
 
 > מסמך העברה לכלי פיתוח אחר. כולל את המצב הנוכחי, ההחלטות שהתקבלו, והתוכנית המלאה.
 
@@ -6,7 +6,7 @@
 
 ## 1. רקע הפרויקט
 
-**KickOff** — פלטפורמת הימורי כדורגל חברתית ישראלית (React + TypeScript + TanStack Query קדמי, Node.js/Express + PostgreSQL אחורי, strict CommonJS).
+**DerbyUp** — פלטפורמת הימורי כדורגל חברתית ישראלית (React + TypeScript + TanStack Query קדמי, Node.js/Express + PostgreSQL אחורי, strict CommonJS).
 
 **המטרה:** מערכת סוכני AI אוטונומית לניהול שיווק הסושיאל (LinkedIn, Instagram, TikTok) בסגנון NoimosAI, עם אייג'נטים מבוססי Claude Agent Skills (SKILL.md בהשראת [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills)) ודפוסי orchestration בהשראת [paperclipai/paperclip](https://github.com/paperclipai/paperclip).
 
@@ -80,7 +80,7 @@
 | **פרסום** | Draft-only — כפתורי "העתק" לפלטפורמה, ללא OAuth ופרסום אוטומטי |
 | **מסגרת זמן** | MVP תוך 4 ימים, ואז איטרציות שבועיות |
 | **פורמט אייג'נטים** | Claude Agent Skills — `SKILL.md` עם YAML frontmatter + `references/*.md` (בהשראת coreyhaines31/marketingskills) |
-| **ארכיטקטורת orchestration** | Kernel עצמי (3 קבצים קטנים) בהשראת paperclip. **paperclip עצמו נבדק ונפסל** — pure ESM, אפליקציית monorepo שלמה ללא SDK, מריץ Claude Code CLI כ-subprocess במקום Groq/Gemini — לא מתאים להטמעה בתוך KickOff |
+| **ארכיטקטורת orchestration** | Kernel עצמי (3 קבצים קטנים) בהשראת paperclip. **paperclip עצמו נבדק ונפסל** — pure ESM, אפליקציית monorepo שלמה ללא SDK, מריץ Claude Code CLI כ-subprocess במקום Groq/Gemini — לא מתאים להטמעה בתוך DerbyUp |
 | **שפה** | עברית RTL, hashtags באנגלית |
 | **עיצוב** | Dark theme (bg-slate-950), accent כחול-סגול, Rubik, בסגנון NoimosAI (ללא גישה לסקרינים) |
 
@@ -142,7 +142,7 @@ backend/src/agents/
 │   │   ├── SKILL.md          # YAML frontmatter: name, description, metadata.version; body: instructions
 │   │   └── references/
 │   │       ├── sources.md    # רשימת RSS feeds + subreddits
-│   │       ├── relevance.md  # איך לדרג חדשות לפי רלוונטיות ל-KickOff
+│   │       ├── relevance.md  # איך לדרג חדשות לפי רלוונטיות ל-DerbyUp
 │   │       └── examples.md   # דוגמאות briefs טובים/רעים
 │   │
 │   ├── seo-geo-agent/
@@ -158,7 +158,7 @@ backend/src/agents/
 │   │       ├── linkedin.md   # הוראות + schema JSON (150-300 מילים, טון מקצועי)
 │   │       ├── instagram.md  # קצר וקליט, עד 100 מילים
 │   │       ├── tiktok.md     # 15-30 שניות, hook, overlay, CTA
-│   │       ├── tone-guide.md # Tone of Voice של KickOff
+│   │       ├── tone-guide.md # Tone of Voice של DerbyUp
 │   │       └── visual.md     # הוראות ל-image prompts (Imagen 3)
 │   │
 │   ├── social-media-agent/   # תזמון, תגובות, engagement analysis
@@ -207,7 +207,7 @@ backend/src/agents/
 ```markdown
 ---
 name: research-agent
-description: סורק את הרשת (Reddit, RSS ישראליים) ומזהה טרנדים + הזדמנויות בזמן אמת עבור KickOff
+description: סורק את הרשת (Reddit, RSS ישראליים) ומזהה טרנדים + הזדמנויות בזמן אמת עבור DerbyUp
 metadata:
   version: 1.0.0
   role: Research
@@ -220,7 +220,7 @@ metadata:
 
 ## Instructions
 
-אתה סוכן מחקר של KickOff. המשימה שלך: לסרוק מקורות מידע ציבוריים ולזהות 3-5 נושאים חמים שיעניינו את הקהל הישראלי של חובבי כדורגל והימורים.
+אתה סוכן מחקר של DerbyUp. המשימה שלך: לסרוק מקורות מידע ציבוריים ולזהות 3-5 נושאים חמים שיעניינו את הקהל הישראלי של חובבי כדורגל והימורים.
 
 ## Process
 
@@ -454,7 +454,7 @@ src/components/admin/social/v2/
 
 ## 11. קישורים חיוניים
 
-- **הרפו של KickOff:** https://github.com/dordavidm8/bet-joy-league-hub
+- **הרפו של DerbyUp:** https://github.com/dordavidm8/bet-joy-league-hub
 - **Claude Skills reference:** https://github.com/coreyhaines31/marketingskills
 - **paperclip orchestration:** https://github.com/paperclipai/paperclip
 - **NoimosAI** (למטרות השראה ויזואלית בלבד, ללא גישה API)
