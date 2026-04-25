@@ -458,7 +458,9 @@ const LeaguesPage = () => {
                   <div className="bg-secondary/50 rounded-xl p-3 flex flex-col gap-1">
                     <span className="text-[10px] text-muted-foreground font-bold uppercase">סוג</span>
                     <span className="text-sm font-bold flex items-center gap-1.5">
-                      {previewLeague.is_tournament ? '🚩 טורניר' : '📅 עונה מלאה'}
+                      {previewLeague.is_tournament ? (
+                        <>🚩 {previewLeague.tournament_name || 'טורניר'}</>
+                      ) : '📅 עונה מלאה'}
                     </span>
                   </div>
                 </div>
@@ -467,25 +469,39 @@ const LeaguesPage = () => {
                   <div className="bg-primary/10 rounded-lg p-2.5 flex items-start gap-2.5">
                     <Info size={16} className="text-primary shrink-0 mt-0.5" />
                     <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      {previewLeague.format === 'pool' 
+                      {previewLeague.is_member ? (
+                        <span className="text-primary font-bold">אתה כבר חבר בליגה זו! תוכל להיכנס ולראות את המצב הנוכחי.</span>
+                      ) : previewLeague.format === 'pool' 
                         ? 'בליגה זו צוברים ניקוד לאורך זמן. בסוף העונה הקופה תחולק בין המקומות הראשונים.'
                         : `בליגה זו מהמרים מהמאזן האישי. הימור מינימלי: ${previewLeague.min_bet} נק׳.`}
                     </p>
                   </div>
                   
                   <div className="flex gap-2.5">
-                    <Button 
-                      variant="cta" 
-                      className="flex-1 h-12 text-base shadow-lg shadow-primary/20"
-                      onClick={() => joinMutation.mutate(joinCode)}
-                      disabled={joinMutation.isPending}
-                    >
-                      {joinMutation.isPending ? 'מצטרף...' : (
+                    {previewLeague.is_member ? (
+                      <Button 
+                        variant="default" 
+                        className="flex-1 h-12 text-base"
+                        onClick={() => navigate(`/leagues/${previewLeague.id}`)}
+                      >
                         <span className="flex items-center gap-2">
-                          <Check size={18} /> תאשר לי, אני מצטרף
+                          <ChevronRight size={18} /> כנס לליגה שלי
                         </span>
-                      )}
-                    </Button>
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="cta" 
+                        className="flex-1 h-12 text-base shadow-lg shadow-primary/20"
+                        onClick={() => joinMutation.mutate(joinCode)}
+                        disabled={joinMutation.isPending}
+                      >
+                        {joinMutation.isPending ? 'מצטרף...' : (
+                          <span className="flex items-center gap-2">
+                            <Check size={18} /> תאשר לי, אני מצטרף
+                          </span>
+                        )}
+                      </Button>
+                    )}
                     <Button 
                       variant="outline" 
                       className="h-12 w-12 p-0"

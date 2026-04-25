@@ -540,6 +540,8 @@ export interface League {
   auto_settle?: boolean;
   bet_mode?: 'minimum_stake' | 'initial_balance';
   created_at: string;
+  tournament_name?: string;
+  is_member?: boolean;
 }
 
 export interface LeagueMember {
