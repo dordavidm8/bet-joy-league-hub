@@ -1,7 +1,7 @@
 // AdminDashboard.tsx – לוח ניהול
 // גישה: admin בלבד (AdminRoute ב-App.tsx).
 // 8 לשוניות: סקירה, משתמשים, הימורים, משחקים, ליגות, התראות, אתגרים, מתקדם.
-// כולל: AdvisorTab (הגדרות AI), SocialAgentTab (pipeline מדיה חברתית).
+// כולל: AdvisorTab (הגדרות AI), SocialAgentsV2Tab (pipeline V2 מדיה חברתית).
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +11,7 @@ import {
   LogOut, XCircle, ToggleLeft, ToggleRight, Activity, X, Check, Bot, Flag
 } from "lucide-react";
 import { AdvisorTab } from "@/components/admin/AdvisorTab";
-import { SocialAgentTab } from "@/components/admin/SocialAgentTab";
+import SocialAgentsV2Tab from "@/components/admin/social/v2/SocialAgentsV2Tab";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -59,8 +59,8 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "support",      label: "פניות",      icon: <HelpCircle size={14} /> },
   { id: "minigames",    label: "אתגרים",     icon: <Target size={14} /> },
   { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
-  { id: "advisor",      label: "יועץ AI",        icon: <Bot size={14} /> },
-  { id: "social",       label: "סוכני סושיאל 🤖", icon: <Bot size={14} /> },
+  { id: "advisor",      label: "יועץ AI",            icon: <Bot size={14} /> },
+  { id: "social",       label: "סוכני סושיאל 🤖 V2", icon: <Bot size={14} /> },
 ];
 
 const fmt = (n: string | number) => Number(n).toLocaleString("he-IL");
@@ -2428,7 +2428,7 @@ const AdminDashboard = () => {
     games: <GamesTab />, leagues: <LeaguesTab />, notifications: <NotificationsTab />,
     minigames: <MiniGamesTab />, advanced: <AdvancedTab />,
     advisor: <AdvisorTab />,
-    social:  <SocialAgentTab />,
+    social:  <SocialAgentsV2Tab />,
     support: <SupportTab />,
   };
 
