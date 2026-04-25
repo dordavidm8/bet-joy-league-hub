@@ -78,6 +78,21 @@ const LeaguesPage = () => {
     queryFn: getMyLeagues,
   });
 
+  const leagues = leaguesData?.leagues ?? [];
+
+  const { data: previewData, isError: previewIsError, error: previewError } = useQuery({
+    queryKey: ["league-preview", joinCode],
+    queryFn: () => getLeagueByInviteCode(joinCode),
+    enabled: joinCode.length >= 4 && showJoin,
+  });
+
+  useEffect(() => {
+    if (previewData) {
+      setPreviewLeague(previewData.league);
+      setShowJoin(false);
+    }
+  }, [previewData]);
+
   const { data: leaderboardData, isLoading: lbLoading } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: () => getLeaderboard(50),
