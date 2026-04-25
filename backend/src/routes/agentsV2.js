@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../../config/database');
+const { pool } = require('../config/database');
 const { initPipelineRun, runPipeline } = require('../agents/kernel/orchestrator');
 const eventBus = require('../agents/kernel/eventBus');
 
