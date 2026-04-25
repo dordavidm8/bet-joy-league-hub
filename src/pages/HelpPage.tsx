@@ -176,7 +176,7 @@ const HelpPage = () => {
         viewport={{ once: true }}
         className="mt-8 pt-8 border-t border-border flex flex-col items-center gap-6"
       >
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">יוצרי הפרויקט</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">יוצרים</p>
         
         <div className="flex flex-wrap justify-center gap-4 w-full">
           {/* Nir Dahan */}
