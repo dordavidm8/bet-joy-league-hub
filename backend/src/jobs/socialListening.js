@@ -10,7 +10,7 @@ const { pool } = require('../config/database');
 
 /**
  * Social Listening Job
- * Uses Serper API to find mentions of KickOff and analyze sentiment.
+ * Uses Serper API to find mentions of DerbyUp and analyze sentiment.
  */
 async function runSocialListening() {
   const { getSecret } = require('../lib/secrets');

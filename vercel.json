@@ -4,7 +4,23 @@
       "VITE_API_URL": "https://bet-joy-league-hub-production-6e04.up.railway.app"
     }
   },
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://derbyup.bet/$1",
+      "permanent": true,
+      "has": [
+        {
+          "type": "host",
+          "value": "kickoff-bet.app"
+        }
+      ]
+    }
+  ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
