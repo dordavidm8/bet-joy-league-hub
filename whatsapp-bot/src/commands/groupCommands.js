@@ -41,24 +41,23 @@ async function handleSetupCommand(client, msg, chat, parts) {
     return msg.reply(`❌ לא נמצאה ליגה פעילה עם הקוד *${inviteCode}*. וודא שהקוד נכון.`);
   }
 
-  // Check if ALREADY connected to THIS group
-  const existingRes = await pool.query(
-    `SELECT * FROM wa_groups WHERE wa_group_id = $1 AND league_id = $2 AND is_active = true`,
-    [groupJid, league.id]
-  );
-  if (existingRes.rows.length > 0) {
-    return msg.reply(`✅ הקבוצה כבר מחוברת לליגה "${league.name}".`);
-  }
+  console.log(`[WA-DEBUG] Setup command for group ${groupJid} with invite code ${inviteCode}`);
 
-  // Check if group is already linked to ANOTHER active league
-  const otherLeagueRes = await pool.query(
-    `SELECT l.name FROM wa_groups g 
+  // Check if group is already linked to ANY active league
+  const currentLinkRes = await pool.query(
+    `SELECT l.name, l.id FROM wa_groups g 
      JOIN leagues l ON l.id = g.league_id 
-     WHERE g.wa_group_id = $1 AND g.league_id != $2 AND g.is_active = true`,
-    [groupJid, league.id]
+     WHERE g.wa_group_id = $1 AND g.is_active = true`,
+    [groupJid]
   );
-  if (otherLeagueRes.rows.length > 0) {
-    return msg.reply(`❌ קבוצה זו כבר מחוברת לליגה פעילה אחרת: "${otherLeagueRes.rows[0].name}". קבוצה יכולה להיות מחוברת לליגה אחת בלבד.`);
+
+  if (currentLinkRes.rows.length > 0) {
+    const currentLeague = currentLinkRes.rows[0];
+    if (String(currentLeague.id) === String(league.id)) {
+      return msg.reply(`✅ הקבוצה כבר מחוברת לליגה "${league.name}".`);
+    } else {
+      return msg.reply(`❌ קבוצה זו כבר מחוברת לליגה פעילה אחרת: "${currentLeague.name}".\n\nכדי לחבר את הקבוצה לליגה "${league.name}", יש לנתק תחילה את הקבוצה מהליגה הקודמת דרך האתר או על ידי מנהל הליגה.`);
+    }
   }
 
   // 2. Link in DB
