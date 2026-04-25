@@ -78,9 +78,6 @@ const LeaguesPage = () => {
     queryFn: getMyLeagues,
   });
 
-  const leagues = leaguesData?.leagues ?? [];
-  const leaderboard = leaderboardData?.leaderboard ?? [];
-
   const { data: previewData, isError: previewIsError, error: previewError } = useQuery({
     queryKey: ["league-preview", joinCode],
     queryFn: () => getLeagueByInviteCode(joinCode),
@@ -177,6 +174,8 @@ const LeaguesPage = () => {
   };
 
   const distTotal = distribution.reduce((s, d) => s + d.pct, 0);
+  const leagues = leaguesData?.leagues ?? [];
+  const leaderboard = leaderboardData?.leaderboard ?? [];
   const publicLeagues = (publicLeaguesData?.leagues ?? []).filter(
     pl => !leagues.some(l => l.id === pl.id)
   );
