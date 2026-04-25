@@ -3,7 +3,7 @@
 // טופס פנייה לתמיכה → POST /support/inquiries.
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, HelpCircle, Trophy, Smartphone, Zap, ShieldCheck, Share2, ArrowLeft, ChevronDown } from "lucide-react";
+import { ChevronRight, HelpCircle, Trophy, Smartphone, Zap, ShieldCheck, Share2, ArrowRight, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const HelpPage = () => {
@@ -70,19 +70,18 @@ const HelpPage = () => {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-3"
       >
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 -mr-2 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="flex items-center gap-2 text-primary">
-            <HelpCircle size={28} />
-            <h1 className="text-3xl font-black">עזרה והדרכה</h1>
-          </div>
+        <button 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-muted-foreground text-sm w-fit hover:text-primary transition-colors"
+        >
+          <ArrowRight size={16} /> חזרה
+        </button>
+
+        <div className="flex items-center gap-2 text-primary">
+          <HelpCircle size={28} />
+          <h1 className="text-3xl font-black text-foreground">עזרה והדרכה</h1>
         </div>
         <p className="text-muted-foreground">כל מה שצריך לדעת כדי להפוך לאלוף DerbyUp הבא.</p>
       </motion.div>
