@@ -110,10 +110,10 @@ const BetSlipPage = () => {
       }
 
       const text = isParlay && canParlay
-        ? `פרליי של ${freeBets.length} הימורים חופשיים עם בונוס ×1.10 — ${freeBets.reduce((s,b)=>s+b.points,0).toLocaleString()} נקודות! הצטרף ל-Kickoff`
+        ? `פרליי של ${freeBets.length} הימורים חופשיים עם בונוס ×1.10 — ${freeBets.reduce((s,b)=>s+b.points,0).toLocaleString()} נקודות! הצטרף ל-DerbyUp`
         : betSlip.length === 1
-          ? `הימרתי על ${betSlip[0].selectedOption} (x${betSlip[0].odds}) ב-${betSlip[0].gameLabel} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-Kickoff`
-          : `שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-Kickoff`;
+          ? `הימרתי על ${betSlip[0].selectedOption} (x${betSlip[0].odds}) ב-${betSlip[0].gameLabel} - ${totalStake.toLocaleString()} נקודות! הצטרף ל-DerbyUp`
+          : `שלחתי ${betSlip.length} הימורים עם פוטנציאל ${individualPayout.toLocaleString()} נקודות! הצטרף ל-DerbyUp`;
       setShareText(text);
       clearBetSlip();
       await refreshUser();

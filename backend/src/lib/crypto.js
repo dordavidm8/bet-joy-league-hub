@@ -26,7 +26,7 @@ function getMasterKey() {
   }
   const buf = Buffer.from(raw, 'utf8');
   if (buf.length < KEY_LEN) {
-    return crypto.scryptSync(raw, 'kickoff-salt', KEY_LEN);
+    return crypto.scryptSync(raw, 'derbyup-salt', KEY_LEN);
   }
   return buf.slice(0, KEY_LEN);
 }

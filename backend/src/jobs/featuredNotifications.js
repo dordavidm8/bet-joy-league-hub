@@ -52,7 +52,7 @@ async function sendFeaturedMatchNotifications() {
             `🔥 משחק מומלץ: ${translateTeam(game.home_team)} נגד ${translateTeam(game.away_team)}\n` +
             `בונוס של +${game.featured_bonus_pct}% על הסיכויים! ✨\n` +
             `המשחק מתחיל ב-${kickoffTime}\n\n` +
-            `להימור מהיר: https://kickoff-bet.app/game/${game.id}`;
+            `להימור מהיר: https://derbyup.bet/game/${game.id}`;
           
           sendDM(u.phone_number, waText).catch(() => {});
         }

@@ -19,7 +19,7 @@ const SUGGESTED = [
   "איזו קבוצה בפורמה טובה יותר?",
 ];
 
-const WELCOME_GENERIC = `שלום! אני יועץ ה-AI של Kickoff 🤖\nבחר משחק למעלה ואני אעזור לך לנתח אותו לפני שתמר.`;
+const WELCOME_GENERIC = `שלום! אני יועץ ה-AI של DerbyUp 🤖\nבחר משחק למעלה ואני אעזור לך לנתח אותו לפני שתמר.`;
 
 const WELCOME_GAME = (home: string, away: string) =>
   `מוכן לנתח את **${home}** נגד **${away}**! שאל אותי כל דבר שיעזור לך להחליט.`;

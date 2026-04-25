@@ -28,7 +28,7 @@ const SUGGESTED = [
 ];
 
 const WELCOME = (home: string, away: string) =>
-  `שלום! אני יועץ ה-AI של Kickoff 🤖\nאני כאן לעזור לך עם המשחק **${home}** נגד **${away}**.\nשאל אותי על תחזית, אודס, או כל דבר שיעזור לך להחליט. הניתוח מבוסס על הנתונים הזמינים בלבד.`;
+  `שלום! אני יועץ ה-AI של DerbyUp 🤖\nאני כאן לעזור לך עם המשחק **${home}** נגד **${away}**.\nשאל אותי על תחזית, אודס, או כל דבר שיעזור לך להחליט. הניתוח מבוסס על הנתונים הזמינים בלבד.`;
 
 const AiAdvisor = ({ gameId, homeTeam, awayTeam, onClose }: AiAdvisorProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([

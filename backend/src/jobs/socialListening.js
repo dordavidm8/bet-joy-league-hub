@@ -23,7 +23,7 @@ async function runSocialListening() {
   }
 
   try {
-    const queries = ['KickOff app Israel', 'קיקאוף אפליקציה', 'KickOff football betting'];
+    const queries = ['DerbyUp app Israel', 'דרביאפ אפליקציה', 'DerbyUp football betting'];
 
     for (const query of queries) {
       const res = await fetch('https://google.serper.dev/search', {
@@ -46,7 +46,7 @@ async function runSocialListening() {
 
         // Analyze sentiment with Groq
         const groqRes = await callGroqPipeline(
-          'You are a sentiment analysis agent. Classify the sentiment and PR risk of mentions about KickOff app Israel.',
+          'You are a sentiment analysis agent. Classify the sentiment and PR risk of mentions about DerbyUp app Israel.',
           `Analyze this mention:\nTitle: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}\n\nReturn JSON: {"sentiment": "positive|neutral|negative", "is_pr_risk": true|false}`,
           { jsonMode: true, max_tokens: 200, temperature: 0 }
         );

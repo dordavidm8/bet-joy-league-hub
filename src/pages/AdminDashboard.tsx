@@ -2437,7 +2437,7 @@ const AdminDashboard = () => {
       <div className="sticky top-0 z-40 bg-background/90 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-black">Kickoff</span>
+            <span className="text-lg font-black">DerbyUp</span>
             <span className="text-xs bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">Admin</span>
           </div>
           <button onClick={() => navigate("/")} className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground">

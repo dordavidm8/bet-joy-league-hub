@@ -17,7 +17,7 @@ const STUB_USER = {
   id: 'aaaaaaaa-0000-0000-0000-000000000001',
   firebase_uid: 'stub-uid-001',
   username: 'demo',
-  email: 'demo@kickoff.app',
+  email: 'demo@derbyup.bet',
   avatar_url: null,
   points_balance: 5000,
   total_bets: 18,

@@ -22,7 +22,7 @@ const HelpPage = () => {
     {
       title: "מה זה ליגות ווטסאפ?",
       icon: <Smartphone className="text-green-500" size={20} />,
-      content: "ניתן לחבר כל ליגה שפועלת ב״קופה משותפת״ לקבוצת ווטסאפ. הבוט של Kickoff ישלח הודעה בכל בוקר עם המשחקים הרלוונטיים, וניתן להמר ישירות מהצ'אט על ידי השבה (Reply) להודעה."
+      content: "ניתן לחבר כל ליגה שפועלת ב״קופה משותפת״ לקבוצת ווטסאפ. הבוט של DerbyUp ישלח הודעה בכל בוקר עם המשחקים הרלוונטיים, וניתן להמר ישירות מהצ'אט על ידי השבה (Reply) להודעה."
     },
     {
       title: "צבירת נקודות",
@@ -47,7 +47,7 @@ const HelpPage = () => {
           <HelpCircle size={28} />
           <h1 className="text-3xl font-black">עזרה והדרכה</h1>
         </div>
-        <p className="text-muted-foreground">כל מה שצריך לדעת כדי להפוך לאלוף הקיקאוף הבא.</p>
+        <p className="text-muted-foreground">כל מה שצריך לדעת כדי להפוך לאלוף DerbyUp הבא.</p>
       </motion.div>
 
       <div className="flex flex-col gap-4">
@@ -145,7 +145,7 @@ const HelpPage = () => {
         </div>
 
         <p className="text-[10px] text-muted-foreground mb-4">
-          © {new Date().getFullYear()} Kickoff Project. All rights reserved.
+          © {new Date().getFullYear()} DerbyUp. All rights reserved.
         </p>
       </motion.div>
     </div>

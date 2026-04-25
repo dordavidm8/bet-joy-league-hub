@@ -504,7 +504,7 @@ router.post('/notify', async (req, res, next) => {
       users = result.rows;
     }
 
-    const waText = `הודעה מצוות KickOff 📣:\n\n*${title}*\n${body || ''}`;
+    const waText = `הודעה מצוות DerbyUp 📣:\n\n*${title}*\n${body || ''}`;
 
     // Send to Internal Notifications ALWAYS
     for (const u of users) {
@@ -1217,7 +1217,7 @@ router.post('/support-inquiries/:id/reply', async (req, res, next) => {
     // 4. Send WhatsApp if opted in
     if (inquiry.phone_number && inquiry.phone_verified && inquiry.wa_opt_in) {
       const { sendDM } = require('../services/whatsappBotService');
-      const waText = `שלום, התקבלה תשובה לפנייה מס׳ ${inquiry.inquiry_number} ששלחת למנהלי Kickoff:\n\n*תשובה:* ${message}`;
+      const waText = `שלום, התקבלה תשובה לפנייה מס׳ ${inquiry.inquiry_number} ששלחת למנהלי DerbyUp:\n\n*תשובה:* ${message}`;
       sendDM(inquiry.phone_number, waText).catch(e => console.error('[SupportReply] WA error:', e.message));
     }
 

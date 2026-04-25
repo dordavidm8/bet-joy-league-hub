@@ -77,7 +77,7 @@ async function getGameContext(gameId, skipStatusCheck = false) {
 }
 
 function buildSystemPrompt(cfg, game, questions) {
-  const base = cfg.system_prompt || 'אתה יועץ הימורי של Kickoff. ענה תמיד בעברית, בטון חברותי וקצר. אל תמציא סטטיסטיקות.';
+  const base = cfg.system_prompt || 'אתה יועץ הימורי של DerbyUp. ענה תמיד בעברית, בטון חברותי וקצר. אל תמציא סטטיסטיקות.';
 
   if (!game) return base;
 

@@ -247,7 +247,7 @@ const BetHistoryPage = () => {
               {/* WhatsApp share on won bets */}
               {bet.status === "won" && bet.actual_payout != null && (
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`זכיתי ב-${parseFloat(String(bet.actual_payout)).toFixed(bet.league_bet_mode === 'initial_balance' ? 1 : 0)} נקודות על ${translateTeam(bet.home_team)} נגד ${translateTeam(bet.away_team)} (×${parseFloat(String(bet.odds)).toFixed(2)})! הצטרף ל-Kickoff: https://kickoff-bet.app`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`זכיתי ב-${parseFloat(String(bet.actual_payout)).toFixed(bet.league_bet_mode === 'initial_balance' ? 1 : 0)} נקודות על ${translateTeam(bet.home_team)} נגד ${translateTeam(bet.away_team)} (×${parseFloat(String(bet.odds)).toFixed(2)})! הצטרף ל-DerbyUp: https://derbyup.bet`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={e => e.stopPropagation()}

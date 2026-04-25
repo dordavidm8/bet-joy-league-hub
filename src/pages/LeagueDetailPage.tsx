@@ -173,7 +173,7 @@ const LeagueDetailPage = () => {
 
   const copySetupCommand = () => {
     if (!data?.league.invite_code) return;
-    navigator.clipboard.writeText(`/kickoff setup ${data.league.invite_code}`);
+    navigator.clipboard.writeText(`/derbyup setup ${data.league.invite_code}`);
     setCopiedSetup(true);
     setTimeout(() => setCopiedSetup(false), 2000);
   };
@@ -253,7 +253,7 @@ const LeagueDetailPage = () => {
               </button>
             </div>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent("הצטרף לליגה שלי ב-Kickoff!\nשם: " + league.name + "\nקוד הזמנה: " + league.invite_code + "\nהצטרף ישירות: \u200B" + "https://kickoff-bet.app/leagues?join=" + league.invite_code)}`}
+              href={`https://wa.me/?text=${encodeURIComponent("הצטרף לליגה שלי ב-DerbyUp!\nשם: " + league.name + "\nקוד הזמנה: " + league.invite_code + "\nהצטרף ישירות: \u200B" + "https://derbyup.bet/leagues?join=" + league.invite_code)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors"
@@ -493,7 +493,7 @@ const LeagueDetailPage = () => {
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="flex-1 font-mono text-[11px] bg-secondary rounded-lg px-2 py-1.5 select-all">
-                      /kickoff setup {league.invite_code}
+                      /derbyup setup {league.invite_code}
                     </span>
                     <button
                       onClick={copySetupCommand}

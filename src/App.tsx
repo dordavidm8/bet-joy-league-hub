@@ -110,7 +110,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
 function AuthGate() {
   const { firebaseUser, loading, isGuest } = useAuth();
   const [onboardingDone, setOnboardingDone] = useState(
-    () => !!localStorage.getItem("kickoff_onboarding_done")
+    () => !!localStorage.getItem("derbyup_onboarding_done")
   );
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">טוען...</div>;

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 const SCREENS = [
   {
     emoji: "⚽",
-    title: "ברוכים הבאים ל-Kickoff!",
+    title: "ברוכים הבאים ל-DerbyUp!",
     desc: "המרו על משחקי כדורגל עם נקודות - בחינם, ללא כסף אמיתי.\nכל משחק הוא הזדמנות לנקודות ולהתחרות עם חברים.",
     sub: "קיבלת 5000 נקודות פתיחה!",
     subColor: "text-green-600",
@@ -41,7 +41,7 @@ export default function OnboardingPage({ onDone }: Props) {
 
   const next = () => {
     if (isLast) {
-      localStorage.setItem("kickoff_onboarding_done", "1");
+      localStorage.setItem("derbyup_onboarding_done", "1");
       onDone();
     } else {
       setStep((s) => s + 1);
@@ -89,7 +89,7 @@ export default function OnboardingPage({ onDone }: Props) {
         {!isLast && (
           <button
             onClick={() => {
-              localStorage.setItem("kickoff_onboarding_done", "1");
+              localStorage.setItem("derbyup_onboarding_done", "1");
               onDone();
             }}
             className="text-gray-400 text-xs hover:underline"

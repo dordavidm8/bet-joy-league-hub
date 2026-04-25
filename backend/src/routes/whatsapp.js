@@ -20,7 +20,7 @@ function generateOTP() {
 }
 
 function getHelpText() {
-  return `👋 *שלום! אני הבוט של Kickoff* ⚽\n\n` +
+  return `👋 *שלום! אני הבוט של DerbyUp* ⚽\n\n` +
     `*פקודות בפרטי:* ✉️\n` +
     `• *יתרה* — הצג את יתרת הנקודות שלך\n` +
     `• *הימורים* — ההימורים האחרונים שלך\n` +
@@ -74,7 +74,7 @@ router.post('/link-phone', authenticate, async (req, res, next) => {
     );
 
     const sent = await sendDM(normalized,
-      `👋 קוד האימות ל-KickOff: *${code}*\nקוד זה תקף ל-10 דקות.`
+      `👋 קוד האימות ל-DerbyUp: *${code}*\nקוד זה תקף ל-10 דקות.`
     );
 
     // In stub mode, return the code directly so dev can test
@@ -175,7 +175,7 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
     const participantPhones = membersRes.rows.map(r => r.phone_number);
 
     const result = await callBot('/internal/create-group', {
-      name: `Kickoff - ${league.name} ⚽`,
+      name: `DerbyUp - ${league.name} ⚽`,
       leagueName: league.name,
       phones: participantPhones,
       leagueId: leagueId,

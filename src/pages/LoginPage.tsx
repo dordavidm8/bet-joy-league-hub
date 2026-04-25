@@ -120,9 +120,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl relative z-10">
         {/* Logo & title */}
         <div className="flex justify-center mb-2">
-          <img src="/kickoff_logo_cropped.png" alt="Kickoff" className="h-[130px] w-auto" />
+          <img src="/kickoff_logo_cropped.png" alt="DerbyUp" className="h-[130px] w-auto" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 text-center mb-1">Kickoff</h1>
+        <h1 className="text-2xl font-bold text-gray-900 text-center mb-1">DerbyUp</h1>
         <p className="text-green-600 font-semibold text-center text-sm mb-5">
           {mode === 'login' ? 'נחשו. התחרו. נצחו.' : mode === 'register' ? 'צור חשבון חדש' : 'איפוס סיסמה'}
         </p>
