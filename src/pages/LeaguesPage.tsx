@@ -2,13 +2,13 @@
 // מציג: ליגות שהמשתמש חבר בהן, ליגות ציבוריות לחיפוש.
 // אפשרויות: יצירת ליגה חדשה, הצטרפות לליגה קיימת דרך קוד הזמנה.
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague, searchUsers, getPublicLeagues, joinPublicLeague } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins, Flag } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Tab = "leagues" | "leaderboard";
@@ -37,8 +37,23 @@ const LeaguesPage = () => {
   const [userSearchInput, setUserSearchInput] = useState("");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { isGuest, exitGuest } = useAuth();
+  const hasAttemptedAutoJoin = useRef(false);
+
+  const joinParam = searchParams.get("join");
+
+  useEffect(() => {
+    if (joinParam && !hasAttemptedAutoJoin.current && !isGuest) {
+      setJoinCode(joinParam.toUpperCase());
+      setShowJoin(true);
+      hasAttemptedAutoJoin.current = true;
+      
+      // Attempt auto-join
+      joinMutation.mutate(joinParam.toUpperCase());
+    }
+  }, [joinParam, isGuest]);
 
   // Create form state
   const [name, setName] = useState("");
@@ -124,7 +139,7 @@ const LeaguesPage = () => {
   });
 
   const joinMutation = useMutation({
-    mutationFn: () => joinLeague(joinCode),
+    mutationFn: (overrideCode?: string) => joinLeague(overrideCode || joinCode),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["my-leagues"] });
       setShowJoin(false);
