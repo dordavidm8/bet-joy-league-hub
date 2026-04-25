@@ -342,8 +342,24 @@ const LeagueDetailPage = () => {
               <>
                 <p className="text-xs text-green-600">קבוצה מחוברת ✅</p>
 
-                {/* Invite link — show join button or prompt to add one */}
-                {waSettingsData.settings.invite_link ? (
+                {/* Invite link & management — check phone verification */}
+                {!backendUser?.phone_verified ? (
+                  <div className="flex flex-col gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl relative overflow-hidden">
+                    <Lock className="absolute -bottom-2 -left-2 opacity-5" size={80} />
+                    <div className="flex items-center gap-2 text-red-800">
+                      <Smartphone size={16} />
+                      <p className="text-sm font-black">חיבור ל-WhatsApp נדרש</p>
+                    </div>
+                    <p className="text-[11px] text-red-700 leading-tight">עליך לחבר את הטלפון שלך ל-WhatsApp כדי להצטרף לקבוצה ולהתחיל להמר ישירות מהבוט.</p>
+                    <Button 
+                      size="sm" 
+                      className="bg-red-600 hover:bg-red-700 text-white w-fit mt-1 shadow-sm"
+                      onClick={() => navigate("/profile")}
+                    > 
+                      חבר טלפון עכשיו &larr;
+                    </Button>
+                  </div>
+                ) : waSettingsData.settings.invite_link ? (
                   <a
                     href={waSettingsData.settings.invite_link}
                     target="_blank"
@@ -478,51 +494,71 @@ const LeagueDetailPage = () => {
                 <p className="text-[11px] text-muted-foreground">
                   חבר קבוצת וואטסאפ לליגה — חברים יקבלו הודעות על משחקים ויוכלו להמר ישירות
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => { setWaMsg(null); waCreateGroupMutation.mutate(); }}
-                  disabled={waCreateGroupMutation.isPending}
-                  className="self-start"
-                >
-                  <Smartphone size={14} /> {waCreateGroupMutation.isPending ? "יוצר..." : "צור קבוצת WhatsApp"}
-                </Button>
-                <div>
-                  <p className="text-[11px] text-muted-foreground mb-1">
-                    או הוסף בוט לקבוצה קיימת — שלח בקבוצה:
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="flex-1 font-mono text-[11px] bg-secondary rounded-lg px-2 py-1.5 select-all">
-                      /derbyup setup {league.invite_code}
-                    </span>
-                    <button
-                      onClick={copySetupCommand}
-                      className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center transition-colors hover:bg-primary/20 shrink-0"
-                    >
-                      {copiedSetup ? <Check size={14} className="text-primary" /> : <Copy size={14} className="text-primary" />}
-                    </button>
-                  </div>
-                </div>
-                {showWaLinkEdit ? (
-                  <div className="flex flex-col gap-2">
-                    <input
-                      value={waInviteLinkInput}
-                      onChange={e => setWaInviteLinkInput(e.target.value)}
-                      placeholder="לינק הזמנה לקבוצת WA"
-                      className="bg-secondary rounded-xl px-3 py-2 text-xs outline-none"
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => waUpdateLinkMutation.mutate()} disabled={waUpdateLinkMutation.isPending}>
-                        {waUpdateLinkMutation.isPending ? "שומר..." : "שמור לינק"}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowWaLinkEdit(false)}>ביטול</Button>
+                {!backendUser?.phone_verified ? (
+                  <div className="flex flex-col gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl relative overflow-hidden mt-1">
+                    <Lock className="absolute -bottom-2 -left-2 opacity-5" size={80} />
+                    <div className="flex items-center gap-2 text-red-800">
+                      <Smartphone size={16} />
+                      <p className="text-sm font-black">עליך לחבר טלפון כדי לנהל את הבוט</p>
                     </div>
+                    <p className="text-[11px] text-red-700 leading-tight">כדי ליצור קבוצת WhatsApp עבור הליגה שלך, עליך קודם לאמת את מספר הטלפון שלך בפרופיל.</p>
+                    <Button 
+                      size="sm" 
+                      className="bg-red-600 hover:bg-red-700 text-white w-fit mt-1 shadow-sm"
+                      onClick={() => navigate("/profile")}
+                    > 
+                      חבר טלפון עכשיו &larr;
+                    </Button>
                   </div>
                 ) : (
-                  <button onClick={() => { setWaInviteLinkInput(""); setShowWaLinkEdit(true); }}
-                    className="text-xs text-primary hover:underline self-start">
-                    הוסף לינק הזמנה ישיר לקבוצה
-                  </button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setWaMsg(null); waCreateGroupMutation.mutate(); }}
+                      disabled={waCreateGroupMutation.isPending}
+                      className="self-start mt-1"
+                    >
+                      <Smartphone size={14} /> {waCreateGroupMutation.isPending ? "יוצר..." : "צור קבוצת WhatsApp"}
+                    </Button>
+                    <div className="mt-1">
+                      <p className="text-[11px] text-muted-foreground mb-1">
+                        או הוסף בוט לקבוצה קיימת — שלח בקבוצה:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="flex-1 font-mono text-[11px] bg-secondary rounded-lg px-2 py-1.5 select-all">
+                          /derbyup setup {league.invite_code}
+                        </span>
+                        <button
+                          onClick={copySetupCommand}
+                          className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center transition-colors hover:bg-primary/20 shrink-0"
+                        >
+                          {copiedSetup ? <Check size={14} className="text-primary" /> : <Copy size={14} className="text-primary" />}
+                        </button>
+                      </div>
+                    </div>
+                    {showWaLinkEdit ? (
+                      <div className="flex flex-col gap-2 mt-2">
+                        <input
+                          value={waInviteLinkInput}
+                          onChange={e => setWaInviteLinkInput(e.target.value)}
+                          placeholder="לינק הזמנה לקבוצת WA"
+                          className="bg-secondary rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => waUpdateLinkMutation.mutate()} disabled={waUpdateLinkMutation.isPending}>
+                            {waUpdateLinkMutation.isPending ? "שומר..." : "שמור לינק"}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setShowWaLinkEdit(false)}>ביטול</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setWaInviteLinkInput(""); setShowWaLinkEdit(true); }}
+                        className="text-xs text-primary hover:underline self-start mt-1">
+                        הוסף לינק הזמנה ישיר לקבוצה
+                      </button>
+                    )}
+                  </>
                 )}
               </>
             ) : (
