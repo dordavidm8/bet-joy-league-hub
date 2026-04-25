@@ -1,8 +1,8 @@
-# Social Media Agents — Project Tracker
+# Social Media Agents — Project Tracker (V2 finalized)
 
 ## Overview
-מערכת אייגנטים אוטונומית לניהול סושיאל מדיה של KickOff,
-בסגנון NoimosAI, מבוססת **Groq LLM** (llama-3.3-70b-versatile) + Gemini Imagen 3.
+מערכת אייגנטים אוטונומית מבוזרת מבוססת **Kernel & Skills**.
+החלפה מלאה של הארכיטקטורה המונוליטית ב-V2 מבוסס **Groq LLM** (llama-3.3-70b-versatile) + איוונטים חיים ל-UI.
 
 ---
 
@@ -10,31 +10,25 @@
 
 ```
                 ┌──────────────────────────────────────────────────┐
- 07:30 IST ───► │  Growth Strategy Agent  │  App stats + trends   │
-                └───────────┬──────────────────────────────────────┘
-                            ▼
- 08:00 IST ───► ┌──────────────────────────────────────────────────┐
-                │            ORCHESTRATOR (orchestratorAgent.js)   │
-                │  1. Content Calendar (weekly theme, cached)      │
-                │  2. Growth Strategy (content angle from DB)      │
-                │  3. Content Creator (3× Groq → LI + IG + TT)    │
-                │  4. Prompt Library (Nano Banana Pro selector)    │
-                │  5. Visual Creator (Groq adapts → Imagen 3)      │
-                │  6. SEO/GEO (hashtags + AI search content)       │
-                │  7. Save posts as pending_approval               │
-                │  8. Auto-publish if config.auto_approve = true   │
+  Manual/Cron ──► │     ORCHESTRATOR (kernel/orchestrator.js)        │
+                │  1. Load Skills from /agents/skills/             │
+                │  2. Sequence: Research -> Strategy -> Creative -> │
+                │     SEO/GEO -> Draft Packager                    │
+                │  3. Task Runner executes via Groq & Tools        │
+                │  4. Real-time logging to agent_events (DB)       │
+                │  5. Final drafts inserted into social_posts      │
                 └──────────────────────────────────────────────────┘
                             ▼
                 ┌──────────────────────────────────────────────────┐
-                │  Admin Dashboard → Approve / Reject / Edit       │
-                └───────────┬──────────────────────────────────────┘
+                │  Admin UI (V2) -> Approve / Reject / Edit        │
+                └──────────────────────────────────────────────────┘
                             ▼
                 ┌──────────────────────────────────────────────────┐
-                │  Publisher Agent → LinkedIn + Instagram + TikTok  │
+                │  Publisher Agent / Manual Upload                 │
                 └──────────────────────────────────────────────────┘
 
- Every 4h ────► Social Listening (Serper + Groq sentiment)
- 11:00 IST ──► Analytics Refresh (platform APIs → DB)
+ Every 4h ────► Social Listening (Serper + Groq V2)
+ 08:00 UTC ──► Analytics Refresh (Platform APIs -> DB)
 ```
 
 ---
@@ -53,42 +47,31 @@
 
 ---
 
-## ✅ Phase 1 — Core Infrastructure (COMPLETED)
+## ✅ Phase 3 — V2 Decentralized Kernel (COMPLETED)
 
-### Database
-- [x] `backend/src/db/migrations/2026_social_media_agents.sql` — 10 tables
+### Core Kernel (`backend/src/agents/kernel/`)
+- [x] `orchestrator.js` — Sequence controller with idempotency and Context management.
+- [x] `taskRunner.js` — Groq execution engine with 3-attempt retry backoff.
+- [x] `skillLoader.js` — YAML parser (js-yaml) for `SKILL.md` standardization.
+- [x] `eventBus.js` — EventEmitter with DB persistence for real-time UI logging.
 
-### Backend Services
-- [x] `backend/src/services/social/socialMediaUtils.js` — **Groq** + Gemini clients, DB ops, helpers
-- [x] `backend/src/services/social/contentCalendarAgent.js` — Weekly theme + weekly cache
-- [x] `backend/src/services/social/growthStrategyAgent.js` — Content angle from app stats
-- [x] `backend/src/services/social/contentCreatorAgent.js` — 3× parallel Groq calls (LI/IG/TT)
-- [x] `backend/src/services/social/seoGeoAgent.js` — Hashtags + GEO optimization
-- [x] `backend/src/services/social/promptLibraryService.js` — Nano Banana Pro selector (6 categories)
-- [x] `backend/src/services/social/visualCreatorAgent.js` — Groq picks template → Gemini Imagen 3
-- [x] `backend/src/services/social/publisherAgent.js` — LinkedIn UGC + Instagram Graph + TikTok APIs
-- [x] `backend/src/services/social/orchestratorAgent.js` — Full pipeline orchestration + idempotency
-- [x] `backend/src/services/social/nano-banana-templates.json` — 115 curated templates (361KB)
-- [x] `backend/src/services/social/extract_prompt_templates.py` — One-time extractor (25MB CSV → JSON)
+### Skills Repository (`backend/src/agents/skills/`)
+- [x] `research-agent` — Market and trend analysis.
+- [x] `strategy-agent` — Content angle and platform selection.
+- [x] `creative-content-agent` — Caption generation in Hebrew.
+- [x] `seo-geo-agent` — Hashtag and location optimization.
+- [x] `draft-packager` — JSON parser that pushes final drafts to `social_posts`.
 
-### Cron Jobs
-- [x] `backend/src/jobs/socialMediaPost.js` — Daily pipeline entry point
-- [x] `backend/src/jobs/socialListening.js` — Serper → Groq sentiment + PR risk alerts
-- [x] `backend/src/jobs/socialAnalytics.js` — LinkedIn/Instagram/TikTok analytics refresh
+### Database & Scaling
+- [x] `agent_roster` — Capability to toggle agents on/off dynamically.
+- [x] `agent_tasks` — Persistence for every step's input/output.
+- [x] `agent_events` — Real-time stream data.
+- [x] `social_posts` Hook — V2 now writes directly as `status='draft'`.
 
-### API Routes (`/api/social/*`)
-- [x] `backend/src/routes/socialMedia.js` — 20+ endpoints (runs, posts, config, KB, chat, analytics)
-
-### Wiring
-- [x] `backend/src/app.js` — `/api/social` registered
-- [x] `backend/src/jobs/index.js` — 4 cron schedules (07:30, 08:00, 11:00, every 4h IST)
-- [x] `backend/src/routes/admin.js` — 6 new secret keys in ALLOWED_KEYS
-- [x] `backend/package.json` — `@anthropic-ai/sdk`, `@google/genai` added
-
-### Nano Banana Pro Integration
-- [x] Groq selects best template per platform + adapts it for KickOff brand
-- [x] 6 categories: `sports_content`, `social_media_post`, `infographic`, `poster_flyer`, `profile_avatar`, `default`
-- [x] Raw CSV (25MB) gitignored; compiled JSON (361KB) committed
+### V1 Cleanup
+- [x] Removed all legacy code in `services/social/`.
+- [x] Combined V1 and V2 UI into a unified Dashboard.
+- [x] Migrated Cron Jobs (5:00 UTC) to the V2 Orchestrator.
 
 ---
 
@@ -128,16 +111,17 @@
 | 6 | **[x] managementChatAgent.js** | Groq עם Tool Calling (בדיקת DB, הפעלת pipeline, שינוי config) |
 | 7 | **[x] Magic Switch Panel** | `MagicSwitchModal.tsx` — ממיר פוסט מפלטפורמה לפלטפורמה ב-1 קליק |
 | 8 | **[x] analyticsAgent.js** | ניתוח ביצועים עמוק: best time to post, top hashtags, engagement rate |
-| 9 | **Video support (TikTok)** | Veo 2 כשיפתח ב-API — כרגע רק thumbnail |
+| 9 | **[x] Video support (TikTok)** | שימוש באוטומציית NotebookLM Node.js + FFmpeg (תחליף ל-Veo 2) |
 
 ### Priority: LOW — Nice to Have
 
 | # | משימה | תיאור |
 |---|---|---|
-| 10 | **Post Editor מלא** | עריכת caption + prompt התמונה + regenerate image בלחיצה |
-| 11 | **A/B Testing** | יצירת 2 גרסאות לכל פוסט ומעקב על מי ביצע טוב יותר |
+| 10 | **[x] Post Editor מלא** | עריכת caption + prompt התמונה + regenerate image באמצעות Imagen 3 |
+| 11 | **[x] A/B Testing** | יצירת 2 גרסאות לכל פוסט (Array) + מנגנון Grouping ו-Approval הדדי |
 | 12 | **WhatsApp distribution** | שליחת פוסטים לกลumpot WA כמו Advisor הקיים |
-| 13 | **Competitor deep analysis** | מעקב שבועי על KPIs של מתחרים + Groq insights |
+| 13 | **[x] Competitor deep analysis**| חילוץ מסקנות עומק (Top Hooks & Action Items) באמצעות תפריט UI חדש ל־Groq |
+| 14 | **[x] NotebookLM Node Script**| סקריפט אוטומציה עיוור (Playwright headless) לייצור פודקאסט שמע בלחיצה |
 | 14 | **Performance dashboard** | גרפים של engagement, reach, follower growth לאורך זמן |
 
 ---

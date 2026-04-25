@@ -6,6 +6,16 @@
  */
 'use strict';
 
-const { runDailySocialMediaPipeline } = require('../services/social/orchestratorAgent');
+const { initPipelineRun, runPipeline } = require('../agents/kernel/orchestrator');
 
-module.exports = { runDailySocialMediaPipeline };
+module.exports = { 
+  runDailySocialMediaPipeline: async ({ dryRun = false } = {}) => {
+    console.log('[cron] Starting V2 Social Media Pipeline...');
+    const { runId, isNew } = await initPipelineRun({ dryRun, isCron: true });
+    if (isNew) {
+      return runPipeline(runId);
+    } else {
+      console.log('[cron] Pipeline already ran today, skipping.');
+    }
+  }
+};

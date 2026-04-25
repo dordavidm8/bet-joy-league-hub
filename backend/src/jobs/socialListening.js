@@ -14,7 +14,7 @@ const { pool } = require('../config/database');
  */
 async function runSocialListening() {
   const { getSecret } = require('../lib/secrets');
-  const { callClaude, parseJsonResponse } = require('../services/social/socialMediaUtils');
+  const { callGroqPipeline } = require('../agents/tools/groqClient');
 
   const apiKey = await getSecret('SERPER_API_KEY');
   if (!apiKey) {
@@ -44,13 +44,21 @@ async function runSocialListening() {
         );
         if (existing.rows.length > 0) continue;
 
-        // Analyze sentiment with Claude
-        const sentimentResponse = await callClaude(
-          'You are a sentiment analysis agent. Classify the sentiment and PR risk of mentions about KickOff app.',
+        // Analyze sentiment with Groq
+        const groqRes = await callGroqPipeline(
+          'You are a sentiment analysis agent. Classify the sentiment and PR risk of mentions about KickOff app Israel.',
           `Analyze this mention:\nTitle: ${result.title}\nSnippet: ${result.snippet}\nURL: ${result.link}\n\nReturn JSON: {"sentiment": "positive|neutral|negative", "is_pr_risk": true|false}`,
-          { maxTokens: 200, temperature: 0 }
+          { jsonMode: true, max_tokens: 200, temperature: 0 }
         );
-        const sentiment = parseJsonResponse(sentimentResponse) || { sentiment: 'neutral', is_pr_risk: false };
+
+        let sentiment = { sentiment: 'neutral', is_pr_risk: false };
+        if (groqRes.success && groqRes.text) {
+          try {
+            sentiment = typeof groqRes.text === 'string' ? JSON.parse(groqRes.text) : groqRes.text;
+          } catch(e) {
+            console.warn('[socialListening] Failed parsing Groq JSON:', e.message);
+          }
+        }
 
         await pool.query(
           `INSERT INTO social_mentions (source, platform, url, snippet, sentiment, is_pr_risk)

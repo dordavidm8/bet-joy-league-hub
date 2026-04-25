@@ -101,14 +101,11 @@ bet-joy-league-hub/
 │   │   │   │   ├── PlaygroundPanel.tsx ← בדיקת צ'אט בזמן אמת
 │   │   │   │   └── StatsPanel.tsx      ← שימוש, tokens, עלות
 │   │   │   └── social/           ← 8 קומפוננטות לסוכנים חברתיים
-│   │   │       ├── AgentConfigModal.tsx    ← הגדרות סוכן
-│   │   │       ├── AgentStatusGrid.tsx     ← סטטוס כל סוכן
-│   │   │       ├── KnowledgeBaseManager.tsx← ניהול בסיס הידע
-│   │   │       ├── LiveWorkFeed.tsx        ← לוג pipeline בזמן אמת
-│   │   │       ├── MagicSwitchModal.tsx    ← toggle תכונות
-│   │   │       ├── ManagementChat.tsx      ← צ'אט עם הסוכנים
-│   │   │       ├── PostHistoryGallery.tsx  ← ארכיון פוסטים
-│   │   │       └── SocialListeningFeed.tsx ← ניטור אזכורים
+│   │   │       ├── v2/                     ← ממשק סוכנים V2 החדש
+│   │   │       │   ├── SocialAgentsV2Tab.tsx ← דאשבורד סוכנים ראשי
+│   │   │       │   ├── panels/             ← פאנלים (Timeline, Inbox, Chat)
+│   │   │       │   └── hooks/              ← useDrafts, useAgentRunStream
+│   │   │       └── (רכיבי V1 הוסרו)
 │   │   │
 │   │   ├── minigames/            ← 7 קומפוננטות מיני-גיימס
 │   │   │   ├── Box2BoxGame.tsx   ← חיבור שני שחקנים דרך קריירה משותפת
@@ -127,10 +124,6 @@ bet-joy-league-hub/
 │   │   └── AppContext.tsx        ← notifications, הגדרות אפליקציה
 │   │
 │   ├── hooks/                    ← hooks מותאמים אישית
-│   │   ├── useApi.ts             ← wrapper לקריאות API עם state
-│   │   ├── use-mobile.tsx        ← זיהוי מסך מובייל (breakpoint)
-│   │   └── use-toast.ts          ← hook לתצוגת toast
-│   │
 │   ├── lib/                      ← כלים ותצורות
 │   │   ├── api.ts                ← כל קריאות ה-API (typed functions)
 │   │   ├── firebase.ts           ← אתחול Firebase SDK
@@ -145,129 +138,21 @@ bet-joy-league-hub/
 ├── backend/                      ← Backend (Node.js + Express)
 │   └── src/
 │       ├── app.js                ← שרת Express + Socket.io + cron
-│       │
+│       ├── agents/                    ← מערכת סוכנים V2 (Decentralized)
+│       │   ├── kernel/                ← ליבת המערכת (Orchestrator, TaskRunner)
+│       │   ├── skills/                ← תיקיות Skill עם SKILL.md ו-references
+│       │   └── tools/                 ← כלים לסוכנים (groqClient, rssFeeds, etc.)
 │       ├── config/               ← תצורות חיבור
-│       │   ├── database.js       ← PostgreSQL connection pool
-│       │   ├── firebase.js       ← Firebase Admin SDK
-│       │   └── stubDb.js         ← DB מדומה לפיתוח (ללא PostgreSQL)
-│       │
 │       ├── db/                   ← ניהול סכמת מסד נתונים
-│       │   ├── schema.sql        ← DDL מלא (40+ טבלאות, 490+ שורות)
-│       │   ├── migrate.js        ← מריץ migrations בהפעלה
-│       │   └── migrations/       ← קבצי SQL לשינויים מצטברים
-│       │
 │       ├── middleware/           ← middleware גלובלי
-│       │   ├── auth.js           ← אימות Firebase JWT + בדיקת admin
-│       │   └── errorHandler.js   ← handler שגיאות גלובלי
-│       │
 │       ├── routes/               ← 17 Express routers
-│       │   ├── auth.js           ← POST /register, GET /me
-│       │   ├── users.js          ← פרופיל, סטטיסטיקות, עסקאות
-│       │   ├── games.js          ← משחקים, חיים, תוצאות
-│       │   ├── bets.js           ← הימורים בודדים + פרלי
-│       │   ├── leagues.js        ← ליגות: יצירה/הצטרפות/יציאה
-│       │   ├── leaderboard.js    ← טבלת דירוג גלובלית + אישית
-│       │   ├── quiz.js           ← שאלות טריוויה + הגשת תשובות
-│       │   ├── minigames.js      ← מיני-גיימס יומיים (5 סוגים)
-│       │   ├── advisor.js        ← יועץ AI (JSON + SSE streaming)
-│       │   ├── admin.js          ← ניהול: סטטיסטיקות, משתמשים, לוגים
-│       │   ├── notifications.js  ← התראות למשתמש
-│       │   ├── feed.js           ← פיד פעילות חברתי
-│       │   ├── support.js        ← קריאות תמיכה
-│       │   ├── whatsapp.js       ← webhook לבוט WhatsApp
-│       │   └── socialMedia.js    ← שליטה ב-pipeline סוכנים
-│       │
 │       ├── services/             ← לוגיקת עסקים (19 קבצים)
-│       │   ├── bettingService.js      ← חישוב קנס live + payout
-│       │   ├── sportsApi.js           ← ESPN API, odds, שאלות הימור
-│       │   ├── oddsApi.js             ← The Odds API + cache
-│       │   ├── advisorService.js      ← Groq LLM + tool use + SSE
-│       │   ├── advisorTools.js        ← הגדרות tools ל-LLM
-│       │   ├── advisorMetrics.js      ← לוגים של שימוש ב-LLM
-│       │   ├── aiAdminService.js      ← AI לניהול (אימות מיני-גיימס)
-│       │   ├── achievementService.js  ← מדליות והישגים
-│       │   ├── notificationService.js ← שליחת התראות
-│       │   ├── adminLogService.js     ← audit log פעולות מנהל
-│       │   ├── whatsappBotService.js  ← גשר backend ↔ WhatsApp bot
-│       │   └── social/                ← 12 סוכני מדיה חברתית
-│       │       ├── orchestratorAgent.js      ← מתאם pipeline יומי
-│       │       ├── contentCalendarAgent.js   ← תכנון נושא שבועי
-│       │       ├── contentCreatorAgent.js    ← כתיבת כיתובים
-│       │       ├── visualCreatorAgent.js     ← הנחיות תמונה/וידאו
-│       │       ├── publisherAgent.js         ← פרסום לפלטפורמות
-│       │       ├── growthStrategyAgent.js    ← אסטרטגיית צמיחה
-│       │       ├── seoGeoAgent.js            ← אופטימיזציה גיאוגרפית
-│       │       ├── analyticsAgent.js         ← ניתוח ביצועי פוסטים
-│       │       ├── managementChatAgent.js    ← צ'אט ניהולי עם סוכנים
-│       │       ├── socialMediaUtils.js       ← שאילתות DB + helpers
-│       │       ├── unifiedMemoryService.js   ← זיכרון מצטבר של סוכנים
-│       │       ├── promptLibraryService.js   ← ספריית תבניות פרומפט
-│       │       └── nano-banana-templates.json← קובץ תבניות JSON
-│       │
 │       ├── jobs/                 ← Cron jobs (9 קבצים)
-│       │   ├── index.js          ← אתחול + לוחות זמנים (node-cron)
-│       │   ├── syncGames.js      ← כל דקה: ESPN → DB
-│       │   ├── settleBets.js     ← כל 5 דקות: סגירת הימורים
-│       │   ├── generateMiniGames.js← חצות: יצירת 5 פאזלים יומיים
-│       │   ├── dailyReminder.js  ← 6:00 UTC: תזכורת טריוויה
-│       │   ├── weeklyLeaderboard.js← שבת 21:00 UTC: נקודות בונוס
-│       │   ├── featuredNotifications.js← כל 15 דקות: התראות משחק מוצג
-│       │   ├── socialMediaPost.js← 5:00 UTC: pipeline מדיה חברתית
-│       │   ├── socialAnalytics.js← 8:00 UTC: רענון מדדי engagement
-│       │   └── socialListening.js← ניטור אזכורים ברשת
-│       │
-│       ├── middleware/
-│       │   ├── auth.js           ← Firebase JWT verification + admin check
-│       │   └── errorHandler.js   ← global error catching
-│       │
 │       ├── lib/                  ← כלי backend
-│       │   ├── crypto.js         ← הצפנת AES-256-GCM
-│       │   ├── secrets.js        ← ניהול מפתחות API מוצפנים ב-DB
-│       │   └── teamNames.js      ← מילון תרגום שמות קבוצות
-│       │
 │       └── scripts/              ← סקריפטי תחזוקה חד-פעמיים
-│           ├── cleanupTranslations.js ← מחיקת תרגומים ממתינים
-│           └── syncUserStats.js       ← רענון סטטיסטיקות משתמשים
 │
 ├── whatsapp-bot/                 ← בוט WhatsApp (Node.js)
-│   ├── bot.js                    ← אתחול לקוח WhatsApp (whatsapp-web.js)
-│   ├── ecosystem.config.js       ← תצורת PM2 לניהול תהליך
-│   ├── nixpacks.toml             ← הגדרת build ל-Railway
-│   │
-│   └── src/
-│       ├── handlers/             ← עיבוד הודעות נכנסות
-│       │   ├── groupHandler.js   ← הודעות קבוצה (הימורים דרך reply)
-│       │   ├── dmHandler.js      ← הודעות פרטיות (מכונת מצבים)
-│       │   └── stateRouter.js    ← ניתוב לפי מצב שיחה
-│       │
-│       ├── commands/             ← פקודות בוט
-│       │   ├── betCommands.js    ← הנחת/עדכון/צפייה בהימורים
-│       │   ├── groupCommands.js  ← טבלת דירוג, הגדרות קבוצה
-│       │   └── infoCommands.js   ← עזרה, חוקים, הצטרפות
-│       │
-│       ├── notifications/        ← שליחת הודעות יוזמות
-│       │   ├── morningMessages.js    ← משחקי היום בבוקר
-│       │   ├── resultNotifier.js     ← תוצאות משחקים
-│       │   ├── leaderboardNotifier.js← טבלת הדירוג השבועית
-│       │   └── reminderNotifier.js   ← תזכורות לפני נעילת הימורים
-│       │
-│       ├── scheduledJobs.js      ← cron jobs של הבוט
-│       ├── internalApi.js        ← Express פנימי (port 4001)
-│       ├── health.js             ← בדיקת בריאות
-│       ├── rateLimiter.js        ← הגבלת קצב לפי משתמש/קבוצה
-│       │
-│       └── utils/                ← כלי עזר
-│           ├── db.js             ← חיבור PostgreSQL
-│           ├── formatters.js     ← עיצוב הודעות WhatsApp
-│           ├── phoneUtils.js     ← פענוח מספרי טלפון
-│           └── teamNames.js      ← תרגום שמות קבוצות
-│
 ├── docs/                         ← תיעוד הפרויקט
-│   ├── project-structure-guide.md   ← מסמך זה
-│   ├── techniques-and-patterns.md   ← טכניקות וסגנונות קוד
-│   ├── deployment-guide.md          ← מדריך פריסה
-│   └── [קבצי תיעוד נוספים]
-│
 ├── public/                       ← assets סטטיים (favicon, etc.)
 ├── index.html                    ← HTML entry point (Vite)
 ├── vite.config.ts                ← תצורת Vite + path aliases
@@ -307,8 +192,8 @@ HTTP Request → Route Handler → Service Layer → PostgreSQL
 - יצירת פאזלים יומיים
 - שליחת התראות
 
-### 4. Social Agents בתת-ספרייה (`services/social/`)
-מערכת ה-pipeline של מדיה חברתית היא תת-מודול שלם בתוך services. ה-orchestratorAgent מתאם את כל שאר הסוכנים ברצף.
+### 4. Social Agents V2 (`agents/`)
+מערכת ה-pipeline של מדיה חברתית מבוססת על Kernel מבוזר ו-Skills בפורמט MD. ה-orchestrator מתאם ריצות מבוססות איוונטים חיים ל-UI.
 
 ### 5. WhatsApp Bot כשירות נפרד
 הבוט רץ על VPS נפרד (לא Railway) כי:
@@ -354,4 +239,4 @@ HTTP Request → Route Handler → Service Layer → PostgreSQL
 | `/api/feed` | feed.js | פיד פעילות |
 | `/api/support` | support.js | תמיכה |
 | `/api/whatsapp` | whatsapp.js | webhook בוט |
-| `/api/social` | socialMedia.js | pipeline מדיה חברתית |
+| `/api/agents` | agentsV2.js | pipeline סוכני סושיאל V2 |

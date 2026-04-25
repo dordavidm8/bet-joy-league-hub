@@ -74,13 +74,7 @@ function startJobs() {
   // ── Social Media Agents ─────────────────────────────────────────────────
   const { runDailySocialMediaPipeline } = require('./socialMediaPost');
 
-  // 04:30 UTC = 07:30 IST (Growth Strategy pre-run)
-  cron.schedule('30 4 * * *', async () => {
-    try {
-      const { analyzeAndRecommend } = require('../services/social/growthStrategyAgent');
-      await analyzeAndRecommend({});
-    } catch (err) { console.error('[cron:socialGrowth]', err.message); }
-  });
+  // Removed V1 socialGrowth cron
 
   // 05:00 UTC = 08:00 IST (Daily social pipeline)
   cron.schedule('0 5 * * *', async () => {

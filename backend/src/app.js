@@ -79,8 +79,9 @@ app.use('/api/advisor', advisorRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
-const socialRoutes = require('./routes/socialMedia');
-app.use('/api/social', socialRoutes);
+/* Removed V1 socialRoutes */
+/* Removed /api/social */
+app.use('/api/agents', require('./routes/agentsV2'));
 app.use('/api/support', supportRoutes);
 
 app.use(errorHandler);
