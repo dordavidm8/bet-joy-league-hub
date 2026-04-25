@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getLeague, settleLeague, leaveLeague, getLeagueMatches, inviteToLeague, searchUsers, getWaLeagueSettings, createWaGroup, updateWaLeagueSettings, unlinkWaGroup, refreshWaInviteLink, setWaInviteLink, broadcastToLeague, TournamentMatch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
-import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone, XCircle } from "lucide-react";
+import { ArrowRight, Copy, Check, Trophy, Users, Coins, Crown, LogOut, Flag, CheckCircle2, Circle, Clock, Share2, UserPlus, Smartphone, XCircle, Lock } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { translateTeam } from "@/lib/teamNames";
