@@ -50,10 +50,8 @@ const LeaguesPage = () => {
     if (joinParam && !hasAttemptedPreview.current && !isGuest) {
       const code = joinParam.toUpperCase();
       setJoinCode(code);
+      setShowJoin(true); // This will enable the useQuery below
       hasAttemptedPreview.current = true;
-      getLeagueByInviteCode(code)
-        .then(data => setPreviewLeague(data.league))
-        .catch(() => toast.error('קוד הזמנה לא תקין'));
     }
   }, [joinParam, isGuest]);
 
@@ -78,7 +76,7 @@ const LeaguesPage = () => {
     queryFn: getMyLeagues,
   });
 
-  const { data: previewData, isError: previewIsError, error: previewError } = useQuery({
+  const { data: previewData, isLoading: previewLoading, isError: previewIsError, error: previewError } = useQuery({
     queryKey: ["league-preview", joinCode],
     queryFn: () => getLeagueByInviteCode(joinCode),
     enabled: joinCode.length >= 4 && showJoin,
@@ -414,6 +412,25 @@ const LeaguesPage = () => {
                 disabled={!joinCode}>
                 המשך לבדיקת ליגה
               </Button>
+            </motion.div>
+          )}
+
+          {/* League Preview Loading */}
+          {previewLoading && showJoin && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-kickoff flex items-center justify-center py-8">
+              <div className="flex flex-col items-center gap-2">
+                <Trophy size={32} className="text-primary animate-bounce" />
+                <p className="text-sm text-muted-foreground animate-pulse">בודק את פרטי הליגה...</p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* League Preview Error */}
+          {previewIsError && showJoin && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-kickoff border-destructive/30 bg-destructive/5 flex flex-col items-center gap-3 py-6">
+              <X size={32} className="text-destructive" />
+              <p className="text-sm font-bold text-destructive">{(previewError as any)?.message || 'קוד הזמנה לא תקין'}</p>
+              <Button size="sm" variant="outline" onClick={() => { setShowJoin(false); setJoinCode(""); }}>נסה קוד אחר</Button>
             </motion.div>
           )}
 
