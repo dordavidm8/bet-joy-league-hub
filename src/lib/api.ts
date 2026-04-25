@@ -110,6 +110,9 @@ export const createLeague = (data: CreateLeagueInput) =>
 export const joinLeague = (invite_code: string) =>
   request<{ message: string; league: League }>('/leagues/join', { method: 'POST', body: JSON.stringify({ invite_code }) });
 
+export const getLeagueByInviteCode = (invite_code: string) =>
+  request<{ league: League }> (`/leagues/invite/${invite_code}`);
+
 export const settleLeague = (id: string) =>
   request<{ message: string }>(`/leagues/${id}/settle`, { method: 'POST' });
 

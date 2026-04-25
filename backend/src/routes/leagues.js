@@ -240,6 +240,24 @@ router.post('/:id/leave', authenticate, async (req, res, next) => {
   } finally { client.release(); }
 });
 
+// GET /api/leagues/invite/:code — preview league details by invite code
+router.get('/invite/:code', authenticate, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT l.id, l.name, l.description, l.format, l.entry_fee, l.pool_total, l.status, l.created_at,
+              l.max_members, l.is_tournament, l.tournament_slug, l.stake_per_match, l.join_policy,
+              (SELECT COUNT(*) FROM league_members lm WHERE lm.league_id = l.id AND lm.is_active = true) AS member_count,
+              u.username AS creator_username, u.display_name AS creator_display_name
+       FROM leagues l
+       JOIN users u ON u.id = l.creator_id
+       WHERE l.invite_code = $1`,
+      [req.params.code.toUpperCase()]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'ליגה לא נמצאה. בדוק את הקוד שוב.' });
+    res.json({ league: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
 // GET /api/leagues/public — discover public leagues
 router.get('/public', async (req, res, next) => {
   try {
