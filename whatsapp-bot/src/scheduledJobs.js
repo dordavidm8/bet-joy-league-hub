@@ -143,7 +143,7 @@ function startScheduledJobs(client) {
           // User asked to leave groups not connected to leagues.
           console.log(`[jobs] Leaving orphaned group: ${group.name}`);
           try {
-            await group.sendMessage(`⚠️ קבוצה זו אינה מחוברת לליגה פעילה ב-Kickoff. הבוט יוצא מהקבוצה. 👋`);
+            await group.sendMessage(`⚠️ קבוצה זו אינה מחוברת לליגה פעילה ב-DerbyUp. הבוט יוצא מהקבוצה. 👋`);
             await group.leave();
           } catch (e) { console.warn(`[jobs] Failed to leave orphaned group ${group.name}:`, e.message); }
         }

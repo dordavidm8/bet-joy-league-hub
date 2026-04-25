@@ -65,7 +65,7 @@ async function handleLeagues(msg, user) {
 
 async function handleHelp(msg) {
   await msg.reply(
-    `*Kickoff Bot — עזרה* 🤖\n\n` +
+    `*DerbyUp Bot — עזרה* 🤖\n\n` +
     `*/balance* / *יתרה* — יתרת נקודות\n` +
     `*/games* / *משחקים* — משחקים קרובים\n` +
     `*/mybets* — הימורים אחרונים\n` +

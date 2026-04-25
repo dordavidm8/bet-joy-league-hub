@@ -32,7 +32,7 @@ async function getHealthStatus() {
     hour: '2-digit', minute: '2-digit', second: '2-digit' 
   }).replace(/\//g, '.');
 
-  return `📊 *סטטוס בוט (KickOff)*
+  return `📊 *סטטוס בוט (DerbyUp)*
 🟢 פעיל
 📅 *תאריך ושעה:* ${now}
 

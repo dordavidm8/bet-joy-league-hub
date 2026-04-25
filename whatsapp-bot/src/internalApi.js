@@ -140,7 +140,7 @@ function startInternalApi(client) {
         await new Promise(r => setTimeout(r, 2000));
         
         if (inviteCode && leagueId) {
-          const description = `ברוכים הבאים לליגת Kickoff! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://kickoff-bet.app/leagues/${leagueId}`;
+          const description = `ברוכים הבאים לליגת DerbyUp! ⚽\nלהצטרפות ישירה וליצירת חשבון:\nhttps://derbyup.bet/leagues/${leagueId}`;
           await chat.setDescription(description).catch(e => {
             console.warn(`[WA] Description background update FAIL: ${e.message}`);
           });
@@ -149,14 +149,14 @@ function startInternalApi(client) {
 
         // Wait 2 seconds and send the final welcome message
         await new Promise(r => setTimeout(r, 2000));
-        const welcomeText = `ברוכים הבאים לליגת *${leagueName || 'Kickoff'}*! ⚽\n\n` +
+        const welcomeText = `ברוכים הבאים לליגת *${leagueName || 'DerbyUp'}*! ⚽\n\n` +
           `*כללי המשחק:*\n` +
           `בכל בוקר יישלחו לקבוצה הודעות על משחקי היום הבא. על מנת להמר על המשחק יש להגיב להודעה עם המנצחת (1/2/X) והתוצאה המדויקת.\n` +
           `בסיום כל משחק יישלחו התוצאות והניקוד שהרוויח כל משתתף.\n` +
           `רוצים לראות את הטבלה העדכנית? תכתבו *"שלח טבלה גבר"*.\n\n` +
           `יאללה, מי שעוד לא חיבר את המשתמש שלו לווטסאפ - זה הזמן.\n` +
           `אתר הליגה:\n` +
-          `https://kickoff-bet.app/leagues/${leagueId}\n\n` +
+          `https://derbyup.bet/leagues/${leagueId}\n\n` +
           `שיהיה בהצלחה! 🏆`;
         
         await chat.sendMessage(welcomeText);

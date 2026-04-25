@@ -11,7 +11,7 @@ const { pool } = require('../utils/db');
 const { extractNumber } = require('../utils/phoneUtils');
 
 /**
- * /kickoff setup <invite_code> — links an existing WA group to a Kickoff league
+ * /derbyup setup <invite_code> — links an existing WA group to a DerbyUp league
  */
 async function handleSetupCommand(client, msg, chat, parts) {
   if (!chat.isGroup) {
@@ -21,7 +21,7 @@ async function handleSetupCommand(client, msg, chat, parts) {
   const groupJid = chat.id._serialized;
   const inviteCode = parts[2]?.toUpperCase();
   if (!inviteCode) {
-    return msg.reply('⚠️ מבנה פקודה לא תקין. השתמש ב: `kickoff setup [קוד-ליגה]`');
+    return msg.reply('⚠️ מבנה פקודה לא תקין. השתמש ב: `derbyup setup [קוד-ליגה]`');
   }
 
   // 0. Permission check: Can we send messages?
@@ -118,7 +118,7 @@ async function handleSetupCommand(client, msg, chat, parts) {
     `רוצים לראות את הטבלה העדכנית? תכתבו *"שלח טבלה גבר"*.\n\n` +
     `יאללה, מי שעוד לא חיבר את המשתמש שלו לווטסאפ - זה הזמן.\n` +
     `אתר הליגה:\n` +
-    `https://kickoff-bet.app/leagues/${league.id}\n\n` +
+    `https://derbyup.bet/leagues/${league.id}\n\n` +
     `שיהיה בהצלחה! 🏆${adminWarning}`;
 
   await msg.reply(welcomeText);

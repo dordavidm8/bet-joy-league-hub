@@ -91,10 +91,10 @@ async function handleGroupMessage(client, msg, chat) {
   if (body === 'עזרה' || body === '?' || body === '/help' || body === 'תפריט') return;
 
   // ── Command: Setup / Link League ───────────────────────────────────────────
-  if (body.includes('/kickoff setup ')) {
+  if (body.includes('/derbyup setup ')) {
     const parts = body.split(/\s+/);
-    // Find index of '/kickoff' to be safe
-    const setupIdx = parts.indexOf('/kickoff');
+    // Find index of '/derbyup' to be safe
+    const setupIdx = parts.indexOf('/derbyup');
     if (setupIdx !== -1 && parts[setupIdx+1] === 'setup') {
       await handleSetupCommand(client, msg, chat, parts);
       return;
@@ -217,7 +217,7 @@ async function handleGroupMessage(client, msg, chat) {
     return;
   }
 
-  // Check if this is a registered Kickoff group for other features (betting)
+  // Check if this is a registered DerbyUp group for other features (betting)
   const groupRes = await pool.query(
     `SELECT league_id FROM wa_groups WHERE wa_group_id = $1 AND is_active = true`,
     [groupJid]
