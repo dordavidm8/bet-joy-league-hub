@@ -1,12 +1,41 @@
 // HelpPage.tsx – עזרה ותמיכה
 // שאלות נפוצות (FAQ) עם Accordion.
 // טופס פנייה לתמיכה → POST /support/inquiries.
-import { motion } from "framer-motion";
-import { ChevronRight, HelpCircle, Trophy, Smartphone, Zap, ShieldCheck, Share2 } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronRight, HelpCircle, Trophy, Smartphone, Zap, ShieldCheck, Share2, ArrowLeft, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const HelpPage = () => {
   const navigate = useNavigate();
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      q: "איך פותחים ליגה חדשה?",
+      a: "נכנסים למסך הליגות, לוחצים על הלחצן '+' ובוחרים שם ותמונה לליגה שלכם."
+    },
+    {
+      q: "איזה ליגות אפשר לחבר לווטסאפ?",
+      a: "ניתן לחבר כל ליגה פרטית שאתם מנהלים (ליגות חברים, קופה משותפת וכו') לקבוצת הווטסאפ שלכם בקלות."
+    },
+    {
+      q: "הימרתי בווטסאפ והימור לא הופיע באתר, מה עושים?",
+      a: "ודאו שחיברתם את מספר הטלפון הנכון בפרופיל האתר. אם הכל תקין והבעיה ממשיכה, צרו קשר עם התמיכה."
+    },
+    {
+      q: "מה זה 'הישגים'?",
+      a: "הישגים הם משימות מיוחדות (כמו רצף של 5 ניחושים נכונים) שמעניקות לכם נקודות פרימיום ועוקבים."
+    },
+    {
+      q: "האם השימוש באתר עולה כסף?",
+      a: "השימוש ב-DerbyUp הוא חינמי לחלוטין! המטרה היא להוסיף עניין ותחרותיות לצפייה במשחקי כדורגל."
+    },
+    {
+      q: "מה קורה אם טעיתי בהימור בווטסאפ?",
+      a: "ניתן לשלוח תיקון על ידי השבה (Reply) נוספת להודעת המשחק, והמערכת תעדכן את הניחוש האחרון שנשלח."
+    }
+  ];
 
   const sections = [
     {
@@ -41,16 +70,25 @@ const HelpPage = () => {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-2"
+        className="flex flex-col gap-4"
       >
-        <div className="flex items-center gap-2 text-primary">
-          <HelpCircle size={28} />
-          <h1 className="text-3xl font-black">עזרה והדרכה</h1>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 -mr-2 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex items-center gap-2 text-primary">
+            <HelpCircle size={28} />
+            <h1 className="text-3xl font-black">עזרה והדרכה</h1>
+          </div>
         </div>
         <p className="text-muted-foreground">כל מה שצריך לדעת כדי להפוך לאלוף DerbyUp הבא.</p>
       </motion.div>
 
       <div className="flex flex-col gap-4">
+        <h2 className="font-black text-xl px-1">מדריך מהיר</h2>
         {sections.map((section, i) => (
           <motion.section
             key={i}
@@ -70,6 +108,46 @@ const HelpPage = () => {
             </p>
           </motion.section>
         ))}
+      </div>
+
+      <div className="flex flex-col gap-4 mt-2">
+        <h2 className="font-black text-xl px-1">שאלות נפוצות</h2>
+        <div className="flex flex-col gap-2">
+          {faqs.map((faq, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 + i * 0.05 }}
+              className={`border border-border rounded-2xl overflow-hidden transition-all ${openFaq === i ? 'bg-secondary/30 ring-1 ring-primary/20' : 'bg-transparent'}`}
+            >
+              <button
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                className="w-full flex items-center justify-between p-4 text-right gap-4"
+              >
+                <span className="font-bold text-sm">{faq.q}</span>
+                <ChevronDown 
+                  size={18} 
+                  className={`text-muted-foreground transition-transform duration-300 ${openFaq === i ? 'rotate-180 text-primary' : ''}`} 
+                />
+              </button>
+              <AnimatePresence>
+                {openFaq === i && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    <div className="px-4 pb-4 pt-1 text-xs text-muted-foreground leading-relaxed">
+                      {faq.a}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       <motion.div
