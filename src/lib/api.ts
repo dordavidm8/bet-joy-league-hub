@@ -804,8 +804,16 @@ export const broadcastToLeague = (leagueId: string) =>
 export const getApprovedTeamTranslations = () =>
   request<{ translations: Record<string, string> }>('/games/team-translations');
 
-export const adminGetTeamTranslations = () =>
-  request<{ translations: { name_en: string; name_he: string | null; status: string; created_at: string }[] }>('/admin/team-translations');
+export const adminGetTeamTranslations = (search?: string, status?: string) => {
+  let qs = "";
+  if (search || status) {
+    const p = new URLSearchParams();
+    if (search) p.set("search", search);
+    if (status) p.set("status", status);
+    qs = "?" + p.toString();
+  }
+  return request<{ translations: { name_en: string; name_he: string | null; status: string; created_at: string }[] }>(`/admin/team-translations${qs}`);
+};
 
 export const adminApproveTeamTranslation = (name_en: string, name_he: string) =>
   request<{ ok: boolean }>(`/admin/team-translations/${encodeURIComponent(name_en)}`, {

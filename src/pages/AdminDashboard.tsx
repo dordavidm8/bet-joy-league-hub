@@ -47,7 +47,7 @@ export const ADMIN_EMAILS = [
   "kickoffsportsapp@gmail.com",
 ];
 
-type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "support" | "advanced" | "advisor" | "social";
+type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "support" | "teams" | "advanced" | "advisor" | "social";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "stats",         label: "סקירה",      icon: <BarChart2 size={14} /> },
@@ -57,6 +57,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "leagues",      label: "ליגות",      icon: <Trophy size={14} /> },
   { id: "notifications",label: "התראות",     icon: <Bell size={14} /> },
   { id: "support",      label: "פניות",      icon: <HelpCircle size={14} /> },
+  { id: "teams",        label: "קבוצות",     icon: <Flag size={14} /> },
   { id: "minigames",    label: "אתגרים",     icon: <Target size={14} /> },
   { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
   { id: "advisor",      label: "יועץ AI",            icon: <Bot size={14} /> },
@@ -2022,6 +2023,152 @@ const MiniGamesTab = () => {
 // ── Advanced Tab ──────────────────────────────────────────────────────────────
 
 // ── Support Tab ───────────────────────────────────────────────────────────────
+// ── Teams Tab ─────────────────────────────────────────────────────────────────
+const TeamsTab = () => {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [newEn, setNewEn] = useState("");
+  const [newHe, setNewHe] = useState("");
+  const [editingHe, setEditingHe] = useState<Record<string, string>>({});
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-team-translations", search, statusFilter],
+    queryFn: () => adminGetTeamTranslations(search || undefined, statusFilter || undefined),
+  });
+
+  const upsertMutation = useMutation({
+    mutationFn: ({ name_en, name_he }: { name_en: string; name_he: string }) =>
+      adminApproveTeamTranslation(name_en, name_he),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-team-translations"] });
+      setNewEn("");
+      setNewHe("");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: adminDismissTeamTranslation,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-team-translations"] }),
+  });
+
+  const translations = data?.translations ?? [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Add New Override */}
+      <div className="border rounded-2xl p-4 bg-primary/5 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Plus size={16} className="text-primary" />
+          <h3 className="text-sm font-black text-primary">הוספת תרגום / דריסה חדשה</h3>
+        </div>
+        <p className="text-[11px] text-muted-foreground -mt-1">
+          כאן ניתן להוסיף תרגום לקבוצה חדשה, או לדרוס תרגום קיים (למשל: Real Madrid → הבלאנקוס).
+        </p>
+        <div className="flex flex-col md:flex-row gap-2">
+          <input 
+            value={newEn} 
+            onChange={e => setNewEn(e.target.value)}
+            placeholder="שם הקבוצה באנגלית (למשל: Liverpool)"
+            className="flex-1 bg-background border rounded-xl px-3 py-2 text-sm outline-none"
+          />
+          <input 
+            value={newHe} 
+            onChange={e => setNewHe(e.target.value)}
+            placeholder="תרגום לעברית"
+            className="flex-1 bg-background border rounded-xl px-3 py-2 text-sm outline-none"
+          />
+          <Button 
+            onClick={() => upsertMutation.mutate({ name_en: newEn, name_he: newHe })}
+            disabled={!newEn || !newHe || upsertMutation.isPending}
+          >
+            {upsertMutation.isPending ? "שומר..." : "הוסף תרגום"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters & Search */}
+      <div className="flex flex-col md:flex-row gap-3 items-center">
+        <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2 flex-1 w-full">
+          <Search size={16} className="text-muted-foreground shrink-0" />
+          <input 
+            value={search} 
+            onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש קבוצה..."
+            className="bg-transparent flex-1 text-sm outline-none" 
+          />
+        </div>
+        <div className="flex gap-2">
+          {(["", "pending", "approved"] as const).map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
+              {s === "" ? "הכל" : s === "pending" ? "ממתין" : "מאושר"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Translations Table */}
+      {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
+        <div className="border rounded-2xl overflow-hidden shadow-sm">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 border-b">
+              <tr>
+                <th className="text-right px-4 py-3 font-black text-muted-foreground">שם באנגלית</th>
+                <th className="text-right px-4 py-3 font-black text-muted-foreground">עברית / תרגום</th>
+                <th className="text-right px-4 py-3 font-black text-muted-foreground">סטטוס</th>
+                <th className="text-right px-4 py-3 font-black text-muted-foreground">פעולות</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {translations.map((t) => (
+                <tr key={t.name_en} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 font-mono font-bold text-indigo-600">{t.name_en}</td>
+                  <td className="px-4 py-3">
+                    <input 
+                      value={editingHe[t.name_en] !== undefined ? editingHe[t.name_en] : (t.name_he || "")}
+                      onChange={e => setEditingHe(prev => ({ ...prev, [t.name_en]: e.target.value }))}
+                      className="bg-transparent border-b border-transparent hover:border-border focus:border-primary outline-none py-0.5 w-full font-bold"
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${t.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {t.status === 'approved' ? 'מאושר' : 'ממתין'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => upsertMutation.mutate({ name_en: t.name_en, name_he: editingHe[t.name_en] || t.name_he || "" })}
+                        title="שמור"
+                        className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button 
+                        onClick={() => { if(confirm('למחוק את התרגום ולחזור לברירת מחדל?')) deleteMutation.mutate(t.name_en); }}
+                        title="מחק"
+                        className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {translations.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground text-sm font-bold">
+              לא נמצאו קבוצות התואמות את החיפוש
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SupportTab = () => {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -2430,6 +2577,7 @@ const AdminDashboard = () => {
     advisor: <AdvisorTab />,
     social:  <SocialAgentsV2Tab />,
     support: <SupportTab />,
+    teams:   <TeamsTab />,
   };
 
   return (

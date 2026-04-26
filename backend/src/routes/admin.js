@@ -885,25 +885,51 @@ opsRouter.post('/reset-minigame-attempts', async (req, res, next) => {
 
 // ── Team name translations ────────────────────────────────────────────────────
 
-// GET /api/admin/team-translations — pending only
+// GET /api/admin/team-translations — all overrides (approved & pending)
 router.get('/team-translations', authenticate, requireAdmin, async (req, res, next) => {
+  const { search, status } = req.query;
+  const params = [];
+  let where = '';
+  
+  if (search) {
+    params.push(`%${search}%`);
+    where = `WHERE name_en ILIKE $1 OR name_he ILIKE $1`;
+  }
+  
+  if (status) {
+    if (where) {
+      params.push(status);
+      where += ` AND status = $${params.length}`;
+    } else {
+      params.push(status);
+      where = `WHERE status = $1`;
+    }
+  }
+
   try {
     const result = await pool.query(
-      `SELECT name_en, name_he, status, created_at FROM team_name_translations WHERE status = 'pending' ORDER BY created_at DESC`
+      `SELECT name_en, name_he, status, created_at FROM team_name_translations ${where} ORDER BY status DESC, created_at DESC LIMIT 500`,
+      params
     );
     res.json({ translations: result.rows });
   } catch (err) { next(err); }
 });
 
-// PUT /api/admin/team-translations/:name_en — edit Hebrew name + approve
+// PUT /api/admin/team-translations/:name_en — edit/add Hebrew name + approve
 router.put('/team-translations/:name_en', authenticate, requireAdmin, async (req, res, next) => {
   try {
     const { name_he } = req.body;
     const { name_en } = req.params;
+    if (!name_he) return res.status(400).json({ error: 'name_he required' });
+    
     await pool.query(
-      `UPDATE team_name_translations SET name_he = $1, status = 'approved' WHERE name_en = $2`,
-      [name_he, name_en]
+      `INSERT INTO team_name_translations (name_en, name_he, status)
+       VALUES ($1, $2, 'approved')
+       ON CONFLICT (name_en) 
+       DO UPDATE SET name_he = $2, status = 'approved'`,
+      [name_en, name_he]
     );
+    
     await logAdminAction(req.user.email, 'approve_team_translation', 'team_translation', name_en, { name_he });
     res.json({ ok: true });
   } catch (err) { next(err); }
@@ -953,10 +979,15 @@ router.post('/regenerate-bet-questions', authenticate, requireAdmin, async (req,
       WHERE g.status = 'scheduled'
         AND NOT EXISTS (SELECT 1 FROM bets b WHERE b.bet_question_id = bq.id)
     `);
+    // 1. Fetch all translations to ensure we use the newest overrides
+    const transRes = await client.query(`SELECT name_en, name_he FROM team_name_translations WHERE name_he IS NOT NULL`);
+    const translations = {};
+    for (const r of transRes.rows) translations[r.name_en] = r.name_he;
+
     let count = 0;
     for (const row of toRegen.rows) {
       const mockGame = { home_team: row.home_team, away_team: row.away_team, espn_odds: row.espn_odds };
-      const questions = buildBetQuestions(mockGame);
+      const questions = buildBetQuestions(mockGame, translations);
       const q = questions.find((x) => x.type === row.type);
       if (!q) continue;
       await client.query(
