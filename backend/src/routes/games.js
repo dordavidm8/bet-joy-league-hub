@@ -46,11 +46,12 @@ router.get('/', async (req, res, next) => {
     conditions.push(`(g.home_team ILIKE $${n} OR g.away_team ILIKE $${n} OR c.name ILIKE $${n})`);
   }
   if (featured === 'true') {
+    // Priority: specifically marked featured OR popular team
     const teamConditions = POPULAR_TEAMS.map((_, idx) => {
       params.push(`%${POPULAR_TEAMS[idx]}%`);
       return `g.home_team ILIKE $${params.length} OR g.away_team ILIKE $${params.length}`;
     });
-    conditions.push(`(${teamConditions.join(' OR ')})`);
+    conditions.push(`(g.is_featured = true OR ${teamConditions.join(' OR ')})`);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';

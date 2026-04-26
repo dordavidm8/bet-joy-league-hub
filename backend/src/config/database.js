@@ -21,7 +21,8 @@ if (process.env.STUB_MODE === 'true') {
     ssl: !isLocal ? { rejectUnauthorized: false } : false,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 10000, // 10s query limit
   });
   pool.on('error', (err) => console.error('DB error:', err.message));
 }
