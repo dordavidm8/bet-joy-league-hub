@@ -77,7 +77,31 @@ const GameDetailPage = () => {
   const bettingCountdown = useBettingCountdown(data?.game?.start_time ?? "");
 
   if (isLoading) return <div className="p-5 text-sm text-muted-foreground">טוען משחק...</div>;
-  if (error || !data?.game) return <div className="p-5">משחק לא נמצא</div>;
+  
+  const isAccessBlocked = (error as any)?.message === "HTTP 403" || 
+                         ((data?.game.status === "live" || (new Date() >= new Date(new Date(data?.game.start_time).getTime() - 10 * 60 * 1000))) 
+                          && data?.game.status !== "finished");
+
+  if (error || !data?.game || isAccessBlocked) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 text-center min-h-[60vh]">
+        <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
+          <Lock className="text-muted-foreground" size={32} />
+        </div>
+        <h1 className="text-2xl font-black mb-2">הגישה מוגבלת</h1>
+        <p className="text-muted-foreground mb-8 max-w-[280px]">
+          חלון ההימורים למשחק זה נסגר, או שהמשחק כבר החל. לא ניתן לצפות בפרטי המשחק כרגע.
+        </p>
+        <Button 
+          variant="secondary" 
+          className="rounded-xl px-8"
+          onClick={() => navigate("/")}
+        >
+          חזרה לדף הבית
+        </Button>
+      </div>
+    );
+  }
 
   const { game, bet_questions } = data;
   const isLive = game.status === "live";

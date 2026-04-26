@@ -21,17 +21,35 @@ const { sendDailyChallengeReminder } = require('./dailyReminder');
 const { sendWeeklyLeaderboardBonus } = require('./weeklyLeaderboard');
 const { sendFeaturedMatchNotifications } = require('./featuredNotifications');
 
+// In-memory locks to prevent overlapping executions
+const runningJobs = new Set();
+async function runLocked(name, fn) {
+  if (runningJobs.has(name)) {
+    console.log(`[cron:${name}] Already running, skipping overlap`);
+    return;
+  }
+  runningJobs.add(name);
+  const start = Date.now();
+  try {
+    await fn();
+  } catch (err) {
+    console.error(`[cron:${name}] Error:`, err.message);
+  } finally {
+    runningJobs.delete(name);
+    const duration = ((Date.now() - start) / 1000).toFixed(1);
+    if (duration > 5) console.log(`[cron:${name}] Finished in ${duration}s`);
+  }
+}
+
 function startJobs() {
   // Sync live scores every 60 seconds
-  cron.schedule('* * * * *', async () => {
-    try { await syncGames(); }
-    catch (err) { console.error('[cron:syncGames]', err.message); }
+  cron.schedule('* * * * *', () => {
+    runLocked('syncGames', syncGames);
   });
 
   // Settle bets every 5 minutes
-  cron.schedule('*/5 * * * *', async () => {
-    try { await settleBets(); }
-    catch (err) { console.error('[cron:settleBets]', err.message); }
+  cron.schedule('*/5 * * * *', () => {
+    runLocked('settleBets', settleBets);
   });
 
   // Full fixture refresh + safety settlement every day at 04:00 UTC

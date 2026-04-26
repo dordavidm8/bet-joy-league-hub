@@ -19,6 +19,9 @@ if (process.env.STUB_MODE === 'true') {
   pool = new Pool({
     connectionString: dbUrl,
     ssl: !isLocal ? { rejectUnauthorized: false } : false,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
   });
   pool.on('error', (err) => console.error('DB error:', err.message));
 }

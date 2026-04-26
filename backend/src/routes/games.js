@@ -109,7 +109,19 @@ router.get('/:id', async (req, res, next) => {
        FROM games g LEFT JOIN competitions c ON c.id = g.competition_id WHERE g.id = $1`,
       [req.params.id]
     );
-    if (!gameRes.rows[0]) return res.status(404).json({ error: 'Game not found' });
+    const game = gameRes.rows[0];
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+
+    // Restrict access per user request: hide games that have started or are within 10 mins of kickoff.
+    // Finished games remain accessible for results and history.
+    const startTime = new Date(game.start_time);
+    const now = new Date();
+    const isTooLate = now >= new Date(startTime.getTime() - 10 * 60 * 1000);
+    const isOngoing = game.status === 'live' || (game.status === 'scheduled' && isTooLate);
+
+    if (isOngoing && game.status !== 'finished') {
+       return res.status(403).json({ error: 'Access restricted: This game has already reached the betting deadline or is in progress.' });
+    }
 
     const questionsRes = await pool.query(
       `SELECT * FROM bet_questions WHERE game_id = $1 ORDER BY created_at ASC`,
