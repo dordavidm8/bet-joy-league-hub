@@ -39,7 +39,9 @@ async function sendWeeklyLeaderboardBonus() {
     }
 
     const top = await client.query(
-      `SELECT id, username FROM users ORDER BY points_balance DESC LIMIT $1`,
+      `SELECT id, username FROM users 
+       WHERE username NOT LIKE 'deleted_%'
+       ORDER BY points_balance DESC LIMIT $1`,
       [TOP_N]
     );
 

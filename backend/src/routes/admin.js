@@ -141,8 +141,8 @@ router.get('/users', async (req, res, next) => {
   const search = req.query.search;
   const params = [limit, offset];
   
-  // Filter out anonymized users (those starting with deleted_)
-  let where = `WHERE username NOT LIKE 'deleted_%'`;
+  // Allow searching including anonymized users if necessary
+  let where = `WHERE true`;
   
   if (search) {
     where += ` AND (username ILIKE $3 OR email ILIKE $3)`;
@@ -181,44 +181,57 @@ router.patch('/users/:id', async (req, res, next) => {
   }
 });
 
-// DELETE /api/admin/users/:id — soft-delete a user
+// DELETE /api/admin/users/:id — hard-delete a user and all their data
 router.delete('/users/:id', async (req, res, next) => {
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',');
+  const userId = req.params.id;
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const userRes = await client.query(`SELECT username, email, firebase_uid FROM users WHERE id = $1`, [req.params.id]);
+    
+    const userRes = await client.query(`SELECT username, email, firebase_uid FROM users WHERE id = $1`, [userId]);
     if (!userRes.rows[0]) return res.status(404).json({ error: 'User not found' });
-    if (ADMIN_EMAILS.includes(userRes.rows[0].email)) {
+    
+    if (ADMIN_EMAILS.includes(userRes.rows[0].email.toLowerCase())) {
       return res.status(403).json({ error: 'לא ניתן למחוק חשבון מנהל' });
     }
-    // Deactivate league memberships
-    await client.query(`UPDATE league_members SET is_active = false WHERE user_id = $1`, [req.params.id]);
-    // Cancel pending bets
-    await client.query(`UPDATE bets SET status = 'cancelled' WHERE user_id = $1 AND status = 'pending'`, [req.params.id]);
-    // Anonymize user (to release username/email/uid while keeping DB integrity for old bets/stats)
-    const anonSuffix = req.params.id.slice(0, 8);
-    const firebaseUid = userRes.rows[0].firebase_uid;
-    
-    await client.query(
-      `UPDATE users SET username = $1, email = $2, display_name = NULL, firebase_uid = $1, phone_number = NULL
-       WHERE id = $3`,
-      [`deleted_${anonSuffix}`, `deleted_${anonSuffix}@deleted.invalid`, req.params.id]
-    );
 
-    // Try to delete from Firebase so they can't log in anymore
+    const { username, firebase_uid } = userRes.rows[0];
+
+    // 1. Handle dependencies that aren't ON DELETE CASCADE
+    await client.query(`UPDATE users SET referred_by = NULL WHERE referred_by = $1`, [userId]);
+    await client.query(`DELETE FROM referrals WHERE referrer_id = $1 OR referred_id = $1`, [userId]);
+    
+    // 2. Handle leagues where this user is the creator
+    const creatorLeagues = await client.query(`SELECT id FROM leagues WHERE creator_id = $1`, [userId]);
+    for (const leg of creatorLeagues.rows) {
+      const nextMember = await client.query(
+        `SELECT user_id FROM league_members WHERE league_id = $1 AND user_id != $2 ORDER BY joined_at ASC LIMIT 1`,
+        [leg.id, userId]
+      );
+      if (nextMember.rows[0]) {
+        await client.query(`UPDATE leagues SET creator_id = $1 WHERE id = $2`, [nextMember.rows[0].user_id, leg.id]);
+      } else {
+        await client.query(`DELETE FROM leagues WHERE id = $1`, [leg.id]);
+      }
+    }
+
+    // 3. Delete from users (this triggers CASCADE for bets, league_members, etc.)
+    await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+
+    // 4. Delete from Firebase
     try {
       const firebaseAdmin = require('../config/firebase');
-      if (firebaseUid && !firebaseUid.startsWith('deleted_')) {
-        await firebaseAdmin.auth().deleteUser(firebaseUid);
+      if (firebase_uid && !firebase_uid.startsWith('deleted_')) {
+        await firebaseAdmin.auth().deleteUser(firebase_uid);
       }
     } catch (fbErr) {
-      console.warn(`Could not delete user ${req.params.id} from Firebase:`, fbErr.message);
+      console.warn(`[admin] Could not delete user ${userId} from Firebase:`, fbErr.message);
     }
 
     await client.query('COMMIT');
-    await logAdminAction(req.user.email, 'delete_user', 'user', req.params.id, { username: userRes.rows[0].username });
-    res.json({ message: 'User deleted' });
+    await logAdminAction(req.user.email, 'hard_delete_user', 'user', userId, { username });
+    res.json({ message: 'User deleted permanently' });
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
