@@ -705,11 +705,13 @@ const LeagueDetailPage = () => {
 
           <div className="flex flex-col gap-2">
             {matchesData.matches
-              .filter((m: TournamentMatch) =>
-                matchTab === "upcoming"
-                  ? m.status === "scheduled" || m.status === "live"
-                  : m.status === "finished"
-              )
+              .filter((m: TournamentMatch) => {
+                const isTooLate = new Date() >= new Date(new Date(m.start_time).getTime() - 10 * 60 * 1000);
+                if (matchTab === "upcoming") {
+                  return m.status === "scheduled" && !isTooLate;
+                }
+                return m.status === "finished";
+              })
               .sort((a, b) => 
                 matchTab === "finished" 
                   ? new Date(b.start_time).getTime() - new Date(a.start_time).getTime()

@@ -28,7 +28,14 @@ router.get('/', async (req, res, next) => {
   const { status, date, competition, search, featured, from, to } = req.query;
   const conditions = [], params = [];
 
-  if (status) { params.push(status); conditions.push(`g.status = $${params.length}`); if (status === 'scheduled') { conditions.push(`g.start_time > NOW() - INTERVAL '2 hours'`); } }
+  if (status) { 
+    params.push(status); 
+    conditions.push(`g.status = $${params.length}`); 
+    if (status === 'scheduled') { 
+      // Hide games starting in less than 10 minutes
+      conditions.push(`g.start_time > NOW() + INTERVAL '10 minutes'`); 
+    } 
+  }
   if (date) { params.push(date); conditions.push(`DATE(g.start_time AT TIME ZONE 'UTC') = $${params.length}`); }
   if (from) { params.push(from); conditions.push(`g.start_time >= $${params.length}::date`); }
   if (to) { params.push(to); conditions.push(`g.start_time < ($${params.length}::date + INTERVAL '1 day')`); }
@@ -74,15 +81,11 @@ router.get('/results', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/games/live
+// GET /api/games/live — Returning empty as requested to hide started games
 router.get('/live', async (req, res, next) => {
   try {
-    const result = await pool.query(
-      `SELECT g.*, c.name AS competition_name FROM games g
-       LEFT JOIN competitions c ON c.id = g.competition_id
-       WHERE g.status = 'live' ORDER BY g.start_time ASC`
-    );
-    res.json({ games: result.rows });
+    // Hidden per user request: "שלא יוצגו בכלל משחקים שהתחילו"
+    res.json({ games: [] });
   } catch (err) { next(err); }
 });
 
