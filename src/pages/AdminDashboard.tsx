@@ -15,15 +15,6 @@ import SocialAgentsV2Tab from "@/components/admin/social/v2/SocialAgentsV2Tab";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const KNOWN_COMPETITIONS = [
-  { slug: 'fifa.world',      name: 'גביע העולם 2026' },
-  { slug: 'uefa.champions',  name: 'ליגת האלופות' },
-  { slug: 'eng.1',           name: 'פרמייר ליג' },
-  { slug: 'esp.1',           name: 'לה ליגה' },
-  { slug: 'ger.1',           name: 'בונדסליגה' },
-  { slug: 'ita.1',           name: 'סריה א' },
-  { slug: 'fra.1',           name: 'ליג 1' },
-];
 import {
   adminGetStats, adminGetUsers, adminGetBets, adminGetGames, adminGetLeagues,
   adminGetCompetitions, adminGetLog,
@@ -41,6 +32,16 @@ import {
   AdminUser, AdminBet, AdminGame, AdminLeague, AdminQuizQuestion,
   AdminCompetition, AdminLogEntry, AdminGameAnalyticsQuestion, AdminUserEntry, getGames,
 } from "@/lib/api";
+
+const KNOWN_COMPETITIONS = [
+  { slug: 'fifa.world',      name: 'גביע העולם 2026' },
+  { slug: 'uefa.champions',  name: 'ליגת האלופות' },
+  { slug: 'eng.1',           name: 'פרמייר ליג' },
+  { slug: 'esp.1',           name: 'לה ליגה' },
+  { slug: 'ger.1',           name: 'בונדסליגה' },
+  { slug: 'ita.1',           name: 'סריה א' },
+  { slug: 'fra.1',           name: 'ליג 1' },
+];
 
 export const ADMIN_EMAILS = [
   "nir.dahan2001@gmail.com",
