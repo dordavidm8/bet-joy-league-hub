@@ -34,13 +34,13 @@ import {
 } from "@/lib/api";
 
 const KNOWN_COMPETITIONS = [
-  { slug: 'fifa.world',      name: 'גביע העולם 2026' },
-  { slug: 'uefa.champions',  name: 'ליגת האלופות' },
-  { slug: 'eng.1',           name: 'פרמייר ליג' },
-  { slug: 'esp.1',           name: 'לה ליגה' },
-  { slug: 'ger.1',           name: 'בונדסליגה' },
-  { slug: 'ita.1',           name: 'סריה א' },
-  { slug: 'fra.1',           name: 'ליג 1' },
+  { slug: 'fifa.world', name: 'גביע העולם 2026' },
+  { slug: 'uefa.champions', name: 'ליגת האלופות' },
+  { slug: 'eng.1', name: 'פרמייר ליג' },
+  { slug: 'esp.1', name: 'לה ליגה' },
+  { slug: 'ger.1', name: 'בונדסליגה' },
+  { slug: 'ita.1', name: 'סריה א' },
+  { slug: 'fra.1', name: 'ליג 1' },
 ];
 
 export const ADMIN_EMAILS = [
@@ -52,18 +52,18 @@ export const ADMIN_EMAILS = [
 type Tab = "stats" | "users" | "bets" | "games" | "leagues" | "notifications" | "minigames" | "support" | "teams" | "advanced" | "advisor" | "social";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "stats",         label: "סקירה",      icon: <BarChart2 size={14} /> },
-  { id: "users",        label: "משתמשים",    icon: <Users size={14} /> },
-  { id: "bets",         label: "הימורים",    icon: <Target size={14} /> },
-  { id: "games",        label: "משחקים",     icon: <Trophy size={14} /> },
-  { id: "leagues",      label: "ליגות",      icon: <Trophy size={14} /> },
-  { id: "notifications",label: "התראות",     icon: <Bell size={14} /> },
-  { id: "support",      label: "פניות",      icon: <HelpCircle size={14} /> },
-  { id: "teams",        label: "קבוצות",     icon: <Flag size={14} /> },
-  { id: "minigames",    label: "אתגרים",     icon: <Target size={14} /> },
-  { id: "advanced",     label: "מתקדם",      icon: <Settings size={14} /> },
-  { id: "advisor",      label: "יועץ AI",            icon: <Bot size={14} /> },
-  { id: "social",       label: "סוכני סושיאל 🤖 V2", icon: <Bot size={14} /> },
+  { id: "stats", label: "סקירה", icon: <BarChart2 size={14} /> },
+  { id: "users", label: "משתמשים", icon: <Users size={14} /> },
+  { id: "bets", label: "הימורים", icon: <Target size={14} /> },
+  { id: "games", label: "משחקים", icon: <Trophy size={14} /> },
+  { id: "leagues", label: "ליגות", icon: <Trophy size={14} /> },
+  { id: "notifications", label: "התראות", icon: <Bell size={14} /> },
+  { id: "support", label: "פניות", icon: <HelpCircle size={14} /> },
+  { id: "teams", label: "קבוצות", icon: <Flag size={14} /> },
+  { id: "minigames", label: "אתגרים", icon: <Target size={14} /> },
+  { id: "advanced", label: "מתקדם", icon: <Settings size={14} /> },
+  { id: "advisor", label: "יועץ AI", icon: <Bot size={14} /> },
+  { id: "social", label: "סוכני סושיאל 🤖 V2", icon: <Bot size={14} /> },
 ];
 
 const fmt = (n: string | number) => Number(n).toLocaleString("he-IL");
@@ -227,8 +227,8 @@ const UsersTab = () => {
             placeholder="חיפוש לפי שם / אימייל..."
             className="bg-transparent flex-1 text-sm outline-none" />
         </div>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
           onClick={() => {
             if (confirm("האם אתה בטוח שברצונך למחוק לצמיתות את כל המשתמשים הפיקטיביים (deleted_)? פעולה זו תנקה את כל ההיסטוריה שלהם מהמערכת.")) {
@@ -421,7 +421,7 @@ const BetsTab = () => {
         <button
           onClick={async () => {
             setOddsLoading(true);
-            try { setOddsDebug(await adminOddsDebug()); } catch {}
+            try { setOddsDebug(await adminOddsDebug()); } catch { }
             setOddsLoading(false);
           }}
           disabled={oddsLoading}
@@ -516,7 +516,7 @@ const BetsTab = () => {
                       <span className="text-primary font-bold">{fmt(b.actual_payout)}</span>
                     ) : (
                       <span className="text-muted-foreground italic">
-                        {b.league_bet_mode === 'initial_balance' 
+                        {b.league_bet_mode === 'initial_balance'
                           ? `×${(parseFloat(String(b.odds)) * (b.exact_score_prediction ? 3 : 1)).toFixed(2)}`
                           : fmt(Number(b.potential_payout) * (b.exact_score_prediction ? 3 : 1))}
                       </span>
@@ -957,10 +957,10 @@ const LeaguesTab = () => {
   const [sendToGroup, setSendToGroup] = useState(false);
 
   const sendMsgMutation = useMutation({
-    mutationFn: () => adminSendNotification({ 
-      type: 'admin_message', 
-      title: msgTitle, 
-      body: msgBody, 
+    mutationFn: () => adminSendNotification({
+      type: 'admin_message',
+      title: msgTitle,
+      body: msgBody,
       target: { league_id: msgLeague!.id } as any,
       send_to_dms: sendToDms,
       send_to_group: sendToGroup
@@ -1064,7 +1064,7 @@ const LeaguesTab = () => {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["admin-leagues"] });
       setPubMsg(`✅ ליגה ציבורית נוצרה: ${res.league.name}`);
-      setPubName(""); setPubDesc(""); setPubFormat("pool"); setPubEntryFee("0"); setPubMaxMembers(""); 
+      setPubName(""); setPubDesc(""); setPubFormat("pool"); setPubEntryFee("0"); setPubMaxMembers("");
       setPubIsTournament(false); setPubTournamentSlug("");
       setPubSeasonEnd(""); setPubJoinPolicy("anytime"); setPubAutoSettle(false);
       setPubDistribution([{ place: 1, pct: 60 }, { place: 2, pct: 30 }, { place: 3, pct: 10 }]);
@@ -1095,16 +1095,14 @@ const LeaguesTab = () => {
               <p className="text-xs text-muted-foreground font-medium">פורמט ליגה</p>
               <div className="flex gap-2">
                 <button onClick={() => setPubFormat("pool")}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
-                    pubFormat === "pool" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
-                  }`}>
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${pubFormat === "pool" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
+                    }`}>
                   <span className="block font-bold">קופה משותפת</span>
                   <span className="opacity-70">ניקוד · חלוקה לפי מקום</span>
                 </button>
                 <button onClick={() => setPubFormat("per_game")}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
-                    pubFormat === "per_game" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
-                  }`}>
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-colors ${pubFormat === "per_game" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
+                    }`}>
                   <span className="block font-bold">תשלום למשחק</span>
                   <span className="opacity-70">הימור מהמאזן · זוכה שומר</span>
                 </button>
@@ -1155,9 +1153,8 @@ const LeaguesTab = () => {
                   <div className="flex gap-2">
                     {(["before_start", "anytime"] as const).map(p => (
                       <button key={p} onClick={() => setPubJoinPolicy(p)}
-                        className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-colors ${
-                          pubJoinPolicy === p ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
-                        }`}>
+                        className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-colors ${pubJoinPolicy === p ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"
+                          }`}>
                         {p === "before_start" ? "לפני תחילת הטורניר בלבד" : "בכל שלב"}
                       </button>
                     ))}
@@ -1216,8 +1213,8 @@ const LeaguesTab = () => {
             )}
 
             {pubMsg && <p className="text-xs font-bold">{pubMsg}</p>}
-            <Button onClick={() => createPublicMutation.mutate()} 
-              disabled={!pubName || createPublicMutation.isPending || ((pubFormat === "pool" || parseInt(pubEntryFee) > 0) && distTotal !== 100)} 
+            <Button onClick={() => createPublicMutation.mutate()}
+              disabled={!pubName || createPublicMutation.isPending || ((pubFormat === "pool" || parseInt(pubEntryFee) > 0) && distTotal !== 100)}
               className="bg-primary hover:bg-primary/90 mt-2">
               {createPublicMutation.isPending ? "יוצר..." : "צור ליגה ציבורית"}
             </Button>
@@ -1363,7 +1360,7 @@ const LeaguesTab = () => {
               className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none" />
             <textarea value={msgBody} onChange={e => setMsgBody(e.target.value)} placeholder="תוכן ההודעה (אופציונלי)" rows={3}
               className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none resize-none" />
-            
+
             <div className="flex flex-col gap-2 bg-muted/30 p-3 rounded-xl">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={sendToDms} onChange={e => setSendToDms(e.target.checked)} className="w-4 h-4 accent-primary" />
@@ -1593,8 +1590,8 @@ const NotificationsTab = () => {
               {userSearchData?.users && userSearchQuery.length >= 2 && (
                 <div className="absolute top-full mt-1 left-0 right-0 bg-background border rounded-xl shadow-lg z-20 max-h-40 overflow-y-auto">
                   {userSearchData.users.slice(0, 8).map((u: AdminUser) => (
-                    <button 
-                      key={u.id} 
+                    <button
+                      key={u.id}
                       onClick={() => toggleUserSelection(u.username)}
                       className="w-full text-right px-3 py-2 text-xs hover:bg-secondary flex items-center justify-between gap-2"
                     >
@@ -1722,7 +1719,7 @@ const MiniGamesTab = () => {
               {fetchDraftMutation.isPending ? "טוען..." : "חולל משחק"}
             </Button>
           </div>
-          
+
           {selectedType === "trivia" && (
             <div className="flex bg-secondary/50 rounded-xl px-3 py-2 text-xs items-center gap-2">
               <span className="text-muted-foreground">נושא (ל-AI):</span>
@@ -1744,21 +1741,21 @@ const MiniGamesTab = () => {
               {draft.game_type === "trivia" ? (
                 <div className="flex flex-col gap-3">
                   <span className="text-xs text-muted-foreground font-bold -mb-2">ערוך שאלה:</span>
-                  <input 
+                  <input
                     value={draft.puzzle_data.question_text || ''}
-                    onChange={(e) => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, question_text: e.target.value }})}
+                    onChange={(e) => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, question_text: e.target.value } })}
                     className="font-bold text-base bg-background border rounded-lg p-2.5 w-full outline-indigo-500 transition-all"
                   />
-                  
+
                   <span className="text-xs text-muted-foreground font-bold mt-1 -mb-2">ערוך תשובות וסמן את התשובה הנכונה בבחירה מימין:</span>
                   <div className="flex flex-col gap-2">
                     {draft.puzzle_data.options.map((opt: string, i: number) => {
-                       const optionLetters = ['A', 'B', 'C', 'D'];
-                       const letter = optionLetters[i] || 'A';
-                       const isCorrect = draft.solution.secret === letter;
-                       return (
+                      const optionLetters = ['A', 'B', 'C', 'D'];
+                      const letter = optionLetters[i] || 'A';
+                      const isCorrect = draft.solution.secret === letter;
+                      return (
                         <div key={i} className="flex gap-3 items-center">
-                          <input 
+                          <input
                             type="radio"
                             name="correct_option"
                             checked={isCorrect}
@@ -1766,17 +1763,17 @@ const MiniGamesTab = () => {
                             title={`סמן את ${letter} כתשובה הנכונה`}
                             className="w-5 h-5 cursor-pointer accent-green-600"
                           />
-                          <input 
+                          <input
                             value={opt}
                             onChange={(e) => {
                               const newOptions = [...draft.puzzle_data.options];
                               newOptions[i] = e.target.value;
-                              setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, options: newOptions }});
+                              setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, options: newOptions } });
                             }}
                             className={`flex-1 p-2 rounded-lg border text-sm transition-all focus:outline-indigo-500 ${isCorrect ? 'bg-green-50 border-green-400 font-bold text-green-900' : 'bg-background hover:bg-secondary/50'}`}
                           />
                         </div>
-                       );
+                      );
                     })}
                   </div>
                 </div>
@@ -1790,19 +1787,19 @@ const MiniGamesTab = () => {
                     <div className="flex flex-col gap-2 flex-1 w-full text-right">
                       <div className="flex gap-2 items-center">
                         <span className="text-xs font-bold w-14">תמונה:</span>
-                        <input value={draft.puzzle_data.image_url ?? ''} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, image_url: e.target.value || null }})} placeholder="URL לתמונת שחקן" className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
+                        <input value={draft.puzzle_data.image_url ?? ''} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, image_url: e.target.value || null } })} placeholder="URL לתמונת שחקן" className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
                       </div>
                       <div className="flex gap-2 items-center">
                         <span className="text-xs font-bold w-14">לאומיות:</span>
-                        <input value={draft.puzzle_data.nationality} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, nationality: e.target.value }})} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
+                        <input value={draft.puzzle_data.nationality} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, nationality: e.target.value } })} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
                       </div>
                       <div className="flex gap-2 items-center">
                         <span className="text-xs font-bold w-14">קבוצה:</span>
-                        <input value={draft.puzzle_data.club} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, club: e.target.value }})} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
+                        <input value={draft.puzzle_data.club} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, club: e.target.value } })} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
                       </div>
                       <div className="flex gap-2 items-center">
                         <span className="text-xs font-bold w-14">עמדה:</span>
-                        <input value={draft.puzzle_data.position} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, position: e.target.value }})} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
+                        <input value={draft.puzzle_data.position} onChange={e => setDraft({ ...draft, puzzle_data: { ...draft.puzzle_data, position: e.target.value } })} className="flex-1 text-sm bg-background border px-2 py-1 rounded" />
                       </div>
                     </div>
                   </div>
@@ -1810,13 +1807,13 @@ const MiniGamesTab = () => {
                     <span className="text-xs text-muted-foreground font-bold">השחקן המסתתר (הפתרון):</span>
                     <input
                       value={draft.solution.secret}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value } })}
                       className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="English Name"
                     />
                     <input
                       value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value }})}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
                       className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
                       placeholder="שם בעברית"
                     />
@@ -1830,16 +1827,16 @@ const MiniGamesTab = () => {
                   <img src={draft.puzzle_data.logo_data || draft.puzzle_data.image_url} className="w-24 h-24 object-contain" />
                   <div className="pt-2 border-t flex flex-col gap-1 w-full text-right">
                     <span className="text-xs text-muted-foreground font-bold">שם המועדון (הפתרון):</span>
-                    <input 
+                    <input
                       value={draft.solution.secret}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value } })}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="Club Name (EN)"
                     />
-                    <input 
+                    <input
                       value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1" 
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
                       placeholder="שם המועדון (HE)"
                     />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
@@ -1851,27 +1848,27 @@ const MiniGamesTab = () => {
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap gap-2 items-center">
                     {draft.puzzle_data.transfers?.map((t: any, i: number) => (
-                       <div key={i} className="flex items-center gap-2">
-                         <div className="flex flex-col items-center bg-background border rounded-lg p-2 min-w-[80px]">
-                           <span className="text-[10px] text-muted-foreground">{t.season || ''}</span>
-                           <span className="text-xs font-bold text-center leading-tight">{t.club}</span>
-                         </div>
-                         {i < draft.puzzle_data.transfers.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
-                       </div>
+                      <div key={i} className="flex items-center gap-2">
+                        <div className="flex flex-col items-center bg-background border rounded-lg p-2 min-w-[80px]">
+                          <span className="text-[10px] text-muted-foreground">{t.season || ''}</span>
+                          <span className="text-xs font-bold text-center leading-tight">{t.club}</span>
+                        </div>
+                        {i < draft.puzzle_data.transfers.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
+                      </div>
                     ))}
                   </div>
                   <div className="pt-2 border-t flex flex-col gap-1 w-full text-right">
                     <span className="text-xs text-muted-foreground font-bold">השחקן המסתתר (הפתרון):</span>
-                    <input 
+                    <input
                       value={draft.solution.secret}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value } })}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="Player Name (EN)"
                     />
-                    <input 
+                    <input
                       value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1" 
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
                       placeholder="שם השחקן (HE)"
                     />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
@@ -1888,16 +1885,16 @@ const MiniGamesTab = () => {
                   </div>
                   <div className="pt-2 border-t flex flex-col gap-1 w-full text-right">
                     <span className="text-xs text-muted-foreground font-bold">השחקן המסתתר (הפתרון):</span>
-                    <input 
+                    <input
                       value={draft.solution.secret}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value } })}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="B2B Player (EN)"
                     />
-                    <input 
+                    <input
                       value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1" 
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
                       placeholder="שם השחקן (HE)"
                     />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
@@ -1914,24 +1911,24 @@ const MiniGamesTab = () => {
                   <span className="text-xs text-muted-foreground -mt-2">{draft.puzzle_data.matchContext} • מערך: {draft.puzzle_data.formation}</span>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {draft.puzzle_data.players?.map((p: any, i: number) => (
-                       <div key={i} className={`flex items-center gap-2 p-1.5 border rounded-md text-xs ${p.name === '???' ? 'bg-indigo-50 border-indigo-300' : 'bg-background'}`}>
-                          <span className="font-mono bg-secondary px-1.5 py-0.5 rounded text-[10px]">{p.shirt}</span>
-                          <span className={`${p.name === '???' ? 'font-black text-indigo-700' : ''}`}>{p.name}</span>
-                       </div>
+                      <div key={i} className={`flex items-center gap-2 p-1.5 border rounded-md text-xs ${p.name === '???' ? 'bg-indigo-50 border-indigo-300' : 'bg-background'}`}>
+                        <span className="font-mono bg-secondary px-1.5 py-0.5 rounded text-[10px]">{p.shirt}</span>
+                        <span className={`${p.name === '???' ? 'font-black text-indigo-700' : ''}`}>{p.name}</span>
+                      </div>
                     ))}
                   </div>
                   <div className="pt-2 border-t flex flex-col gap-1 w-full text-right">
                     <span className="text-xs text-muted-foreground font-bold">השחקן החסר (הפתרון):</span>
-                    <input 
+                    <input
                       value={draft.solution.secret}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700" 
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value } })}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="Missing Player (EN)"
                     />
-                    <input 
+                    <input
                       value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value }})}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1" 
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
+                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
                       placeholder="השם בעברית"
                     />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
@@ -1946,16 +1943,16 @@ const MiniGamesTab = () => {
                   </pre>
                   <div className="mt-auto pt-2 border-t font-bold flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground font-bold text-right">תשובה נכונה / פתרון:</span>
-                    <input 
+                    <input
                       value={typeof draft.solution.secret === 'string' ? draft.solution.secret : JSON.stringify(draft.solution.secret)}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value }})}
+                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value } })}
                       className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                     />
                   </div>
                 </>
               )}
             </div>
-            
+
             <div className="flex gap-2">
               <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-lg">
                 {saveMutation.isPending ? "שומר בתור..." : "✅ אשר משחק ושלח לתור (Queue)"}
@@ -1978,7 +1975,7 @@ const MiniGamesTab = () => {
         </div>
 
         {queueLoading ? (
-           <div className="text-muted-foreground text-xs font-bold animate-pulse">טוען תור...</div>
+          <div className="text-muted-foreground text-xs font-bold animate-pulse">טוען תור...</div>
         ) : queueData?.queue ? (
           (() => {
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1995,50 +1992,50 @@ const MiniGamesTab = () => {
             return (
               <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-right text-xs">
-                   <thead className="bg-secondary text-[10px] uppercase font-bold text-muted-foreground">
-                     <tr>
-                       <th className="px-3 py-2">סוג משחק</th>
-                       <th className="px-3 py-2 text-center">הפתרון (EN / HE)</th>
-                       <th className="px-3 py-2 w-32 border-r">תאריך שידור</th>
-                       <th className="px-3 py-2 w-10"></th>
-                     </tr>
-                   </thead>
-                   <tbody className="divide-y bg-background font-medium">
-                     {filteredQueue.map((q: any) => {
-                       const t = MINIGAMES.find(m => m.id === q.game_type)?.name || q.game_type;
-                       const playDate = new Date(q.play_date).toISOString().split('T')[0];
-                       const secretEn = typeof q.solution.secret === 'string' ? q.solution.secret : JSON.stringify(q.solution.secret);
-                        const secretHe = q.answer_he || q.solution.secret_he;
-                       return (
-                         <tr key={q.id}>
-                           <td className="px-3 py-2">{t}</td>
-                           <td className="px-3 py-2 text-center text-indigo-700 max-w-[200px] truncate">
-                              {secretEn} {secretHe ? `(${secretHe})` : ''}
-                            </td>
-                           <td className="px-3 py-2 border-r">
-                              <input 
-                                type="date" 
-                                disabled={updateDateMutation.isPending}
-                                value={playDate}
-                                onChange={(e) => updateDateMutation.mutate({ id: q.id, play_date: e.target.value })}
-                                className="bg-transparent outline-none w-full cursor-pointer text-[11px]" 
-                              />
-                           </td>
-                           <td className="px-3 py-1">
-                              <button onClick={() => { if(confirm('למחוק עתידית?')) deleteQueueMutation.mutate(q.id); }} className="p-1.5 hover:bg-destructive/10 text-destructive rounded block mx-auto transition-colors">
-                                <Trash2 size={12} />
-                              </button>
-                           </td>
-                         </tr>
-                       )
-                     })}
-                   </tbody>
+                  <thead className="bg-secondary text-[10px] uppercase font-bold text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2">סוג משחק</th>
+                      <th className="px-3 py-2 text-center">הפתרון (EN / HE)</th>
+                      <th className="px-3 py-2 w-32 border-r">תאריך שידור</th>
+                      <th className="px-3 py-2 w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y bg-background font-medium">
+                    {filteredQueue.map((q: any) => {
+                      const t = MINIGAMES.find(m => m.id === q.game_type)?.name || q.game_type;
+                      const playDate = new Date(q.play_date).toISOString().split('T')[0];
+                      const secretEn = typeof q.solution.secret === 'string' ? q.solution.secret : JSON.stringify(q.solution.secret);
+                      const secretHe = q.answer_he || q.solution.secret_he;
+                      return (
+                        <tr key={q.id}>
+                          <td className="px-3 py-2">{t}</td>
+                          <td className="px-3 py-2 text-center text-indigo-700 max-w-[200px] truncate">
+                            {secretEn} {secretHe ? `(${secretHe})` : ''}
+                          </td>
+                          <td className="px-3 py-2 border-r">
+                            <input
+                              type="date"
+                              disabled={updateDateMutation.isPending}
+                              value={playDate}
+                              onChange={(e) => updateDateMutation.mutate({ id: q.id, play_date: e.target.value })}
+                              className="bg-transparent outline-none w-full cursor-pointer text-[11px]"
+                            />
+                          </td>
+                          <td className="px-3 py-1">
+                            <button onClick={() => { if (confirm('למחוק עתידית?')) deleteQueueMutation.mutate(q.id); }} className="p-1.5 hover:bg-destructive/10 text-destructive rounded block mx-auto transition-colors">
+                              <Trash2 size={12} />
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
                 </table>
               </div>
             );
           })()
         ) : (
-           <div className="text-muted-foreground text-xs">שגיאה בטעינת התור.</div>
+          <div className="text-muted-foreground text-xs">שגיאה בטעינת התור.</div>
         )}
       </div>
     </div>
@@ -2091,19 +2088,19 @@ const TeamsTab = () => {
           כאן ניתן להוסיף תרגום לקבוצה חדשה, או לדרוס תרגום קיים (למשל: Real Madrid → הבלאנקוס).
         </p>
         <div className="flex flex-col md:flex-row gap-2">
-          <input 
-            value={newEn} 
+          <input
+            value={newEn}
             onChange={e => setNewEn(e.target.value)}
             placeholder="שם הקבוצה באנגלית (למשל: Liverpool)"
             className="flex-1 bg-background border rounded-xl px-3 py-2 text-sm outline-none"
           />
-          <input 
-            value={newHe} 
+          <input
+            value={newHe}
             onChange={e => setNewHe(e.target.value)}
             placeholder="תרגום לעברית"
             className="flex-1 bg-background border rounded-xl px-3 py-2 text-sm outline-none"
           />
-          <Button 
+          <Button
             onClick={() => upsertMutation.mutate({ name_en: newEn, name_he: newHe })}
             disabled={!newEn || !newHe || upsertMutation.isPending}
           >
@@ -2116,11 +2113,11 @@ const TeamsTab = () => {
       <div className="flex flex-col md:flex-row gap-3 items-center">
         <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2 flex-1 w-full">
           <Search size={16} className="text-muted-foreground shrink-0" />
-          <input 
-            value={search} 
+          <input
+            value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="חיפוש קבוצה..."
-            className="bg-transparent flex-1 text-sm outline-none" 
+            className="bg-transparent flex-1 text-sm outline-none"
           />
         </div>
         <div className="flex gap-2">
@@ -2151,7 +2148,7 @@ const TeamsTab = () => {
                 <tr key={t.name_en} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 font-mono font-bold text-indigo-600">{t.name_en}</td>
                   <td className="px-4 py-3">
-                    <input 
+                    <input
                       value={editingHe[t.name_en] !== undefined ? editingHe[t.name_en] : (t.name_he || "")}
                       onChange={e => setEditingHe(prev => ({ ...prev, [t.name_en]: e.target.value }))}
                       className="bg-transparent border-b border-transparent hover:border-border focus:border-primary outline-none py-0.5 w-full font-bold"
@@ -2169,15 +2166,15 @@ const TeamsTab = () => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => upsertMutation.mutate({ name_en: t.name_en, name_he: editingHe[t.name_en] || t.name_he || "" })}
                         title="שמור"
                         className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                       >
                         <Check size={14} />
                       </button>
-                      <button 
-                        onClick={() => { if(confirm('למחוק את התרגום ולחזור לברירת מחדל?')) deleteMutation.mutate(t.name_en); }}
+                      <button
+                        onClick={() => { if (confirm('למחוק את התרגום ולחזור לברירת מחדל?')) deleteMutation.mutate(t.name_en); }}
                         title="מחק"
                         className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors"
                       >
@@ -2243,10 +2240,10 @@ const SupportTab = () => {
         {(["", "unread", "read_unhandled", "handled"] as const).map(s => (
           <button key={s} onClick={() => setStatusFilter(s)}
             className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border"}`}>
-            {s === "" ? "הכל" : 
-             s === "unread" ? "טרם נקרא" : 
-             s === "read_unhandled" ? "נקרא וטרם טופל" : 
-             "טופל"}
+            {s === "" ? "הכל" :
+              s === "unread" ? "טרם נקרא" :
+                s === "read_unhandled" ? "נקרא וטרם טופל" :
+                  "טופל"}
           </button>
         ))}
       </div>
@@ -2271,8 +2268,8 @@ const SupportTab = () => {
                   <p className="line-clamp-2" title={inq.message}>{inq.message}</p>
                 </td>
                 <td className="px-3 py-2">
-                  <Select 
-                    value={inq.status} 
+                  <Select
+                    value={inq.status}
                     onValueChange={(val) => updateStatusMutation.mutate({ id: inq.id, status: val })}
                   >
                     <SelectTrigger className="h-7 text-[11px] w-[130px]">
@@ -2287,7 +2284,7 @@ const SupportTab = () => {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => { setReplyInquiry(inq); setReplyMsg(""); setReplyError(""); }}
                       className="text-primary font-bold hover:underline"
                     >
@@ -2306,8 +2303,8 @@ const SupportTab = () => {
       </div>
 
       {replyInquiry && (
-        <Modal 
-          onClose={() => setReplyInquiry(null)} 
+        <Modal
+          onClose={() => setReplyInquiry(null)}
           title={"תשובה לפנייה מס׳ " + replyInquiry.inquiry_number + " (@" + replyInquiry.username + ")"}
         >
           <div className="flex flex-col gap-4">
@@ -2317,7 +2314,7 @@ const SupportTab = () => {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-muted-foreground">הודעת תשובה</label>
-              <textarea 
+              <textarea
                 value={replyMsg}
                 onChange={e => setReplyMsg(e.target.value)}
                 placeholder="כתוב תשובה..."
@@ -2327,8 +2324,8 @@ const SupportTab = () => {
             </div>
             {replyError && <p className="text-xs text-destructive">{replyError}</p>}
             <div className="flex gap-2">
-              <Button 
-                className="flex-1" 
+              <Button
+                className="flex-1"
                 onClick={() => { setReplyLoading(true); replyMutation.mutate(); }}
                 disabled={!replyMsg.trim() || replyLoading}
               >
@@ -2431,9 +2428,8 @@ const AdvancedTab = () => {
                   <p className="text-xs text-muted-foreground">{c.slug} · {c.game_count} משחקים · {c.upcoming} קרובים</p>
                 </div>
                 <button onClick={() => toggleMutation.mutate(c.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
-                    c.is_active ? "bg-green-100 border-green-300 text-green-700" : "bg-gray-100 border-gray-300 text-gray-500"
-                  }`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${c.is_active ? "bg-green-100 border-green-300 text-green-700" : "bg-gray-100 border-gray-300 text-gray-500"
+                    }`}>
                   {c.is_active ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
                   {c.is_active ? "פעיל" : "כבוי"}
                 </button>
@@ -2606,9 +2602,9 @@ const AdminDashboard = () => {
     games: <GamesTab />, leagues: <LeaguesTab />, notifications: <NotificationsTab />,
     minigames: <MiniGamesTab />, advanced: <AdvancedTab />,
     advisor: <AdvisorTab />,
-    social:  <SocialAgentsV2Tab />,
+    social: <SocialAgentsV2Tab />,
     support: <SupportTab />,
-    teams:   <TeamsTab />,
+    teams: <TeamsTab />,
   };
 
   return (
@@ -2626,9 +2622,8 @@ const AdminDashboard = () => {
         <div className="max-w-6xl mx-auto px-4 flex overflow-x-auto gap-1 pb-2 scrollbar-hide">
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
-                activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"
-              }`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"
+                }`}>
               {tab.icon} {tab.label}
             </button>
           ))}

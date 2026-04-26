@@ -198,9 +198,13 @@ router.delete('/users/:id', async (req, res, next) => {
 
     const { username, firebase_uid } = userRes.rows[0];
 
-    // 1. Handle dependencies that aren't ON DELETE CASCADE
+    // 1. Handle dependencies that aren't ON DELETE CASCADE (or missing it in DB)
     await client.query(`UPDATE users SET referred_by = NULL WHERE referred_by = $1`, [userId]);
     await client.query(`DELETE FROM referrals WHERE referrer_id = $1 OR referred_id = $1`, [userId]);
+    await client.query(`DELETE FROM mini_game_attempts WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM quiz_attempts WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM point_transactions WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
     
     // 2. Handle leagues where this user is the creator
     const creatorLeagues = await client.query(`SELECT id FROM leagues WHERE creator_id = $1`, [userId]);
@@ -251,6 +255,10 @@ router.post('/users/cleanup-anonymized', async (req, res, next) => {
       // 1. Dependencies
       await client.query(`UPDATE users SET referred_by = NULL WHERE referred_by = $1`, [userId]);
       await client.query(`DELETE FROM referrals WHERE referrer_id = $1 OR referred_id = $1`, [userId]);
+      await client.query(`DELETE FROM mini_game_attempts WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM quiz_attempts WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM point_transactions WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
       
       // 2. League ownership
       const creatorLeagues = await client.query(`SELECT id FROM leagues WHERE creator_id = $1`, [userId]);
