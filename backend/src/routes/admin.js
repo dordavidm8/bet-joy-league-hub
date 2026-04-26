@@ -885,33 +885,57 @@ opsRouter.post('/reset-minigame-attempts', async (req, res, next) => {
 
 // ── Team name translations ────────────────────────────────────────────────────
 
-// GET /api/admin/team-translations — all overrides (approved & pending)
+// GET /api/admin/team-translations — all overrides (approved & pending) + static fallbacks
 router.get('/team-translations', authenticate, requireAdmin, async (req, res, next) => {
   const { search, status } = req.query;
-  const params = [];
-  let where = '';
-  
-  if (search) {
-    params.push(`%${search}%`);
-    where = `WHERE name_en ILIKE $1 OR name_he ILIKE $1`;
-  }
-  
-  if (status) {
-    if (where) {
-      params.push(status);
-      where += ` AND status = $${params.length}`;
-    } else {
-      params.push(status);
-      where = `WHERE status = $1`;
-    }
-  }
-
   try {
-    const result = await pool.query(
-      `SELECT name_en, name_he, status, created_at FROM team_name_translations ${where} ORDER BY status DESC, created_at DESC LIMIT 500`,
-      params
+    const { TEAM_NAMES_HE } = require('../lib/teamNames');
+    
+    // Fetch all from DB
+    const dbResult = await pool.query(
+      `SELECT name_en, name_he, status FROM team_name_translations`
     );
-    res.json({ translations: result.rows });
+    
+    const all = [];
+    const seen = new Set();
+
+    // 1. Add overrides from DB
+    dbResult.rows.forEach(r => {
+      all.push({ ...r, is_override: true });
+      seen.add(r.name_en);
+    });
+
+    // 2. Add static names that aren't overridden
+    for (const [en, he] of Object.entries(TEAM_NAMES_HE)) {
+      if (!seen.has(en)) {
+        all.push({ name_en: en, name_he: he, status: 'approved', is_override: false });
+        seen.add(en);
+      }
+    }
+
+    // Filter
+    let filtered = all;
+    if (search) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter(t => 
+        t.name_en.toLowerCase().includes(s) || 
+        (t.name_he && t.name_he.toLowerCase().includes(s))
+      );
+    }
+    if (status) {
+      filtered = filtered.filter(t => t.status === status);
+    }
+
+    // Sort: pending first, then overrides, then alphabetical
+    filtered.sort((a, b) => {
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (a.status !== 'pending' && b.status === 'pending') return 1;
+      if (a.is_override && !b.is_override) return -1;
+      if (!a.is_override && b.is_override) return 1;
+      return a.name_en.localeCompare(b.name_en);
+    });
+
+    res.json({ translations: filtered.slice(0, 1500) });
   } catch (err) { next(err); }
 });
 

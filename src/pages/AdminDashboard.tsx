@@ -2116,6 +2116,7 @@ const TeamsTab = () => {
               <tr>
                 <th className="text-right px-4 py-3 font-black text-muted-foreground">שם באנגלית</th>
                 <th className="text-right px-4 py-3 font-black text-muted-foreground">עברית / תרגום</th>
+                <th className="text-right px-4 py-3 font-black text-muted-foreground">מקור</th>
                 <th className="text-right px-4 py-3 font-black text-muted-foreground">סטטוס</th>
                 <th className="text-right px-4 py-3 font-black text-muted-foreground">פעולות</th>
               </tr>
@@ -2130,6 +2131,11 @@ const TeamsTab = () => {
                       onChange={e => setEditingHe(prev => ({ ...prev, [t.name_en]: e.target.value }))}
                       className="bg-transparent border-b border-transparent hover:border-border focus:border-primary outline-none py-0.5 w-full font-bold"
                     />
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${t.is_override ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'}`}>
+                      {t.is_override ? 'דריסה ידנית' : 'ברירת מחדל'}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${t.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
