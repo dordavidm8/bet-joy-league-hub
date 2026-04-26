@@ -814,7 +814,7 @@ export const adminGetTeamTranslations = (search?: string, status?: string) => {
     if (status) p.set("status", status);
     qs = "?" + p.toString();
   }
-  return request<{ translations: { name_en: string; name_he: string | null; status: string; created_at: string }[] }>(`/admin/team-translations${qs}`);
+  return request<{ translations: { name_en: string; name_he: string | null; status: string; created_at?: string; is_override: boolean }[] }>(`/admin/team-translations${qs}`);
 };
 
 export const adminApproveTeamTranslation = (name_en: string, name_he: string) =>
