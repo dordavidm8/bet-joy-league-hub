@@ -2353,7 +2353,7 @@ const AdvancedTab = () => {
     queryKey: ["admin-competitions"], queryFn: adminGetCompetitions, enabled: section === "competitions",
   });
   const { data: translationsData, isLoading: translationsLoading } = useQuery({
-    queryKey: ["admin-team-translations"], queryFn: adminGetTeamTranslations, enabled: section === "translations",
+    queryKey: ["admin-team-translations"], queryFn: () => adminGetTeamTranslations(), enabled: section === "translations",
   });
   const [editingHe, setEditingHe] = useState<Record<string, string>>({});
   const [regenMsg, setRegenMsg] = useState<string | null>(null);
