@@ -238,6 +238,47 @@ router.delete('/users/:id', async (req, res, next) => {
   } finally { client.release(); }
 });
 
+// POST /api/admin/users/cleanup-anonymized — hard-delete ALL users starting with 'deleted_'
+router.post('/users/cleanup-anonymized', async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const usersRes = await client.query(`SELECT id, username FROM users WHERE username LIKE 'deleted_%'`);
+    const victims = usersRes.rows;
+    
+    for (const user of victims) {
+      const userId = user.id;
+      // 1. Dependencies
+      await client.query(`UPDATE users SET referred_by = NULL WHERE referred_by = $1`, [userId]);
+      await client.query(`DELETE FROM referrals WHERE referrer_id = $1 OR referred_id = $1`, [userId]);
+      
+      // 2. League ownership
+      const creatorLeagues = await client.query(`SELECT id FROM leagues WHERE creator_id = $1`, [userId]);
+      for (const leg of creatorLeagues.rows) {
+        const nextMember = await client.query(
+          `SELECT user_id FROM league_members WHERE league_id = $1 AND user_id != $2 ORDER BY joined_at ASC LIMIT 1`,
+          [leg.id, userId]
+        );
+        if (nextMember.rows[0]) {
+          await client.query(`UPDATE leagues SET creator_id = $1 WHERE id = $2`, [nextMember.rows[0].user_id, leg.id]);
+        } else {
+          await client.query(`DELETE FROM leagues WHERE id = $1`, [leg.id]);
+        }
+      }
+
+      // 3. Hard delete user (CASCADE handles bets, etc.)
+      await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+    }
+
+    await client.query('COMMIT');
+    await logAdminAction(req.user.email, 'bulk_cleanup_deleted_users', 'users', 'all', { count: victims.length });
+    res.json({ message: `Successfully cleaned up ${victims.length} anonymized users.` });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
+});
+
 // DELETE /api/admin/users/:id/phone — unlink phone number from user
 router.delete('/users/:id/phone', async (req, res, next) => {
   try {

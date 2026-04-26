@@ -30,6 +30,7 @@ import {
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
   adminLockGame, adminUnlockGame, adminPauseLeague, adminStopLeague, adminUpdateGameOdds, adminUpdateUser, adminDeleteUser,
+  adminCleanupAnonymizedUsers,
   adminRemoveWaGroup, adminSetWaInviteLink, adminUnlinkPhone,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
   adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
@@ -205,15 +206,38 @@ const UsersTab = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
   });
 
+  const cleanupAnonymizedMutation = useMutation({
+    mutationFn: adminCleanupAnonymizedUsers,
+    onSuccess: (res) => {
+      alert(res.message);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e: any) => alert(`❌ ${e.message}`),
+  });
+
   const users = data?.users ?? [];
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2">
-        <Search size={16} className="text-muted-foreground shrink-0" />
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="חיפוש לפי שם / אימייל..."
-          className="bg-transparent flex-1 text-sm outline-none" />
+      <div className="flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 bg-secondary rounded-xl px-3 py-2">
+          <Search size={16} className="text-muted-foreground shrink-0" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש לפי שם / אימייל..."
+            className="bg-transparent flex-1 text-sm outline-none" />
+        </div>
+        <Button 
+          variant="outline" 
+          className="text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+          onClick={() => {
+            if (confirm("האם אתה בטוח שברצונך למחוק לצמיתות את כל המשתמשים הפיקטיביים (deleted_)? פעולה זו תנקה את כל ההיסטוריה שלהם מהמערכת.")) {
+              cleanupAnonymizedMutation.mutate();
+            }
+          }}
+          disabled={cleanupAnonymizedMutation.isPending}
+        >
+          {cleanupAnonymizedMutation.isPending ? "מנקה..." : "ניקוי משתמשים נטושים"}
+        </Button>
       </div>
 
       {isLoading ? <Loader /> : isError ? <ErrorMsg /> : (
