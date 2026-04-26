@@ -17,6 +17,7 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { logAdminAction } = require('../services/adminLogService');
+const { TEAM_NAMES_HE } = require('../lib/teamNames');
 
 // Seed admin_users table from ADMIN_EMAILS env var on startup
 ;(async () => {
@@ -886,10 +887,9 @@ opsRouter.post('/reset-minigame-attempts', async (req, res, next) => {
 // ── Team name translations ────────────────────────────────────────────────────
 
 // GET /api/admin/team-translations — all overrides (approved & pending) + static fallbacks
-router.get('/team-translations', authenticate, requireAdmin, async (req, res, next) => {
+router.get('/team-translations', async (req, res, next) => {
   const { search, status } = req.query;
   try {
-    const { TEAM_NAMES_HE } = require('../lib/teamNames');
     
     // Fetch all from DB
     const dbResult = await pool.query(
@@ -940,12 +940,17 @@ router.get('/team-translations', authenticate, requireAdmin, async (req, res, ne
 });
 
 // PUT /api/admin/team-translations/:name_en — edit/add Hebrew name + approve
-router.put('/team-translations/:name_en', authenticate, requireAdmin, async (req, res, next) => {
+router.put('/team-translations/:name_en', async (req, res, next) => {
   try {
     const { name_he } = req.body;
     const { name_en } = req.params;
     if (!name_he) return res.status(400).json({ error: 'name_he required' });
     
+    // 1. Catch the OLD name so we can fix existing records
+    const oldRes = await pool.query(`SELECT name_he FROM team_name_translations WHERE name_en = $1`, [name_en]);
+    const oldHebrew = oldRes.rows[0]?.name_he || TEAM_NAMES_HE[name_en];
+    
+    // 2. Update the translation table
     await pool.query(
       `INSERT INTO team_name_translations (name_en, name_he, status)
        VALUES ($1, $2, 'approved')
@@ -954,13 +959,35 @@ router.put('/team-translations/:name_en', authenticate, requireAdmin, async (req
       [name_en, name_he]
     );
     
-    await logAdminAction(req.user.email, 'approve_team_translation', 'team_translation', name_en, { name_he });
+    // 3. If there's an old name and it's different, update pending questions and bets
+    if (oldHebrew && oldHebrew !== name_he) {
+      // Update bet questions text
+      await pool.query(
+        `UPDATE bet_questions SET question_text = REPLACE(question_text, $1, $2)
+         WHERE question_text LIKE $3`,
+        [oldHebrew, name_he, `%${oldHebrew}%`]
+      );
+      // Update outcomes (JSONB labels)
+      await pool.query(
+        `UPDATE bet_questions SET outcomes = CAST(REPLACE(CAST(outcomes AS TEXT), $1, $2) AS JSONB)
+         WHERE CAST(outcomes AS TEXT) LIKE $3`,
+        [oldHebrew, name_he, `%${oldHebrew}%`]
+      );
+      // Update pending bets selected outcomes
+      await pool.query(
+        `UPDATE bets SET selected_outcome = $1 WHERE selected_outcome = $2 AND status = 'pending'`,
+        [name_he, oldHebrew]
+      );
+      console.log(`[admin] Updated system-wide team name: "${oldHebrew}" -> "${name_he}"`);
+    }
+
+    await logAdminAction(req.user.email, 'approve_team_translation', 'team_translation', name_en, { name_he, old_hebrew: oldHebrew });
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
 
 // DELETE /api/admin/team-translations/:name_en — dismiss (remove pending)
-router.delete('/team-translations/:name_en', authenticate, requireAdmin, async (req, res, next) => {
+router.delete('/team-translations/:name_en', async (req, res, next) => {
   try {
     await pool.query(`DELETE FROM team_name_translations WHERE name_en = $1`, [req.params.name_en]);
     res.json({ ok: true });
@@ -968,7 +995,7 @@ router.delete('/team-translations/:name_en', authenticate, requireAdmin, async (
 });
 
 // GET /api/admin/odds-debug — check odds cache status
-router.get('/odds-debug', authenticate, requireAdmin, async (req, res, next) => {
+router.get('/odds-debug', async (req, res, next) => {
   try {
     const { fetchAllOdds } = require('../services/oddsApi');
     const { setOddsCache } = require('../services/sportsApi');
