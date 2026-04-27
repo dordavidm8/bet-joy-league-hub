@@ -1811,12 +1811,6 @@ const MiniGamesTab = () => {
                       className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="English Name"
                     />
-                    <input
-                      value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
-                      placeholder="שם בעברית"
-                    />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
                       * המערכת חכמה ויודעת לקבל כשגיאות כתיב קלות, אותיות קטנות/גדולות, חלק מהשם בלבד (מעל 3 אותיות), וכינויים נבחרים אוטומטית כפי שהם מקודדים במשחק. אין צורך להזין את כל הווריאציות.
                     </span>
@@ -1832,12 +1826,6 @@ const MiniGamesTab = () => {
                       onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value } })}
                       className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="Club Name (EN)"
-                    />
-                    <input
-                      value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
-                      placeholder="שם המועדון (HE)"
                     />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
                       * המערכת חכמה ויודעת לקבל מילות מפתח מתוך שם הקבוצה, השמטת United/City/FC ועוד.
@@ -1865,12 +1853,6 @@ const MiniGamesTab = () => {
                       className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="Player Name (EN)"
                     />
-                    <input
-                      value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
-                      placeholder="שם השחקן (HE)"
-                    />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
                       * השחקנים מוקלדים תמיד באנגלית. המערכת תזהה שם חלקי, שגיאות והחלפת תווים מיוחדים.
                     </span>
@@ -1891,14 +1873,8 @@ const MiniGamesTab = () => {
                       className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="B2B Player (EN)"
                     />
-                    <input
-                      value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
-                      placeholder="שם השחקן (HE)"
-                    />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
-                      * המערכת חכמה ויודעת לקבל כשגיאות כתיב קלות, אותיות קטנות/גדולות, חלק מהשם בלבד (מעל 4 אותיות), וכינויים כמו רונאלדו. אין צורך להזין את כל הווריאציות.
+                      * המערכת חכמה ויודעת לקבל כשגיאות כתיב קלות, אותיות קטנות/גדולות, חלק מהשם בלבד (מעל 4 אותיות), וכינויים כמו Ronaldo. אין צורך להזין את כל הווריאציות.
                     </span>
                   </div>
                 </div>
@@ -1924,12 +1900,6 @@ const MiniGamesTab = () => {
                       onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret: e.target.value } })}
                       className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-green-700"
                       placeholder="Missing Player (EN)"
-                    />
-                    <input
-                      value={draft.solution.secret_he || ''}
-                      onChange={(e) => setDraft({ ...draft, solution: { ...draft.solution, secret_he: e.target.value } })}
-                      className="font-bold text-base bg-background border rounded-lg p-2 outline-indigo-500 transition-all text-blue-700 mt-1"
-                      placeholder="השם בעברית"
                     />
                     <span className="text-[10px] text-muted-foreground leading-tight mt-1">
                       * המערכת חכמה ומזהה שחקנים גם אם התשובה לא מושלמת או קצרה מלקוחת משם המשפחה (למעלה מ-4 תווים).
@@ -2005,12 +1975,11 @@ const MiniGamesTab = () => {
                       const t = MINIGAMES.find(m => m.id === q.game_type)?.name || q.game_type;
                       const playDate = new Date(q.play_date).toISOString().split('T')[0];
                       const secretEn = typeof q.solution.secret === 'string' ? q.solution.secret : JSON.stringify(q.solution.secret);
-                      const secretHe = q.answer_he || q.solution.secret_he;
                       return (
                         <tr key={q.id}>
                           <td className="px-3 py-2">{t}</td>
                           <td className="px-3 py-2 text-center text-indigo-700 max-w-[200px] truncate">
-                            {secretEn} {secretHe ? `(${secretHe})` : ''}
+                            {secretEn}
                           </td>
                           <td className="px-3 py-2 border-r">
                             <input
