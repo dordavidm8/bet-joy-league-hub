@@ -678,30 +678,30 @@ router.get('/minigames/queue', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Helper: compact a game_type queue so future games have consecutive dates with no gaps
+// Helper: compact a game_type queue so future games have consecutive dates with no gaps.
+// Uses DATE + INTEGER arithmetic (PostgreSQL native, avoids INTERVAL type issues).
 async function compactQueue(game_type) {
   await pool.query(
     `WITH ranked AS (
        SELECT id,
-              ROW_NUMBER() OVER (ORDER BY play_date ASC, created_at ASC) - 1 AS idx,
-              MIN(play_date::date) OVER ()                                    AS start_date
+              (ROW_NUMBER() OVER (ORDER BY play_date ASC, created_at ASC) - 1)::int AS idx,
+              MIN(play_date::date) OVER ()                                           AS start_date
        FROM daily_mini_games
        WHERE game_type = $1 AND play_date::date >= CURRENT_DATE
      )
      UPDATE daily_mini_games d
-     SET play_date = (ranked.start_date + ranked.idx * INTERVAL '1 day')::date
+     SET play_date = ranked.start_date + ranked.idx
      FROM ranked
      WHERE d.id = ranked.id`,
     [game_type]
   );
 }
 
-// PATCH /api/admin/minigames/queue/:id  — swap dates if target date is taken
+// PATCH /api/admin/minigames/queue/:id  — move date, compact afterwards to fill any gap
 router.patch('/minigames/queue/:id', async (req, res, next) => {
   const { play_date } = req.body;
   if (!play_date) return res.status(400).json({ error: 'play_date required' });
   try {
-    // Fetch current game — cast play_date to text to get a plain "YYYY-MM-DD" string
     const currentResult = await pool.query(
       'SELECT game_type, play_date::text AS pd FROM daily_mini_games WHERE id = $1',
       [req.params.id]
@@ -709,20 +709,21 @@ router.patch('/minigames/queue/:id', async (req, res, next) => {
     if (currentResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     const { game_type, pd: current_date } = currentResult.rows[0];
 
-    // Find ONE conflict game on the target date (LIMIT 1 to avoid multi-row issues)
+    // If target date is taken, move that one game to our old date first
     const conflictResult = await pool.query(
       `SELECT id FROM daily_mini_games
        WHERE game_type = $1 AND play_date::date = $2::date AND id != $3
        ORDER BY play_date ASC LIMIT 1`,
       [game_type, play_date, req.params.id]
     );
-
     if (conflictResult.rows.length > 0) {
-      // Move conflict game to our current date, then move us to target date
       await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [current_date, conflictResult.rows[0].id]);
     }
 
     await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [play_date, req.params.id]);
+
+    // Compact to close any gap left behind
+    await compactQueue(game_type);
     res.json({ swapped: conflictResult.rows.length > 0 });
   } catch (err) { next(err); }
 });
