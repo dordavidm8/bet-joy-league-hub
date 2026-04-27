@@ -678,52 +678,76 @@ router.get('/minigames/queue', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Helper: compact a game_type queue so future games have consecutive dates with no gaps
+async function compactQueue(game_type) {
+  await pool.query(
+    `WITH ranked AS (
+       SELECT id,
+              ROW_NUMBER() OVER (ORDER BY play_date ASC, created_at ASC) - 1 AS idx,
+              MIN(play_date::date) OVER ()                                    AS start_date
+       FROM daily_mini_games
+       WHERE game_type = $1 AND play_date::date >= CURRENT_DATE
+     )
+     UPDATE daily_mini_games d
+     SET play_date = (ranked.start_date + ranked.idx * INTERVAL '1 day')::date
+     FROM ranked
+     WHERE d.id = ranked.id`,
+    [game_type]
+  );
+}
+
 // PATCH /api/admin/minigames/queue/:id  — swap dates if target date is taken
 router.patch('/minigames/queue/:id', async (req, res, next) => {
   const { play_date } = req.body;
   if (!play_date) return res.status(400).json({ error: 'play_date required' });
   try {
-    // Swap conflict game to our current date using a SQL subquery to avoid JS Date type issues
-    const swapResult = await pool.query(
-      `UPDATE daily_mini_games
-       SET play_date = (SELECT play_date FROM daily_mini_games WHERE id = $1)
-       WHERE game_type  = (SELECT game_type FROM daily_mini_games WHERE id = $1)
-         AND play_date::date = $2::date
-         AND id != $1
-       RETURNING id`,
-      [req.params.id, play_date]
+    // Fetch current game — cast play_date to text to get a plain "YYYY-MM-DD" string
+    const currentResult = await pool.query(
+      'SELECT game_type, play_date::text AS pd FROM daily_mini_games WHERE id = $1',
+      [req.params.id]
+    );
+    if (currentResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const { game_type, pd: current_date } = currentResult.rows[0];
+
+    // Find ONE conflict game on the target date (LIMIT 1 to avoid multi-row issues)
+    const conflictResult = await pool.query(
+      `SELECT id FROM daily_mini_games
+       WHERE game_type = $1 AND play_date::date = $2::date AND id != $3
+       ORDER BY play_date ASC LIMIT 1`,
+      [game_type, play_date, req.params.id]
     );
 
-    const check = await pool.query('SELECT id FROM daily_mini_games WHERE id = $1', [req.params.id]);
-    if (check.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    if (conflictResult.rows.length > 0) {
+      // Move conflict game to our current date, then move us to target date
+      await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [current_date, conflictResult.rows[0].id]);
+    }
 
     await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [play_date, req.params.id]);
-    res.json({ swapped: swapResult.rows.length > 0 });
+    res.json({ swapped: conflictResult.rows.length > 0 });
   } catch (err) { next(err); }
 });
 
-// DELETE /api/admin/minigames/queue/:id — shift subsequent games of same type to fill the gap
+// DELETE /api/admin/minigames/queue/:id — delete then compact to fill the gap
 router.delete('/minigames/queue/:id', async (req, res, next) => {
   try {
     const gameResult = await pool.query(
-      'SELECT game_type, play_date FROM daily_mini_games WHERE id = $1',
+      'SELECT game_type FROM daily_mini_games WHERE id = $1',
       [req.params.id]
     );
     if (gameResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-
-    const { game_type, play_date } = gameResult.rows[0];
+    const { game_type } = gameResult.rows[0];
 
     await pool.query('DELETE FROM daily_mini_games WHERE id = $1', [req.params.id]);
-
-    // Shift every subsequent game of the same type one day earlier
-    await pool.query(
-      `UPDATE daily_mini_games
-       SET play_date = play_date - INTERVAL '1 day'
-       WHERE game_type = $1 AND play_date::date > $2::date`,
-      [game_type, play_date]
-    );
-
+    await compactQueue(game_type);
     res.json({ message: 'Deleted' });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/minigames/compact/:game_type — manually compact an existing queue
+router.post('/minigames/compact/:game_type', async (req, res, next) => {
+  try {
+    await compactQueue(req.params.game_type);
+    res.json({ message: 'Queue compacted' });
   } catch (err) { next(err); }
 });
 

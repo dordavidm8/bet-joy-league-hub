@@ -286,6 +286,9 @@ export const adminUpdateMiniGameQueueDate = (id: string, play_date: string) =>
 export const adminDeleteMiniGameQueue = (id: string) =>
   request<{ message: string }>(`/admin/minigames/queue/${id}`, { method: 'DELETE' });
 
+export const adminCompactQueue = (game_type: string) =>
+  request<{ message: string }>(`/admin/minigames/compact/${game_type}`, { method: 'POST' });
+
 export const adminFeatureGame = (id: string, bonus_pct: number, hours_before: number) =>
   request<{ message: string }>(`/admin/games/${id}/feature`, {
     method: 'POST', body: JSON.stringify({ bonus_pct, hours_before }),

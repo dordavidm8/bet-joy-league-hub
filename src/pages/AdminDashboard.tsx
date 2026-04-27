@@ -24,7 +24,7 @@ import {
   adminCleanupAnonymizedUsers,
   adminRemoveWaGroup, adminSetWaInviteLink, adminUnlinkPhone,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
-  adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue,
+  adminGetMiniGameQueue, adminUpdateMiniGameQueueDate, adminDeleteMiniGameQueue, adminCompactQueue,
   adminGetAdmins, adminAddAdmin, adminRemoveAdmin,
   adminGetTeamTranslations, adminApproveTeamTranslation, adminDismissTeamTranslation, adminRegenerateBetQuestions, adminOddsDebug, adminRunSettlement,
   adminGetSupportInquiries, adminUpdateSupportStatus, adminReplyToSupport,
@@ -1675,8 +1675,18 @@ const MiniGamesTab = () => {
     mutationFn: adminDeleteMiniGameQueue,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-minigames-queue"] });
-      setMsg("🗑️ החידה הוסרה מהתור.");
-    }
+      setMsg("🗑️ החידה הוסרה והתור עודכן.");
+    },
+    onError: () => setMsg("❌ שגיאה במחיקה - נסה שוב.")
+  });
+
+  const compactQueueMutation = useMutation({
+    mutationFn: () => adminCompactQueue(selectedType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-minigames-queue"] });
+      setMsg("✅ התור דוחס — כל הפערים מולאו.");
+    },
+    onError: () => setMsg("❌ שגיאה בדחיסת התור.")
   });
 
   const saveMutation = useMutation({
@@ -1720,6 +1730,9 @@ const MiniGamesTab = () => {
             <Button onClick={() => fetchDraftMutation.mutate()} disabled={fetchDraftMutation.isPending} variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">
               <Star size={16} className="ml-2 fill-indigo-600" />
               {fetchDraftMutation.isPending ? "טוען..." : "חולל משחק"}
+            </Button>
+            <Button onClick={() => { if (confirm('לדחוס את התור ולמלא פערים?')) compactQueueMutation.mutate(); }} disabled={compactQueueMutation.isPending} variant="secondary" className="text-xs px-3">
+              {compactQueueMutation.isPending ? "..." : "דחוס תור"}
             </Button>
           </div>
 
