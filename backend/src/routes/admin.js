@@ -678,18 +678,49 @@ router.get('/minigames/queue', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/admin/minigames/queue/:id
+// PATCH /api/admin/minigames/queue/:id  — swap dates if target date is taken
 router.patch('/minigames/queue/:id', async (req, res, next) => {
   const { play_date } = req.body;
   if (!play_date) return res.status(400).json({ error: 'play_date required' });
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
-      `UPDATE daily_mini_games SET play_date = $1 WHERE id = $2 RETURNING *`,
-      [play_date, req.params.id]
+    await client.query('BEGIN');
+
+    const current = await client.query(
+      'SELECT game_type, play_date FROM daily_mini_games WHERE id = $1',
+      [req.params.id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-    res.json({ game: result.rows[0] });
-  } catch (err) { next(err); }
+    if (current.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const { game_type, play_date: current_date } = current.rows[0];
+
+    const conflict = await client.query(
+      'SELECT id FROM daily_mini_games WHERE game_type = $1 AND play_date = $2 AND id != $3',
+      [game_type, play_date, req.params.id]
+    );
+
+    if (conflict.rows.length > 0) {
+      const conflictId = conflict.rows[0].id;
+      // Use a temporary sentinel date to avoid unique-constraint collision during swap
+      const tmpDate = '1970-01-01';
+      await client.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [tmpDate, conflictId]);
+      await client.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [play_date, req.params.id]);
+      await client.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [current_date, conflictId]);
+      await client.query('COMMIT');
+      return res.json({ swapped: true });
+    }
+
+    await client.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [play_date, req.params.id]);
+    await client.query('COMMIT');
+    res.json({ swapped: false });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    next(err);
+  } finally {
+    client.release();
+  }
 });
 
 // DELETE /api/admin/minigames/queue/:id

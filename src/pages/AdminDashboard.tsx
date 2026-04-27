@@ -1662,9 +1662,12 @@ const MiniGamesTab = () => {
 
   const updateDateMutation = useMutation({
     mutationFn: (variables: { id: string, play_date: string }) => adminUpdateMiniGameQueueDate(variables.id, variables.play_date),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["admin-minigames-queue"] });
-      setMsg("✅ שונה תאריך למשחק בתור.");
+      setMsg(data?.swapped ? "🔄 בוצעה החלפה בין שני משחקים." : "✅ שונה תאריך למשחק בתור.");
+    },
+    onError: () => {
+      setMsg("❌ שגיאה בשינוי תאריך - נסה שוב.");
     }
   });
 
@@ -1965,7 +1968,7 @@ const MiniGamesTab = () => {
                   <thead className="bg-secondary text-[10px] uppercase font-bold text-muted-foreground">
                     <tr>
                       <th className="px-3 py-2">סוג משחק</th>
-                      <th className="px-3 py-2 text-center">הפתרון (EN / HE)</th>
+                      <th className="px-3 py-2 text-center">הפתרון (EN)</th>
                       <th className="px-3 py-2 w-32 border-r">תאריך שידור</th>
                       <th className="px-3 py-2 w-10"></th>
                     </tr>
@@ -1985,9 +1988,14 @@ const MiniGamesTab = () => {
                             <input
                               type="date"
                               disabled={updateDateMutation.isPending}
-                              value={playDate}
-                              onChange={(e) => updateDateMutation.mutate({ id: q.id, play_date: e.target.value })}
-                              className="bg-transparent outline-none w-full cursor-pointer text-[11px]"
+                              defaultValue={playDate}
+                              key={playDate}
+                              onBlur={(e) => {
+                                if (e.target.value && e.target.value !== playDate) {
+                                  updateDateMutation.mutate({ id: q.id, play_date: e.target.value });
+                                }
+                              }}
+                              className="bg-background border border-border rounded px-1.5 py-0.5 w-full cursor-pointer text-[11px] disabled:opacity-50"
                             />
                           </td>
                           <td className="px-3 py-1">
