@@ -1,5 +1,5 @@
 const EventEmitter = require('events');
-const { pool } = require('../../config/database');
+const { agentsPool: pool } = require('../../config/database');
 
 /**
  * EventBus singleton for the Agents V2 Kernel.

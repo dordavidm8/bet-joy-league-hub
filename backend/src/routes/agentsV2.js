@@ -1,10 +1,92 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../config/database');
-const { initPipelineRun, runPipeline } = require('../agents/kernel/orchestrator');
+const { agentsPool: pool } = require('../config/database');
+const { initPipelineRun, runPipeline, runSkill } = require('../agents/kernel/orchestrator');
 const eventBus = require('../agents/kernel/eventBus');
+const { runManualAuth, confirmAuth } = require('../agents/tools/notebookLmAuth');
+const TicketManager = require('../agents/kernel/ticketManager');
+const ApprovalGate = require('../agents/kernel/approvalGate');
 
-// GET /api/agents/roster
+// ── COMPANIES (Stage A) ──────────────────────────────────────────────────
+
+router.get('/companies', async (req, res, next) => {
+  try {
+    const result = await pool.query('SELECT * FROM companies ORDER BY created_at DESC');
+    res.json({ companies: result.rows });
+  } catch (err) { next(err); }
+});
+
+router.post('/companies', async (req, res, next) => {
+  try {
+    const { name, owner_user_id } = req.body;
+    const result = await pool.query(
+      'INSERT INTO companies (name, owner_user_id) VALUES ($1, $2) RETURNING *',
+      [name, owner_user_id]
+    );
+    res.json({ company: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// ── ISSUES / TICKETS (Stage B) ───────────────────────────────────────────
+
+router.get('/issues', async (req, res, next) => {
+  try {
+    const { companyId, status } = req.query;
+    const issues = await TicketManager.listIssues(companyId, status);
+    res.json({ issues });
+  } catch (err) { next(err); }
+});
+
+router.post('/issues', async (req, res, next) => {
+  try {
+    const issue = await TicketManager.createIssue(req.body);
+    res.json({ issue });
+  } catch (err) { next(err); }
+});
+
+router.patch('/issues/:id', async (req, res, next) => {
+  try {
+    const issue = await TicketManager.updateIssue(req.params.id, req.body);
+    res.json({ issue });
+  } catch (err) { next(err); }
+});
+
+router.post('/issues/:id/run', async (req, res, next) => {
+  try {
+    const issue = await TicketManager.getIssue(req.params.id);
+    if (!issue) return res.status(404).json({ error: 'Issue not found' });
+    
+    const { runId } = await initPipelineRun({ companyId: issue.company_id });
+    
+    runSkill(runId, issue.assigned_skill, { 
+      issueId: issue.id, 
+      input: { issueBody: issue.body, title: issue.title } 
+    }).catch(err => console.error('[API] runSkill failed:', err.message));
+      
+    res.json({ success: true, runId, message: `Skill ${issue.assigned_skill} execution started.` });
+  } catch (err) { next(err); }
+});
+
+// ── APPROVALS (Stage D) ──────────────────────────────────────────────────
+
+router.get('/approvals', async (req, res, next) => {
+  try {
+    const { companyId } = req.query;
+    const approvals = await ApprovalGate.listPending(companyId);
+    res.json({ approvals });
+  } catch (err) { next(err); }
+});
+
+router.post('/approvals/:id/decide', async (req, res, next) => {
+  try {
+    const { decision, comment } = req.body;
+    const result = await ApprovalGate.decide(req.params.id, { decision, comment });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+// ── AGENT MANAGEMENT ──────────────────────────────────────────────────────
+
 router.get('/roster', async (req, res, next) => {
   try {
     const result = await pool.query(`SELECT * FROM agent_roster ORDER BY created_at ASC`);
@@ -12,20 +94,26 @@ router.get('/roster', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/agents/runs
+// ── PIPELINE EXECUTION ───────────────────────────────────────────────────
+
 router.post('/runs', async (req, res, next) => {
   try {
-    const { runId, isNew } = await initPipelineRun({ dryRun: req.body.dryRun || false, isCron: req.body.isCron || false });
+    const { runId, isNew } = await initPipelineRun({ 
+      dryRun: req.body.dryRun || false, 
+      isCron: req.body.isCron || false,
+      companyId: req.body.companyId
+    });
     res.json({ message: 'Pipeline V2 triggered', runId, isNew });
     
-    // Only run if it's a new pipeline to prevent duplicate background execution
     if (isNew) {
-      runPipeline(runId).catch(console.error);
+      runPipeline(runId, { 
+        platform: req.body.platform, 
+        contentMode: req.body.contentMode 
+      }).catch(console.error);
     }
   } catch (err) { next(err); }
 });
 
-// GET /api/agents/runs/:id
 router.get('/runs/:id', async (req, res, next) => {
   try {
     const result = await pool.query(`SELECT * FROM social_pipeline_runs WHERE id = $1`, [req.params.id]);
@@ -33,7 +121,6 @@ router.get('/runs/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/agents/runs/:id/tasks
 router.get('/runs/:id/tasks', async (req, res, next) => {
   try {
     const result = await pool.query(`SELECT * FROM agent_tasks WHERE run_id = $1 ORDER BY started_at ASC`, [req.params.id]);
@@ -41,13 +128,13 @@ router.get('/runs/:id/tasks', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/agents/runs/:id/stream - Server-Sent Events (SSE)
+// Real-time SSE Stream
 router.get('/runs/:id/stream', async (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no' // Prevent Nginx buffering
+    'X-Accel-Buffering': 'no'
   });
 
   const sendEvent = (event, data) => {
@@ -61,21 +148,17 @@ router.get('/runs/:id/stream', async (req, res) => {
     'stage_failed': (data) => { if (data.runId === req.params.id) sendEvent('stage_failed', Object.assign({}, data, { agent: data.skillName || data.agent })); }
   };
 
-  // Register live handlers FIRST to close the race condition gap
   eventBus.on('stage_started', handlerMap['stage_started']);
   eventBus.on('stage_completed', handlerMap['stage_completed']);
   eventBus.on('stage_failed', handlerMap['stage_failed']);
 
-  // 1. Initial hydration to fix race conditions (fetch all relevant tasks)
   try {
     const pastTasks = await pool.query(
       `SELECT skill_name, status FROM agent_tasks WHERE run_id = $1 AND status != 'queued' ORDER BY started_at ASC`, 
       [req.params.id]
     );
-    // Send started for ALL retrieved tasks first (since UI needs started to draw the running state)
     pastTasks.rows.forEach(t => {
       sendEvent('stage_started', { runId: req.params.id, agent: t.skill_name });
-      // If completed or failed, send the finale event too
       if (t.status === 'success') {
         sendEvent('stage_completed', { runId: req.params.id, agent: t.skill_name });
       } else if (t.status === 'failed') {
@@ -84,7 +167,6 @@ router.get('/runs/:id/stream', async (req, res) => {
     });
   } catch(e) { console.error("SSE Initial Hydration Error", e); }
 
-  // 2. Heartbeat to keep connection alive
   const heartbeat = setInterval(() => res.write(`:\n\n`), 45000);
 
   req.on('close', () => {
@@ -95,27 +177,36 @@ router.get('/runs/:id/stream', async (req, res) => {
   });
 });
 
-// GET /api/agents/posts - List generated social posts
+// ── ASSETS & MEDIA ────────────────────────────────────────────────────────
+
 router.get('/posts', async (req, res, next) => {
   try {
     const { status, platform } = req.query;
     let query = `SELECT * FROM social_posts WHERE 1=1`;
     const params = [];
-
-    if (status) {
-      params.push(status);
-      query += ` AND status = $${params.length}`;
-    }
-    if (platform) {
-      params.push(platform);
-      query += ` AND platform = $${params.length}`;
-    }
-
+    if (status) { params.push(status); query += ` AND status = $${params.length}`; }
+    if (platform) { params.push(platform); query += ` AND platform = $${params.length}`; }
     query += ` ORDER BY created_at DESC LIMIT 50`;
-    
     const result = await pool.query(query, params);
     res.json({ posts: result.rows });
   } catch (err) { next(err); }
 });
+
+router.get('/knowledge', async (req, res, next) => {
+  try {
+    const result = await pool.query(`SELECT * FROM knowledge_assets ORDER BY created_at DESC`);
+    res.json({ assets: result.rows });
+  } catch (err) { next(err); }
+});
+
+router.get('/media/:jobId', async (req, res, next) => {
+  try {
+    const result = await pool.query(`SELECT * FROM media_jobs WHERE id = $1`, [req.params.jobId]);
+    res.json({ job: result.rows[0] || null });
+  } catch (err) { next(err); }
+});
+
+router.post('/notebooklm/auth', runManualAuth);
+router.post('/notebooklm/auth/confirm', confirmAuth);
 
 module.exports = router;

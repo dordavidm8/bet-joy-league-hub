@@ -38,12 +38,30 @@ export default function DraftsInbox() {
               </span>
             </div>
             
-            {draft.image_url && (
-              <div className="h-32 bg-slate-200 dark:bg-slate-700 flex items-center justify-center border-b relative overflow-hidden">
-                {draft.image_url.startsWith('http') ? (
-                  <img src={draft.image_url} className="w-full h-full object-cover" alt="Draft creative" />
+            {/* RICH MEDIA RENDERING (Phase 6) */}
+            {(draft.media_url || draft.image_url) && (
+              <div className="bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center border-b relative overflow-hidden min-h-[160px]">
+                {draft.media_type === 'image' || (!draft.media_type && (draft.image_url || draft.media_url?.match(/\.(jpg|jpeg|png|webp|gif)$/i))) ? (
+                  <img src={draft.media_url || draft.image_url} className="w-full h-full object-cover max-h-64" alt="Draft creative" />
+                ) : draft.media_type === 'audio' || draft.media_url?.endsWith('.mp3') ? (
+                  <div className="w-full flex flex-col items-center p-6 gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Podcast Draft</span>
+                    <audio controls className="w-full h-10">
+                      <source src={draft.media_url} type="audio/mpeg" />
+                    </audio>
+                  </div>
+                ) : draft.media_type === 'pdf' || draft.media_url?.endsWith('.pdf') ? (
+                  <div className="w-full flex flex-col items-center p-4 gap-2">
+                     <span className="text-[10px] font-bold text-slate-500 uppercase">Slide Deck (PDF)</span>
+                     <iframe src={`${draft.media_url}#toolbar=0`} className="w-full h-64 border-0 rounded" title="PDF Preview" />
+                     <a href={draft.media_url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 underline">פתח במסך מלא</a>
+                  </div>
                 ) : (
-                  <ImageIcon className="text-slate-400" size={32} />
+                  <div className="flex flex-col items-center p-4 text-slate-400">
+                    <ImageIcon size={32} />
+                    <span className="text-[10px] mt-2 font-mono">{draft.media_type || 'Unknown Media'}</span>
+                    <a href={draft.media_url} target="_blank" rel="noreferrer" className="text-xs mt-1 underline">Download Media</a>
+                  </div>
                 )}
               </div>
             )}

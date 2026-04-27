@@ -82,6 +82,7 @@ app.use('/api/whatsapp', whatsappRoutes);
 /* Removed V1 socialRoutes */
 /* Removed /api/social */
 app.use('/api/agents', require('./routes/agentsV2'));
+app.use('/storage/media', require('express').static(require('path').resolve(__dirname, 'storage/media')));
 app.use('/api/support', supportRoutes);
 
 app.use(errorHandler);

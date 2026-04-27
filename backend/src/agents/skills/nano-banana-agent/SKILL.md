@@ -56,11 +56,30 @@ Gather this context:
 
 ---
 
+## Required Output Format
+
+You MUST return a single valid JSON object — no markdown, no explanations:
+
+```json
+{
+  "tool": "imageGen",
+  "args": {
+    "prompt": "Flat vector infographic, vibrant neon blue and electric pink, KickOff soccer betting app ROI stats, clean typography, Dribbble style, white background, no distorted text",
+    "aspectRatio": "1:1"
+  }
+}
+```
+
+`aspectRatio` options: `"1:1"` (square), `"16:9"` (landscape/LinkedIn), `"9:16"` (portrait/Stories/TikTok).
+
+---
+
 ## Tool Integrations
 
 | Tool | Type | Guide |
 |------|------|-------|
 | **promptLibraryService** | Internal | Accesses and parses the `nano-banana-pro-prompts` text definitions to feed into your context. |
+| **imageGen** | Internal | Calls Gemini Imagen 3 to generate the image and saves it to `/storage/media/`. Returns `{url, mediaType:'image'}`. |
 
 ---
 

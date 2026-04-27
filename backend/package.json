@@ -13,6 +13,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@google/genai": "^0.14.0",
+    "@remotion/bundler": "^4.0.451",
+    "@remotion/cli": "^4.0.451",
+    "@remotion/renderer": "^4.0.451",
     "axios": "^1.7.2",
     "cheerio": "^1.2.0",
     "cors": "^2.8.5",

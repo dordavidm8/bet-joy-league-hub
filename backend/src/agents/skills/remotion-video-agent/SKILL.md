@@ -1,6 +1,7 @@
 ---
 name: remotion-video-agent
 description: "When the user wants to create, generate, or produce dynamic application promo videos and marketing assets using the Remotion programmatic video framework."
+output: json
 metadata:
   version: 1.0.0
   role: Video
@@ -98,6 +99,30 @@ Be careful to adhere to Remotion constraints (e.g., ensuring local assets or saf
 | **remotionRenderer** | Internal Service | Wraps `@remotion/renderer` safely on the NodeJS Server |
 
 ---
+
+## Required Output Format
+
+You MUST return a single valid JSON object — no markdown, no explanations:
+
+```json
+{
+  "tool": "remotionRenderer",
+  "args": {
+    "compositionId": "MatchTeaser",
+    "inputProps": {
+      "homeTeam": "מכבי ת\"א",
+      "awayTeam": "הפועל",
+      "homeOdds": 1.85,
+      "awayOdds": 2.15,
+      "drawOdds": 3.10,
+      "backgroundImage": null
+    },
+    "outputName": "match-teaser-2026-04-25"
+  }
+}
+```
+
+`compositionId` must be one of: `MatchTeaser`, `AppFeature`, `GenericPromo`.
 
 ## Related Skills
 

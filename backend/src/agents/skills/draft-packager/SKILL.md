@@ -26,11 +26,16 @@ Each item in the array must look exactly like this:
     {
       "platform": "instagram",
       "caption": "The text of the social post here",
-      "tags": ["#Tag1", "#Tag2"]
+      "tags": ["#Tag1", "#Tag2"],
+      "media_url": "url_from_context_if_available",
+      "media_type": "image|video|audio|pdf"
     }
   ]
 }
 ```
+
+## Media Assets
+Preceding agents (like `notebooklm-agent`, `remotion-video-agent`, or `nano-banana-agent`) may have generated media files. If you find keys ending in `__media` in the context (e.g., `remotion-video-agent__media`), you MUST extract the `url` and `mediaType` and include them in the corresponding draft.
 
 **IMPORTANT:** The `platform` field MUST be one of: `instagram`, `tiktok`, or `linkedin`. No other values are allowed. If unspecified or unclear, default to `instagram`.
 

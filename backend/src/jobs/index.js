@@ -21,7 +21,42 @@ const { sendDailyChallengeReminder } = require('./dailyReminder');
 const { sendWeeklyLeaderboardBonus } = require('./weeklyLeaderboard');
 const { sendFeaturedMatchNotifications } = require('./featuredNotifications');
 
+const Heartbeat = require('../agents/kernel/heartbeat');
+const { initPipelineRun, runPipeline } = require('../agents/kernel/orchestrator');
+const TicketManager = require('../agents/kernel/ticketManager');
+
+const DEFAULT_COMPANY_ID = '00000000-0000-0000-0000-000000000000';
+
+async function triggerDailyVideo() {
+  console.log('⏰ [Cron] Running Daily Video Explainer Pipeline...');
+  
+  // 1. Check for scheduled issue from yesterday
+  const scheduled = await TicketManager.getScheduledForToday();
+  const todayStr = new Date().toLocaleDateString('he-IL');
+  
+  const issue = scheduled || await TicketManager.createIssue({
+    title: `Daily Explainer — ${todayStr}`,
+    body: 'הפק סרטון הסבר כללי על האפליקציה KickOff. דגש על UX, מסכים מרכזיים, וערך למשתמש.',
+    assigned_skill: 'remotion-video-agent',
+    company_id: DEFAULT_COMPANY_ID
+  });
+
+  // 2. Launch pipeline
+  const { runId } = await initPipelineRun({ companyId: DEFAULT_COMPANY_ID });
+  runPipeline(runId, { platform: 'tiktok', issueId: issue.id, contentMode: 'video' });
+}
+
 function startJobs() {
+  // Start the autonomous agent monitor
+  Heartbeat.start();
+
+  // Daily Video Explainer (09:00 Asia/Jerusalem)
+  cron.schedule('0 9 * * *', async () => {
+    await triggerDailyVideo();
+  }, {
+    timezone: "Asia/Jerusalem"
+  });
+
   // Sync live scores every 60 seconds
   cron.schedule('* * * * *', async () => {
     try { await syncGames(); }

@@ -1,6 +1,7 @@
 ---
 name: notebooklm-agent
 description: "When the user wants to convert text, PDFs, or web links into interactive Audio Overviews (Podcasts), Slide Decks, or Flashcards using Google's NotebookLM API via notebooklm-py."
+output: json
 metadata:
   version: 1.0.0
   role: NotebookAudio
@@ -97,6 +98,41 @@ An Audio Overview MP3 on its own is not a TikTok video.
 | **notebookLmService** | Internal Python Bridge | Handles `notebooklm-py` async calls to Google and returns the file buffer/path |
 
 ---
+
+## Required Output Format
+
+You MUST return a single valid JSON object — no markdown, no explanations:
+
+**Audio Podcast (default):**
+```json
+{
+  "tool": "notebookLmService",
+  "args": {
+    "format": "audio",
+    "title": "KickOff Weekly Podcast — גמר הליגה",
+    "sourceText": "הכנס כאן את תמצית התוכן שיש להמיר לפודקאסט",
+    "sourceUrl": null,
+    "sourcePdfPath": null
+  }
+}
+```
+
+**Slide Deck (PDF presentation):**
+```json
+{
+  "tool": "notebookLmService",
+  "args": {
+    "format": "slides",
+    "title": "KickOff System Guide",
+    "sourceText": "תוכן המצגת שיש להפוך ל-Slide Deck",
+    "sourceUrl": null,
+    "sourcePdfPath": null
+  }
+}
+```
+
+Provide `sourceText`, `sourceUrl`, OR `sourcePdfPath` — at least one must be non-null.
+Set `format` to `"audio"` for MP3 podcast or `"slides"` for PDF presentation.
 
 ## Related Skills
 

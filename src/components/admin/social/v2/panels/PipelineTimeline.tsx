@@ -29,28 +29,28 @@ export default function PipelineTimeline() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col h-full pt-4">
+      <div className="flex items-center justify-between mb-6 px-2">
         <h3 className="font-bold">🖥️ ניטור ריצות חיות</h3>
         <button 
            onClick={handleStartRun}
            disabled={isLive}
-           className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+           className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 disabled:opacity-50 shadow-md"
         >
           <Play size={14} /> {isLive ? 'Pipeline רץ...' : 'הפעלה ידנית'}
         </button>
       </div>
 
-      <div className="overflow-y-auto px-2">
+      <div className="overflow-y-auto px-2 space-y-2">
         {stages.map((stage, index) => {
           // Find matching event from stream to determine status
           const eventForStage = [...events].reverse().find(e => e.agent === stage.agent);
           
           let status: 'pending' | 'running' | 'completed' | 'failed' = 'pending';
           if (eventForStage) {
-            if (eventForStage.type === 'skill_started') status = 'running';
-            if (eventForStage.type === 'skill_completed') status = 'completed';
-            if (eventForStage.type === 'skill_failed') status = 'failed';
+            if (eventForStage.type === 'stage_started') status = 'running';
+            if (eventForStage.type === 'stage_completed') status = 'completed';
+            if (eventForStage.type === 'stage_failed') status = 'failed';
           } else if (events.length > 0) {
             // If we have started but not reached this stage yet, it's pending.
             // If the whole pipeline finished and we didn't see it, it might still just be pending (skipped)
