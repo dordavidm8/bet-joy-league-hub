@@ -9,7 +9,8 @@ export default function AgentRoster() {
     queryFn: async () => {
       const res = await fetch('/api/agents/roster');
       if (!res.ok) throw new Error('Failed to fetch roster');
-      return res.json() as Promise<AgentData[]>;
+      const data = await res.json();
+      return (data.roster || []) as AgentData[];
     }
   });
 
