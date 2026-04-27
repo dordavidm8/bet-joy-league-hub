@@ -683,36 +683,46 @@ router.patch('/minigames/queue/:id', async (req, res, next) => {
   const { play_date } = req.body;
   if (!play_date) return res.status(400).json({ error: 'play_date required' });
   try {
-    const current = await pool.query(
-      'SELECT game_type, play_date FROM daily_mini_games WHERE id = $1',
-      [req.params.id]
-    );
-    if (current.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-
-    const { game_type, play_date: current_date } = current.rows[0];
-
-    const conflict = await pool.query(
-      'SELECT id FROM daily_mini_games WHERE game_type = $1 AND play_date::date = $2::date AND id != $3',
-      [game_type, play_date, req.params.id]
+    // Swap conflict game to our current date using a SQL subquery to avoid JS Date type issues
+    const swapResult = await pool.query(
+      `UPDATE daily_mini_games
+       SET play_date = (SELECT play_date FROM daily_mini_games WHERE id = $1)
+       WHERE game_type  = (SELECT game_type FROM daily_mini_games WHERE id = $1)
+         AND play_date::date = $2::date
+         AND id != $1
+       RETURNING id`,
+      [req.params.id, play_date]
     );
 
-    if (conflict.rows.length > 0) {
-      const conflictId = conflict.rows[0].id;
-      await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [current_date, conflictId]);
-      await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [play_date, req.params.id]);
-      return res.json({ swapped: true });
-    }
+    const check = await pool.query('SELECT id FROM daily_mini_games WHERE id = $1', [req.params.id]);
+    if (check.rows.length === 0) return res.status(404).json({ error: 'Not found' });
 
     await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [play_date, req.params.id]);
-    res.json({ swapped: false });
+    res.json({ swapped: swapResult.rows.length > 0 });
   } catch (err) { next(err); }
 });
 
-// DELETE /api/admin/minigames/queue/:id
+// DELETE /api/admin/minigames/queue/:id — shift subsequent games of same type to fill the gap
 router.delete('/minigames/queue/:id', async (req, res, next) => {
   try {
-    const result = await pool.query(`DELETE FROM daily_mini_games WHERE id = $1 RETURNING id`, [req.params.id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const gameResult = await pool.query(
+      'SELECT game_type, play_date FROM daily_mini_games WHERE id = $1',
+      [req.params.id]
+    );
+    if (gameResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+
+    const { game_type, play_date } = gameResult.rows[0];
+
+    await pool.query('DELETE FROM daily_mini_games WHERE id = $1', [req.params.id]);
+
+    // Shift every subsequent game of the same type one day earlier
+    await pool.query(
+      `UPDATE daily_mini_games
+       SET play_date = play_date - INTERVAL '1 day'
+       WHERE game_type = $1 AND play_date::date > $2::date`,
+      [game_type, play_date]
+    );
+
     res.json({ message: 'Deleted' });
   } catch (err) { next(err); }
 });
