@@ -14,17 +14,22 @@ if (process.env.STUB_MODE === 'true') {
   pool = stubPool;
   console.log('🧪 DB: stub mode (no PostgreSQL needed)');
 } else {
-// Main App Pool (original)
-const dbUrl = process.env.DATABASE_URL || '';
-const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
-pool = new Pool({
-  connectionString: dbUrl,
-  ssl: !isLocal ? { rejectUnauthorized: false } : false,
-});
-pool.on('error', (err) => console.error('DB error:', err.message));
+  // Main App Pool
+  const dbUrl = process.env.DATABASE_URL || '';
+  const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
+  pool = new Pool({
+    connectionString: dbUrl,
+    ssl: !isLocal ? { rejectUnauthorized: false } : false,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 10000,
+  });
+  pool.on('error', (err) => console.error('DB error:', err.message));
+}
 
 // Isolated Agents Pool (for AI stuff)
-const agentsDbUrl = process.env.AGENTS_DATABASE_URL || dbUrl;
+const agentsDbUrl = process.env.AGENTS_DATABASE_URL || process.env.DATABASE_URL || '';
 const isAgentsIsolated = !!process.env.AGENTS_DATABASE_URL;
 if (!isAgentsIsolated) {
   console.warn('⚠️ AGENTS_DATABASE_URL not set. Using primary database for agents (No Isolation).');

@@ -1,7 +1,7 @@
 {
-  "name": "kickoff-wa-bot",
+  "name": "derbyup-wa-bot",
   "version": "1.0.0",
-  "description": "Kickoff WhatsApp bot",
+  "description": "DerbyUp WhatsApp bot",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",

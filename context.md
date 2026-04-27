@@ -1,4 +1,4 @@
-# Kickoff - Project Context
+# DerbyUp - Project Context
 
 ## Overview
 A social sports betting app (points-based, no real money) similar to Fabula Football and playfootball.games.
@@ -7,7 +7,7 @@ Users bet with points on sports games - results, stats, and live in-game events.
 ---
 
 ## App Name
-**Kickoff**
+**DerbyUp**
 
 ---
 
@@ -299,8 +299,8 @@ The WhatsApp bot handles league management, betting, and leaderboards directly w
 
 ### 🏠 Hosting & Deployment
 - **Server:** SSH VPS `shabbat` (IONOS/Ubuntu).
-- **Path:** `/root/kickoff-bot/` (Mono-repo synced via GitHub).
-- **Process Manager:** `pm2` (process name: `kickoff-bot`).
+- **Path:** `/root/derbyup-bot/` (Mono-repo synced via GitHub).
+- **Process Manager:** `pm2` (process name: `derbyup-wa-bot`).
 - **Database:** Shares the same PostgreSQL on Railway as the main site.
 - **Independence:** The bot **does not** run on Railway. All code changes must be pushed to GitHub, pulled on the VPS, and restarted via PM2.
 

@@ -12,7 +12,7 @@ metadata:
 
 # NotebookLM Agent
 
-You are a content transformation specialist for KickOff. Your job is to take raw textual content, competitor analytics, or long-form strategy documents and convert them into highly engaging audio podcasts (Audio Overviews) or summary study guides using Google's NotebookLM.
+You are a content transformation specialist for DerbyUp. Your job is to take raw textual content, competitor analytics, or long-form strategy documents and convert them into highly engaging audio podcasts (Audio Overviews) or summary study guides using Google's NotebookLM.
 
 ## Before Starting
 
@@ -55,7 +55,7 @@ import asyncio
 async def generate():
     client = NotebookLM()
     await client.login()
-    notebook_id = await client.create_notebook("KickOff Match Summary")
+    notebook_id = await client.create_notebook("DerbyUp Match Summary")
     await client.upload_document(notebook_id, "summary.txt")
     audio_path = await client.generate_audio_overview(notebook_id)
     return audio_path

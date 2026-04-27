@@ -27,21 +27,36 @@ const TicketManager = require('../agents/kernel/ticketManager');
 
 const DEFAULT_COMPANY_ID = '00000000-0000-0000-0000-000000000000';
 
+// In-memory locks to prevent overlapping executions
+const runningJobs = new Set();
+async function runLocked(name, fn) {
+  if (runningJobs.has(name)) {
+    console.log(`[cron:${name}] Already running, skipping overlap`);
+    return;
+  }
+  runningJobs.add(name);
+  const start = Date.now();
+  try {
+    await fn();
+  } catch (err) {
+    console.error(`[cron:${name}] Error:`, err.message);
+  } finally {
+    runningJobs.delete(name);
+    const duration = ((Date.now() - start) / 1000).toFixed(1);
+    if (duration > 5) console.log(`[cron:${name}] Finished in ${duration}s`);
+  }
+}
+
 async function triggerDailyVideo() {
   console.log('⏰ [Cron] Running Daily Video Explainer Pipeline...');
-  
-  // 1. Check for scheduled issue from yesterday
   const scheduled = await TicketManager.getScheduledForToday();
   const todayStr = new Date().toLocaleDateString('he-IL');
-  
   const issue = scheduled || await TicketManager.createIssue({
     title: `Daily Explainer — ${todayStr}`,
     body: 'הפק סרטון הסבר כללי על האפליקציה KickOff. דגש על UX, מסכים מרכזיים, וערך למשתמש.',
     assigned_skill: 'remotion-video-agent',
     company_id: DEFAULT_COMPANY_ID
   });
-
-  // 2. Launch pipeline
   const { runId } = await initPipelineRun({ companyId: DEFAULT_COMPANY_ID });
   runPipeline(runId, { platform: 'tiktok', issueId: issue.id, contentMode: 'video' });
 }
@@ -58,15 +73,13 @@ function startJobs() {
   });
 
   // Sync live scores every 60 seconds
-  cron.schedule('* * * * *', async () => {
-    try { await syncGames(); }
-    catch (err) { console.error('[cron:syncGames]', err.message); }
+  cron.schedule('* * * * *', () => {
+    runLocked('syncGames', syncGames);
   });
 
   // Settle bets every 5 minutes
-  cron.schedule('*/5 * * * *', async () => {
-    try { await settleBets(); }
-    catch (err) { console.error('[cron:settleBets]', err.message); }
+  cron.schedule('*/5 * * * *', () => {
+    runLocked('settleBets', settleBets);
   });
 
   // Full fixture refresh + safety settlement every day at 04:00 UTC

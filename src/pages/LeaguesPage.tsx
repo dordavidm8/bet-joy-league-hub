@@ -2,14 +2,15 @@
 // מציג: ליגות שהמשתמש חבר בהן, ליגות ציבוריות לחיפוש.
 // אפשרויות: יצירת ליגה חדשה, הצטרפות לליגה קיימת דרך קוד הזמנה.
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague, searchUsers, getPublicLeagues, joinPublicLeague } from "@/lib/api";
+import { getMyLeagues, getLeaderboard, getMyRank, createLeague, joinLeague, searchUsers, getPublicLeagues, joinPublicLeague, getLeagueByInviteCode, League } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins, Flag } from "lucide-react";
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { Plus, Users, Trophy, Lock, Globe, Medal, ChevronRight, Coins, Flag, Info, Check, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 type Tab = "leagues" | "leaderboard";
 
@@ -33,12 +34,26 @@ const LeaguesPage = () => {
   const [tab, setTab] = useState<Tab>("leagues");
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [previewLeague, setPreviewLeague] = useState<League | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [userSearchInput, setUserSearchInput] = useState("");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { isGuest, exitGuest } = useAuth();
+  const hasAttemptedPreview = useRef(false);
+
+  const joinParam = searchParams.get("join");
+
+  useEffect(() => {
+    if (joinParam && !hasAttemptedPreview.current && !isGuest) {
+      const code = joinParam.toUpperCase();
+      setJoinCode(code);
+      setShowJoin(true); // This will enable the useQuery below
+      hasAttemptedPreview.current = true;
+    }
+  }, [joinParam, isGuest]);
 
   // Create form state
   const [name, setName] = useState("");
@@ -60,6 +75,19 @@ const LeaguesPage = () => {
     queryKey: ["my-leagues"],
     queryFn: getMyLeagues,
   });
+
+  const { data: previewData, isLoading: previewLoading, isError: previewIsError, error: previewError } = useQuery({
+    queryKey: ["league-preview", joinCode],
+    queryFn: () => getLeagueByInviteCode(joinCode),
+    enabled: joinCode.length >= 4 && showJoin,
+  });
+
+  useEffect(() => {
+    if (previewData) {
+      setPreviewLeague(previewData.league);
+      setShowJoin(false);
+    }
+  }, [previewData]);
 
   const { data: leaderboardData, isLoading: lbLoading } = useQuery({
     queryKey: ["leaderboard"],
@@ -124,10 +152,11 @@ const LeaguesPage = () => {
   });
 
   const joinMutation = useMutation({
-    mutationFn: () => joinLeague(joinCode),
+    mutationFn: (overrideCode?: string) => joinLeague(overrideCode || joinCode),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["my-leagues"] });
       setShowJoin(false);
+      setPreviewLeague(null);
       setJoinCode("");
       navigate(`/leagues/${data.league.id}`);
     },
@@ -364,7 +393,7 @@ const LeaguesPage = () => {
           )}
 
           {/* Join Form */}
-          {showJoin && (
+          {showJoin && !previewLeague && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
               className="card-kickoff flex flex-col gap-3 overflow-hidden"
             >
@@ -372,15 +401,150 @@ const LeaguesPage = () => {
               <input placeholder="קוד הזמנה" value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 className="bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 tracking-widest" />
-              <Button variant="cta" size="lg" onClick={() => joinMutation.mutate()}
-                disabled={!joinCode || joinMutation.isPending}>
-                {joinMutation.isPending ? "מצטרף..." : "הצטרף"}
+              <Button 
+                variant="cta" 
+                size="lg" 
+                onClick={() => {
+                  getLeagueByInviteCode(joinCode)
+                    .then(data => setPreviewLeague(data.league))
+                    .catch((err) => toast.error(err.message || 'קוד לא תקין'));
+                }}
+                disabled={!joinCode}>
+                המשך לבדיקת ליגה
               </Button>
-              {joinMutation.isError && (
-                <p className="text-xs text-destructive">{(joinMutation.error as any)?.message}</p>
-              )}
             </motion.div>
           )}
+
+          {/* League Preview Loading */}
+          {previewLoading && showJoin && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-kickoff flex items-center justify-center py-8">
+              <div className="flex flex-col items-center gap-2">
+                <Trophy size={32} className="text-primary animate-bounce" />
+                <p className="text-sm text-muted-foreground animate-pulse">בודק את פרטי הליגה...</p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* League Preview Error */}
+          {previewIsError && showJoin && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-kickoff border-destructive/30 bg-destructive/5 flex flex-col items-center gap-3 py-6">
+              <X size={32} className="text-destructive" />
+              <p className="text-sm font-bold text-destructive">{(previewError as any)?.message || 'קוד הזמנה לא תקין'}</p>
+              <Button size="sm" variant="outline" onClick={() => { setShowJoin(false); setJoinCode(""); }}>נסה קוד אחר</Button>
+            </motion.div>
+          )}
+
+          {/* League Preview Card */}
+          <AnimatePresence>
+            {previewLeague && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="card-kickoff border-2 border-primary/30 bg-primary/5 flex flex-col gap-4 relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                  <Trophy size={120} />
+                </div>
+
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-wider">
+                      <Lock size={10} /> הצטרפות לליגה פרטית
+                    </div>
+                    <h3 className="text-xl font-bold">{previewLeague.name}</h3>
+                    <p className="text-xs text-muted-foreground">מאת: @{previewLeague.creator_username}</p>
+                  </div>
+                  <button onClick={() => setPreviewLeague(null)} className="p-2 hover:bg-secondary rounded-full transition-colors">
+                    <X size={20} className="text-muted-foreground" />
+                  </button>
+                </div>
+
+                {previewLeague.description && (
+                  <p className="text-sm text-muted-foreground border-r-2 border-primary/20 pr-3">
+                    {previewLeague.description}
+                  </p>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-secondary/50 rounded-xl p-3 flex flex-col gap-1">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">פורמט</span>
+                    <span className="text-sm font-bold flex items-center gap-1.5">
+                      {previewLeague.format === 'pool' ? '🏆 קופה משותפת' : '🎯 תשלום למשחק'}
+                    </span>
+                  </div>
+                  <div className="bg-secondary/50 rounded-xl p-3 flex flex-col gap-1">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">דמי כניסה</span>
+                    <span className="text-sm font-black text-primary flex items-center gap-1">
+                      <Coins size={14} /> {previewLeague.entry_fee.toLocaleString()} נק׳
+                    </span>
+                  </div>
+                  <div className="bg-secondary/50 rounded-xl p-3 flex flex-col gap-1">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">משתתפים</span>
+                    <span className="text-sm font-bold flex items-center gap-1.5">
+                      <Users size={14} /> {previewLeague.member_count} {previewLeague.max_members ? `/ ${previewLeague.max_members}` : ''}
+                    </span>
+                  </div>
+                  <div className="bg-secondary/50 rounded-xl p-3 flex flex-col gap-1">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">סוג</span>
+                    <span className="text-sm font-bold flex items-center gap-1.5">
+                      {previewLeague.is_tournament ? (
+                        <>🚩 {previewLeague.tournament_name || 'טורניר'}</>
+                      ) : '📅 עונה מלאה'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 mt-2">
+                  <div className="bg-primary/10 rounded-lg p-2.5 flex items-start gap-2.5">
+                    <Info size={16} className="text-primary shrink-0 mt-0.5" />
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      {previewLeague.is_member ? (
+                        <span className="text-primary font-bold">אתה כבר חבר בליגה זו! תוכל להיכנס ולראות את המצב הנוכחי.</span>
+                      ) : previewLeague.format === 'pool' 
+                        ? 'בליגה זו צוברים ניקוד לאורך זמן. בסוף העונה הקופה תחולק בין המקומות הראשונים.'
+                        : `בליגה זו מהמרים מהמאזן האישי. הימור מינימלי: ${previewLeague.min_bet} נק׳.`}
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-2.5">
+                    {previewLeague.is_member ? (
+                      <Button 
+                        variant="default" 
+                        className="flex-1 h-12 text-base"
+                        onClick={() => navigate(`/leagues/${previewLeague.id}`)}
+                      >
+                        <span className="flex items-center gap-2">
+                          <ChevronRight size={18} /> כנס לליגה שלי
+                        </span>
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="cta" 
+                        className="flex-1 h-12 text-base shadow-lg shadow-primary/20"
+                        onClick={() => joinMutation.mutate(joinCode)}
+                        disabled={joinMutation.isPending}
+                      >
+                        {joinMutation.isPending ? 'מצטרף...' : (
+                          <span className="flex items-center gap-2">
+                            <Check size={18} /> תאשר לי, אני מצטרף
+                          </span>
+                        )}
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      className="h-12 w-12 p-0"
+                      onClick={() => setPreviewLeague(null)}
+                      disabled={joinMutation.isPending}
+                    >
+                      <X size={20} />
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* League List */}
           {leaguesLoading ? (

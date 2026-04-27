@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
-    name: 'kickoff-wa-bot',
+    name: 'derbyup-wa-bot',
     script: 'bot.js',
-    cwd: '/app/whatsapp-bot',
+    cwd: '/root/derbyup-bot/whatsapp-bot',
     max_memory_restart: '400M',
     restart_delay: 5000,
     max_restarts: 10,

@@ -13,6 +13,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const redis = require('../lib/redis');
 
 const POPULAR_TEAMS = [
   'Manchester City', 'Man City', 'Arsenal', 'Liverpool', 'Chelsea', 'Manchester United', 'Man United', 'Tottenham', 'Tottenham Hotspur',
@@ -26,9 +27,21 @@ const POPULAR_TEAMS = [
 // GET /api/games
 router.get('/', async (req, res, next) => {
   const { status, date, competition, search, featured, from, to } = req.query;
+
+  const cacheKey = `games:${new URLSearchParams(Object.entries(req.query).sort()).toString()}`;
+  const cached = await redis.get(cacheKey);
+  if (cached) return res.json(cached);
+
   const conditions = [], params = [];
 
-  if (status) { params.push(status); conditions.push(`g.status = $${params.length}`); if (status === 'scheduled') { conditions.push(`g.start_time > NOW() - INTERVAL '2 hours'`); } }
+  if (status) {
+    params.push(status);
+    conditions.push(`g.status = $${params.length}`);
+    if (status === 'scheduled') {
+      // Hide games starting in less than 10 minutes
+      conditions.push(`g.start_time > NOW() + INTERVAL '10 minutes'`);
+    }
+  }
   if (date) { params.push(date); conditions.push(`DATE(g.start_time AT TIME ZONE 'UTC') = $${params.length}`); }
   if (from) { params.push(from); conditions.push(`g.start_time >= $${params.length}::date`); }
   if (to) { params.push(to); conditions.push(`g.start_time < ($${params.length}::date + INTERVAL '1 day')`); }
@@ -39,11 +52,12 @@ router.get('/', async (req, res, next) => {
     conditions.push(`(g.home_team ILIKE $${n} OR g.away_team ILIKE $${n} OR c.name ILIKE $${n})`);
   }
   if (featured === 'true') {
+    // Priority: specifically marked featured OR popular team
     const teamConditions = POPULAR_TEAMS.map((_, idx) => {
       params.push(`%${POPULAR_TEAMS[idx]}%`);
       return `g.home_team ILIKE $${params.length} OR g.away_team ILIKE $${params.length}`;
     });
-    conditions.push(`(${teamConditions.join(' OR ')})`);
+    conditions.push(`(g.is_featured = true OR ${teamConditions.join(' OR ')})`);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -54,7 +68,9 @@ router.get('/', async (req, res, next) => {
        ${where} ORDER BY g.start_time ASC LIMIT 100`,
       params
     );
-    res.json({ games: result.rows });
+    const body = { games: result.rows };
+    await redis.set(cacheKey, body, 60);
+    res.json(body);
   } catch (err) { next(err); }
 });
 
@@ -74,15 +90,11 @@ router.get('/results', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/games/live
+// GET /api/games/live — Returning empty as requested to hide started games
 router.get('/live', async (req, res, next) => {
   try {
-    const result = await pool.query(
-      `SELECT g.*, c.name AS competition_name FROM games g
-       LEFT JOIN competitions c ON c.id = g.competition_id
-       WHERE g.status = 'live' ORDER BY g.start_time ASC`
-    );
-    res.json({ games: result.rows });
+    // Hidden per user request: "שלא יוצגו בכלל משחקים שהתחילו"
+    res.json({ games: [] });
   } catch (err) { next(err); }
 });
 
@@ -106,7 +118,19 @@ router.get('/:id', async (req, res, next) => {
        FROM games g LEFT JOIN competitions c ON c.id = g.competition_id WHERE g.id = $1`,
       [req.params.id]
     );
-    if (!gameRes.rows[0]) return res.status(404).json({ error: 'Game not found' });
+    const game = gameRes.rows[0];
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+
+    // Restrict access per user request: hide games that have started or are within 10 mins of kickoff.
+    // Finished games remain accessible for results and history.
+    const startTime = new Date(game.start_time);
+    const now = new Date();
+    const isTooLate = now >= new Date(startTime.getTime() - 10 * 60 * 1000);
+    const isOngoing = game.status === 'live' || (game.status === 'scheduled' && isTooLate);
+
+    if (isOngoing && game.status !== 'finished') {
+       return res.status(403).json({ error: 'Access restricted: This game has already reached the betting deadline or is in progress.' });
+    }
 
     const questionsRes = await pool.query(
       `SELECT * FROM bet_questions WHERE game_id = $1 ORDER BY created_at ASC`,

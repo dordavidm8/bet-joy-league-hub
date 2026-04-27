@@ -17,6 +17,7 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { logAdminAction } = require('../services/adminLogService');
+const { TEAM_NAMES_HE } = require('../lib/teamNames');
 
 // Seed admin_users table from ADMIN_EMAILS env var on startup
 ;(async () => {
@@ -140,8 +141,8 @@ router.get('/users', async (req, res, next) => {
   const search = req.query.search;
   const params = [limit, offset];
   
-  // Filter out anonymized users (those starting with deleted_)
-  let where = `WHERE username NOT LIKE 'deleted_%'`;
+  // Allow searching including anonymized users if necessary
+  let where = `WHERE true`;
   
   if (search) {
     where += ` AND (username ILIKE $3 OR email ILIKE $3)`;
@@ -180,44 +181,106 @@ router.patch('/users/:id', async (req, res, next) => {
   }
 });
 
-// DELETE /api/admin/users/:id — soft-delete a user
+// DELETE /api/admin/users/:id — hard-delete a user and all their data
 router.delete('/users/:id', async (req, res, next) => {
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',');
+  const userId = req.params.id;
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const userRes = await client.query(`SELECT username, email, firebase_uid FROM users WHERE id = $1`, [req.params.id]);
+    
+    const userRes = await client.query(`SELECT username, email, firebase_uid FROM users WHERE id = $1`, [userId]);
     if (!userRes.rows[0]) return res.status(404).json({ error: 'User not found' });
-    if (ADMIN_EMAILS.includes(userRes.rows[0].email)) {
+    
+    if (ADMIN_EMAILS.includes(userRes.rows[0].email.toLowerCase())) {
       return res.status(403).json({ error: 'לא ניתן למחוק חשבון מנהל' });
     }
-    // Deactivate league memberships
-    await client.query(`UPDATE league_members SET is_active = false WHERE user_id = $1`, [req.params.id]);
-    // Cancel pending bets
-    await client.query(`UPDATE bets SET status = 'cancelled' WHERE user_id = $1 AND status = 'pending'`, [req.params.id]);
-    // Anonymize user (to release username/email/uid while keeping DB integrity for old bets/stats)
-    const anonSuffix = req.params.id.slice(0, 8);
-    const firebaseUid = userRes.rows[0].firebase_uid;
-    
-    await client.query(
-      `UPDATE users SET username = $1, email = $2, display_name = NULL, firebase_uid = $1, phone_number = NULL
-       WHERE id = $3`,
-      [`deleted_${anonSuffix}`, `deleted_${anonSuffix}@deleted.invalid`, req.params.id]
-    );
 
-    // Try to delete from Firebase so they can't log in anymore
+    const { username, firebase_uid } = userRes.rows[0];
+
+    // 1. Handle dependencies that aren't ON DELETE CASCADE (or missing it in DB)
+    await client.query(`UPDATE users SET referred_by = NULL WHERE referred_by = $1`, [userId]);
+    await client.query(`DELETE FROM referrals WHERE referrer_id = $1 OR referred_id = $1`, [userId]);
+    await client.query(`DELETE FROM mini_game_attempts WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM quiz_attempts WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM point_transactions WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
+    
+    // 2. Handle leagues where this user is the creator
+    const creatorLeagues = await client.query(`SELECT id FROM leagues WHERE creator_id = $1`, [userId]);
+    for (const leg of creatorLeagues.rows) {
+      const nextMember = await client.query(
+        `SELECT user_id FROM league_members WHERE league_id = $1 AND user_id != $2 ORDER BY joined_at ASC LIMIT 1`,
+        [leg.id, userId]
+      );
+      if (nextMember.rows[0]) {
+        await client.query(`UPDATE leagues SET creator_id = $1 WHERE id = $2`, [nextMember.rows[0].user_id, leg.id]);
+      } else {
+        await client.query(`DELETE FROM leagues WHERE id = $1`, [leg.id]);
+      }
+    }
+
+    // 3. Delete from users (this triggers CASCADE for bets, league_members, etc.)
+    await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+
+    // 4. Delete from Firebase
     try {
       const firebaseAdmin = require('../config/firebase');
-      if (firebaseUid && !firebaseUid.startsWith('deleted_')) {
-        await firebaseAdmin.auth().deleteUser(firebaseUid);
+      if (firebase_uid && !firebase_uid.startsWith('deleted_')) {
+        await firebaseAdmin.auth().deleteUser(firebase_uid);
       }
     } catch (fbErr) {
-      console.warn(`Could not delete user ${req.params.id} from Firebase:`, fbErr.message);
+      console.warn(`[admin] Could not delete user ${userId} from Firebase:`, fbErr.message);
     }
 
     await client.query('COMMIT');
-    await logAdminAction(req.user.email, 'delete_user', 'user', req.params.id, { username: userRes.rows[0].username });
-    res.json({ message: 'User deleted' });
+    await logAdminAction(req.user.email, 'hard_delete_user', 'user', userId, { username });
+    res.json({ message: 'User deleted permanently' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally { client.release(); }
+});
+
+// POST /api/admin/users/cleanup-anonymized — hard-delete ALL users starting with 'deleted_'
+router.post('/users/cleanup-anonymized', async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const usersRes = await client.query(`SELECT id, username FROM users WHERE username LIKE 'deleted_%'`);
+    const victims = usersRes.rows;
+    
+    for (const user of victims) {
+      const userId = user.id;
+      // 1. Dependencies
+      await client.query(`UPDATE users SET referred_by = NULL WHERE referred_by = $1`, [userId]);
+      await client.query(`DELETE FROM referrals WHERE referrer_id = $1 OR referred_id = $1`, [userId]);
+      await client.query(`DELETE FROM mini_game_attempts WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM quiz_attempts WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM point_transactions WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
+      
+      // 2. League ownership
+      const creatorLeagues = await client.query(`SELECT id FROM leagues WHERE creator_id = $1`, [userId]);
+      for (const leg of creatorLeagues.rows) {
+        const nextMember = await client.query(
+          `SELECT user_id FROM league_members WHERE league_id = $1 AND user_id != $2 ORDER BY joined_at ASC LIMIT 1`,
+          [leg.id, userId]
+        );
+        if (nextMember.rows[0]) {
+          await client.query(`UPDATE leagues SET creator_id = $1 WHERE id = $2`, [nextMember.rows[0].user_id, leg.id]);
+        } else {
+          await client.query(`DELETE FROM leagues WHERE id = $1`, [leg.id]);
+        }
+      }
+
+      // 3. Hard delete user (CASCADE handles bets, etc.)
+      await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+    }
+
+    await client.query('COMMIT');
+    await logAdminAction(req.user.email, 'bulk_cleanup_deleted_users', 'users', 'all', { count: victims.length });
+    res.json({ message: `Successfully cleaned up ${victims.length} anonymized users.` });
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
@@ -504,7 +567,7 @@ router.post('/notify', async (req, res, next) => {
       users = result.rows;
     }
 
-    const waText = `הודעה מצוות KickOff 📣:\n\n*${title}*\n${body || ''}`;
+    const waText = `הודעה מצוות DerbyUp 📣:\n\n*${title}*\n${body || ''}`;
 
     // Send to Internal Notifications ALWAYS
     for (const u of users) {
@@ -607,34 +670,85 @@ router.post('/minigames/save-drafts', async (req, res, next) => {
 router.get('/minigames/queue', async (req, res, next) => {
   try {
     const result = await pool.query(
-      `SELECT id, game_type, play_date, puzzle_data, solution, answer_he 
-       FROM daily_mini_games 
+      `SELECT id, game_type, play_date, puzzle_data, solution
+       FROM daily_mini_games
        ORDER BY play_date ASC, game_type ASC`
     );
     res.json({ queue: result.rows });
   } catch (err) { next(err); }
 });
 
-// PATCH /api/admin/minigames/queue/:id
+// Helper: compact a game_type queue so future games have consecutive dates with no gaps.
+// Uses DATE + INTEGER arithmetic (PostgreSQL native, avoids INTERVAL type issues).
+async function compactQueue(game_type) {
+  await pool.query(
+    `WITH ranked AS (
+       SELECT id,
+              (ROW_NUMBER() OVER (ORDER BY play_date ASC, created_at ASC) - 1)::int AS idx,
+              MIN(play_date::date) OVER ()                                           AS start_date
+       FROM daily_mini_games
+       WHERE game_type = $1 AND play_date::date >= CURRENT_DATE
+     )
+     UPDATE daily_mini_games d
+     SET play_date = ranked.start_date + ranked.idx
+     FROM ranked
+     WHERE d.id = ranked.id`,
+    [game_type]
+  );
+}
+
+// PATCH /api/admin/minigames/queue/:id  — move date, compact afterwards to fill any gap
 router.patch('/minigames/queue/:id', async (req, res, next) => {
   const { play_date } = req.body;
   if (!play_date) return res.status(400).json({ error: 'play_date required' });
   try {
-    const result = await pool.query(
-      `UPDATE daily_mini_games SET play_date = $1 WHERE id = $2 RETURNING *`,
-      [play_date, req.params.id]
+    const currentResult = await pool.query(
+      'SELECT game_type, play_date::text AS pd FROM daily_mini_games WHERE id = $1',
+      [req.params.id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-    res.json({ game: result.rows[0] });
+    if (currentResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const { game_type, pd: current_date } = currentResult.rows[0];
+
+    // If target date is taken, move that one game to our old date first
+    const conflictResult = await pool.query(
+      `SELECT id FROM daily_mini_games
+       WHERE game_type = $1 AND play_date::date = $2::date AND id != $3
+       ORDER BY play_date ASC LIMIT 1`,
+      [game_type, play_date, req.params.id]
+    );
+    if (conflictResult.rows.length > 0) {
+      await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [current_date, conflictResult.rows[0].id]);
+    }
+
+    await pool.query('UPDATE daily_mini_games SET play_date = $1 WHERE id = $2', [play_date, req.params.id]);
+
+    // Compact to close any gap left behind
+    await compactQueue(game_type);
+    res.json({ swapped: conflictResult.rows.length > 0 });
   } catch (err) { next(err); }
 });
 
-// DELETE /api/admin/minigames/queue/:id
+// DELETE /api/admin/minigames/queue/:id — delete then compact to fill the gap
 router.delete('/minigames/queue/:id', async (req, res, next) => {
   try {
-    const result = await pool.query(`DELETE FROM daily_mini_games WHERE id = $1 RETURNING id`, [req.params.id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const gameResult = await pool.query(
+      'SELECT game_type FROM daily_mini_games WHERE id = $1',
+      [req.params.id]
+    );
+    if (gameResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const { game_type } = gameResult.rows[0];
+
+    await pool.query('DELETE FROM daily_mini_games WHERE id = $1', [req.params.id]);
+    await compactQueue(game_type);
     res.json({ message: 'Deleted' });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/minigames/compact/:game_type — manually compact an existing queue
+router.post('/minigames/compact/:game_type', async (req, res, next) => {
+  try {
+    await compactQueue(req.params.game_type);
+    res.json({ message: 'Queue compacted' });
   } catch (err) { next(err); }
 });
 
@@ -885,32 +999,108 @@ opsRouter.post('/reset-minigame-attempts', async (req, res, next) => {
 
 // ── Team name translations ────────────────────────────────────────────────────
 
-// GET /api/admin/team-translations — pending only
-router.get('/team-translations', authenticate, requireAdmin, async (req, res, next) => {
+// GET /api/admin/team-translations — all overrides (approved & pending) + static fallbacks
+router.get('/team-translations', async (req, res, next) => {
+  const { search, status } = req.query;
   try {
-    const result = await pool.query(
-      `SELECT name_en, name_he, status, created_at FROM team_name_translations WHERE status = 'pending' ORDER BY created_at DESC`
+    
+    // Fetch all from DB
+    const dbResult = await pool.query(
+      `SELECT name_en, name_he, status FROM team_name_translations`
     );
-    res.json({ translations: result.rows });
+    
+    const all = [];
+    const seen = new Set();
+
+    // 1. Add overrides from DB
+    dbResult.rows.forEach(r => {
+      all.push({ ...r, is_override: true });
+      seen.add(r.name_en);
+    });
+
+    // 2. Add static names that aren't overridden
+    for (const [en, he] of Object.entries(TEAM_NAMES_HE)) {
+      if (!seen.has(en)) {
+        all.push({ name_en: en, name_he: he, status: 'approved', is_override: false });
+        seen.add(en);
+      }
+    }
+
+    // Filter
+    let filtered = all;
+    if (search) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter(t => 
+        t.name_en.toLowerCase().includes(s) || 
+        (t.name_he && t.name_he.toLowerCase().includes(s))
+      );
+    }
+    if (status) {
+      filtered = filtered.filter(t => t.status === status);
+    }
+
+    // Sort: pending first, then overrides, then alphabetical
+    filtered.sort((a, b) => {
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (a.status !== 'pending' && b.status === 'pending') return 1;
+      if (a.is_override && !b.is_override) return -1;
+      if (!a.is_override && b.is_override) return 1;
+      return a.name_en.localeCompare(b.name_en);
+    });
+
+    res.json({ translations: filtered.slice(0, 1500) });
   } catch (err) { next(err); }
 });
 
-// PUT /api/admin/team-translations/:name_en — edit Hebrew name + approve
-router.put('/team-translations/:name_en', authenticate, requireAdmin, async (req, res, next) => {
+// PUT /api/admin/team-translations/:name_en — edit/add Hebrew name + approve
+router.put('/team-translations/:name_en', async (req, res, next) => {
   try {
     const { name_he } = req.body;
     const { name_en } = req.params;
+    if (!name_he) return res.status(400).json({ error: 'name_he required' });
+    
+    // 1. Catch the OLD name so we can fix existing records
+    const oldRes = await pool.query(`SELECT name_he FROM team_name_translations WHERE name_en = $1`, [name_en]);
+    const oldHebrew = oldRes.rows[0]?.name_he || TEAM_NAMES_HE[name_en];
+    
+    // 2. Update the translation table
     await pool.query(
-      `UPDATE team_name_translations SET name_he = $1, status = 'approved' WHERE name_en = $2`,
-      [name_he, name_en]
+      `INSERT INTO team_name_translations (name_en, name_he, status)
+       VALUES ($1, $2, 'approved')
+       ON CONFLICT (name_en) 
+       DO UPDATE SET name_he = $2, status = 'approved'`,
+      [name_en, name_he]
     );
-    await logAdminAction(req.user.email, 'approve_team_translation', 'team_translation', name_en, { name_he });
+    
+    // 3. If there's an old name and it's different, update pending questions and bets
+    if (oldHebrew && oldHebrew !== name_he) {
+      // Update bet questions text
+      await pool.query(
+        `UPDATE bet_questions SET question_text = REPLACE(question_text, $1, $2)
+         WHERE question_text LIKE $3`,
+        [oldHebrew, name_he, `%${oldHebrew}%`]
+      );
+      // Update outcomes (JSONB labels)
+      await pool.query(
+        `UPDATE bet_questions SET outcomes = CAST(REPLACE(CAST(outcomes AS TEXT), $1, $2) AS JSONB)
+         WHERE CAST(outcomes AS TEXT) LIKE $3`,
+        [oldHebrew, name_he, `%${oldHebrew}%`]
+      );
+      // Update pending bets selected outcomes
+      await pool.query(
+        `UPDATE bets SET selected_outcome = $1 WHERE selected_outcome = $2 AND status = 'pending'`,
+        [name_he, oldHebrew]
+      );
+      console.log(`[admin] Updated system-wide team name: "${oldHebrew}" -> "${name_he}"`);
+    }
+
+    await logAdminAction(req.user.email, 'approve_team_translation', 'team_translation', name_en, { name_he, old_hebrew: oldHebrew });
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
 
 // DELETE /api/admin/team-translations/:name_en — dismiss (remove pending)
-router.delete('/team-translations/:name_en', authenticate, requireAdmin, async (req, res, next) => {
+router.delete('/team-translations/:name_en', async (req, res, next) => {
   try {
     await pool.query(`DELETE FROM team_name_translations WHERE name_en = $1`, [req.params.name_en]);
     res.json({ ok: true });
@@ -918,7 +1108,7 @@ router.delete('/team-translations/:name_en', authenticate, requireAdmin, async (
 });
 
 // GET /api/admin/odds-debug — check odds cache status
-router.get('/odds-debug', authenticate, requireAdmin, async (req, res, next) => {
+router.get('/odds-debug', async (req, res, next) => {
   try {
     const { fetchAllOdds } = require('../services/oddsApi');
     const { setOddsCache } = require('../services/sportsApi');
@@ -953,10 +1143,15 @@ router.post('/regenerate-bet-questions', authenticate, requireAdmin, async (req,
       WHERE g.status = 'scheduled'
         AND NOT EXISTS (SELECT 1 FROM bets b WHERE b.bet_question_id = bq.id)
     `);
+    // 1. Fetch all translations to ensure we use the newest overrides
+    const transRes = await client.query(`SELECT name_en, name_he FROM team_name_translations WHERE name_he IS NOT NULL`);
+    const translations = {};
+    for (const r of transRes.rows) translations[r.name_en] = r.name_he;
+
     let count = 0;
     for (const row of toRegen.rows) {
       const mockGame = { home_team: row.home_team, away_team: row.away_team, espn_odds: row.espn_odds };
-      const questions = buildBetQuestions(mockGame);
+      const questions = buildBetQuestions(mockGame, translations);
       const q = questions.find((x) => x.type === row.type);
       if (!q) continue;
       await client.query(
@@ -1217,7 +1412,7 @@ router.post('/support-inquiries/:id/reply', async (req, res, next) => {
     // 4. Send WhatsApp if opted in
     if (inquiry.phone_number && inquiry.phone_verified && inquiry.wa_opt_in) {
       const { sendDM } = require('../services/whatsappBotService');
-      const waText = `שלום, התקבלה תשובה לפנייה מס׳ ${inquiry.inquiry_number} ששלחת למנהלי Kickoff:\n\n*תשובה:* ${message}`;
+      const waText = `שלום, התקבלה תשובה לפנייה מס׳ ${inquiry.inquiry_number} ששלחת למנהלי DerbyUp:\n\n*תשובה:* ${message}`;
       sendDM(inquiry.phone_number, waText).catch(e => console.error('[SupportReply] WA error:', e.message));
     }
 

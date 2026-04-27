@@ -16,7 +16,7 @@ export function useDrafts() {
     queryFn: async () => {
       const res = await fetch('/api/agents/posts?status=draft');
       if (!res.ok) {
-         throw new Error('Failed to fetch drafts');
+        throw new Error('Failed to fetch drafts');
       }
       const data = await res.json();
       return (data.posts || []) as SocialDraft[];

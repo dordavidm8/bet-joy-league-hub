@@ -34,7 +34,7 @@ INSERT INTO advisor_config (key, value) VALUES
   ('daily_limit',   '20'),
   ('temperature',   '0.7'),
   ('max_tokens',    '600'),
-  ('system_prompt', 'אתה יועץ הימורי של Kickoff. ענה תמיד בעברית, בטון חברותי וקצר. אל תמציא סטטיסטיקות.')
+  ('system_prompt', 'אתה יועץ הימורי של DerbyUp. ענה תמיד בעברית, בטון חברותי וקצר. אל תמציא סטטיסטיקות.')
 ON CONFLICT (key) DO NOTHING;
 
 -- encrypted_secrets: AES-256-GCM encrypted API keys

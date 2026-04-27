@@ -15,7 +15,7 @@ const { formatPoints } = require('../utils/formatters');
 const { getHealthStatus, DEVELOPER_NUMBER } = require('../health');
 
 function getHelpText() {
-  return `👋 *שלום! אני הבוט של Kickoff* ⚽\n\n` +
+  return `👋 *שלום! אני הבוט של DerbyUp* ⚽\n\n` +
     `*פקודות בפרטי:* ✉️\n` +
     `• *יתרה* — הצג את יתרת הנקודות שלך\n` +
     `• *הימורים* — ההימורים האחרונים שלך\n` +
@@ -58,7 +58,7 @@ async function handleDmMessage(client, msg) {
     );
     if (pendingOtp.rows[0]) return;
 
-    await client.sendMessage(msg.from, `❌ אני לא מזהה את המשתמש.\n\nיש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://kickoff-bet.app/profile`, { linkPreview: false });
+    await client.sendMessage(msg.from, `❌ אני לא מזהה את המשתמש.\n\nיש לקשר את המשתמש למספר הטלפון באתר כדי להשתמש בבוט: https://derbyup.bet/profile`, { linkPreview: false });
     return;
   }
 

@@ -110,6 +110,9 @@ export const createLeague = (data: CreateLeagueInput) =>
 export const joinLeague = (invite_code: string) =>
   request<{ message: string; league: League }>('/leagues/join', { method: 'POST', body: JSON.stringify({ invite_code }) });
 
+export const getLeagueByInviteCode = (invite_code: string) =>
+  request<{ league: League }> (`/leagues/invite/${invite_code}`);
+
 export const settleLeague = (id: string) =>
   request<{ message: string }>(`/leagues/${id}/settle`, { method: 'POST' });
 
@@ -283,6 +286,9 @@ export const adminUpdateMiniGameQueueDate = (id: string, play_date: string) =>
 export const adminDeleteMiniGameQueue = (id: string) =>
   request<{ message: string }>(`/admin/minigames/queue/${id}`, { method: 'DELETE' });
 
+export const adminCompactQueue = (game_type: string) =>
+  request<{ message: string }>(`/admin/minigames/compact/${game_type}`, { method: 'POST' });
+
 export const adminFeatureGame = (id: string, bonus_pct: number, hours_before: number) =>
   request<{ message: string }>(`/admin/games/${id}/feature`, {
     method: 'POST', body: JSON.stringify({ bonus_pct, hours_before }),
@@ -299,6 +305,8 @@ export const adminUpdateGameOdds = (id: string, home_odds: number, draw_odds: nu
   });
 export const adminDeleteUser = (id: string) =>
   request<{ message: string }>(`/admin/users/${id}`, { method: 'DELETE' });
+export const adminCleanupAnonymizedUsers = () =>
+  request<{ message: string }>('/admin/users/cleanup-anonymized', { method: 'POST' });
 export const adminUpdateUser = (id: string, data: { username?: string; display_name?: string }) =>
   request<{ user: { id: string; username: string; display_name: string | null; email: string } }>(
     `/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }
@@ -537,6 +545,8 @@ export interface League {
   auto_settle?: boolean;
   bet_mode?: 'minimum_stake' | 'initial_balance';
   created_at: string;
+  tournament_name?: string;
+  is_member?: boolean;
 }
 
 export interface LeagueMember {
@@ -799,8 +809,16 @@ export const broadcastToLeague = (leagueId: string) =>
 export const getApprovedTeamTranslations = () =>
   request<{ translations: Record<string, string> }>('/games/team-translations');
 
-export const adminGetTeamTranslations = () =>
-  request<{ translations: { name_en: string; name_he: string | null; status: string; created_at: string }[] }>('/admin/team-translations');
+export const adminGetTeamTranslations = (search?: string, status?: string) => {
+  let qs = "";
+  if (search || status) {
+    const p = new URLSearchParams();
+    if (search) p.set("search", search);
+    if (status) p.set("status", status);
+    qs = "?" + p.toString();
+  }
+  return request<{ translations: { name_en: string; name_he: string | null; status: string; created_at?: string; is_override: boolean }[] }>(`/admin/team-translations${qs}`);
+};
 
 export const adminApproveTeamTranslation = (name_en: string, name_he: string) =>
   request<{ ok: boolean }>(`/admin/team-translations/${encodeURIComponent(name_en)}`, {

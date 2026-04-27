@@ -210,7 +210,7 @@ async function generateMissingXI() {
   return {
     game_type: 'missing_xi',
     puzzle_data: { teamName, teamLogo, matchContext, formation, players: puzzlePlayers, hidden_idx: hiddenIdx },
-    solution: { secret: hiddenPlayerName, secret_he: await translateName(hiddenPlayerName) }
+    solution: { secret: hiddenPlayerName }
   };
 }
 
@@ -278,7 +278,7 @@ async function generateWhoAreYa() {
       position: player.pos,
       age: null
     },
-    solution: { secret: player.name, secret_he: player.name_he }
+    solution: { secret: player.name }
   };
 }
 
@@ -339,7 +339,7 @@ async function generateCareerPath() {
   return {
     game_type: 'career_path',
     puzzle_data: { transfers },
-    solution: { secret: player.name, secret_he: player.name_he }
+    solution: { secret: player.name }
   };
 }
 
@@ -374,7 +374,7 @@ async function generateBox2Box() {
   return {
     game_type: 'box2box',
     puzzle_data: { team1: pair.team1, team2: pair.team2 },
-    solution: { secret: pair.secret_player, secret_he: pair.secret_player_he }
+    solution: { secret: pair.secret_player }
   };
 }
 
@@ -419,7 +419,7 @@ async function generateGuessClub() {
         return {
           game_type: 'guess_club',
           puzzle_data: { logo_data: base64 },
-          solution: { secret: club_name, secret_he: await translateName(club_name) }
+          solution: { secret: club_name }
         };
       }
     } catch (e) {
@@ -436,7 +436,7 @@ async function generateGuessClub() {
     return {
       game_type: 'guess_club',
       puzzle_data: { logo_data: `data:image/png;base64,${blurredBuffer.toString('base64')}` },
-      solution: { secret: 'Barcelona', secret_he: 'ברצלונה' }
+      solution: { secret: 'Barcelona' }
     };
   } catch (e2) {
     return {
@@ -468,17 +468,15 @@ async function saveMiniGame(game) {
     }
 
     const query = `
-      INSERT INTO daily_mini_games (game_type, play_date, puzzle_data, solution, answer_he)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO daily_mini_games (game_type, play_date, puzzle_data, solution)
+      VALUES ($1, $2, $3, $4)
       ON CONFLICT (game_type, play_date) DO UPDATE SET
         puzzle_data = EXCLUDED.puzzle_data,
-        solution = EXCLUDED.solution,
-        answer_he = EXCLUDED.answer_he
+        solution = EXCLUDED.solution
     `;
     const formattedDate = nextDate.toISOString().split('T')[0];
-    const answerHe = game.solution.secret_he || '';
-    await pool.query(query, [game.game_type, formattedDate, game.puzzle_data, game.solution, answerHe]);
-    console.log(`[generateMiniGames] Saved ${game.game_type} queued for ${formattedDate}. Hebrew info: ${answerHe}`);
+    await pool.query(query, [game.game_type, formattedDate, game.puzzle_data, game.solution]);
+    console.log(`[generateMiniGames] Saved ${game.game_type} queued for ${formattedDate}`);
   } catch (err) {
     console.error(`[generateMiniGames] Error saving ${game.game_type}:`, err.message);
     throw err;

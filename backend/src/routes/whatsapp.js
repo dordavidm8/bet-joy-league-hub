@@ -20,7 +20,7 @@ function generateOTP() {
 }
 
 function getHelpText() {
-  return `👋 *שלום! אני הבוט של Kickoff* ⚽\n\n` +
+  return `👋 *שלום! אני הבוט של DerbyUp* ⚽\n\n` +
     `*פקודות בפרטי:* ✉️\n` +
     `• *יתרה* — הצג את יתרת הנקודות שלך\n` +
     `• *הימורים* — ההימורים האחרונים שלך\n` +
@@ -74,7 +74,7 @@ router.post('/link-phone', authenticate, async (req, res, next) => {
     );
 
     const sent = await sendDM(normalized,
-      `👋 קוד האימות ל-KickOff: *${code}*\nקוד זה תקף ל-10 דקות.`
+      `👋 קוד האימות ל-DerbyUp: *${code}*\nקוד זה תקף ל-10 דקות.`
     );
 
     // In stub mode, return the code directly so dev can test
@@ -175,7 +175,7 @@ router.post('/leagues/:id/create-group', authenticate, async (req, res, next) =>
     const participantPhones = membersRes.rows.map(r => r.phone_number);
 
     const result = await callBot('/internal/create-group', {
-      name: `Kickoff - ${league.name} ⚽`,
+      name: `DerbyUp - ${league.name} ⚽`,
       leagueName: league.name,
       phones: participantPhones,
       leagueId: leagueId,
@@ -223,6 +223,17 @@ router.post('/leagues/:id/link-group', authenticate, async (req, res, next) => {
     if (!league) return res.status(404).json({ error: 'League not found' });
     if (league.access_type === 'public') return res.status(403).json({ error: 'ליגות ציבוריות אינן יכולות להתחבר לקבוצת ווטסאפ' });
     if (league.creator_id !== req.user.id) return res.status(403).json({ error: 'Only creator' });
+
+    // Check if group is already linked to ANOTHER active league
+    const takenRes = await pool.query(
+      `SELECT l.name FROM wa_groups g 
+       JOIN leagues l ON l.id = g.league_id 
+       WHERE g.wa_group_id = $1 AND g.league_id != $2 AND g.is_active = true`,
+      [wa_group_id, leagueId]
+    );
+    if (takenRes.rows[0]) {
+      return res.status(409).json({ error: `קבוצה זו כבר מחוברת לליגה פעילה אחרת: "${takenRes.rows[0].name}". קבוצה יכולה להיות מחוברת לליגה אחת בלבד.` });
+    }
 
     await pool.query(
       `INSERT INTO wa_groups (wa_group_id, league_id)
@@ -292,6 +303,17 @@ router.put('/leagues/:id/invite-link', authenticate, async (req, res, next) => {
       }
 
       if (joinRes && joinRes.wa_group_id) {
+        // Check if group is already linked up to ANOTHER active league
+        const takenRes = await pool.query(
+          `SELECT l.name FROM wa_groups g 
+           JOIN leagues l ON l.id = g.league_id 
+           WHERE g.wa_group_id = $1 AND g.league_id != $2 AND g.is_active = true`,
+          [joinRes.wa_group_id, leagueId]
+        );
+        if (takenRes.rows[0]) {
+          return res.status(409).json({ error: `קבוצה זו כבר מחוברת לליגה פעילה אחרת: "${takenRes.rows[0].name}".` });
+        }
+
         // Upsert group tracking
         await pool.query(
           `INSERT INTO wa_groups (wa_group_id, league_id, is_active, invite_link)

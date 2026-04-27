@@ -95,7 +95,7 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, '0.0.0.0', () => {
   const mode = process.env.STUB_MODE === 'true' ? '🧪 STUB MODE' : '🚀 LIVE MODE';
-  console.log(`Kickoff backend running on port ${PORT} — ${mode}`);
+  console.log(`DerbyUp backend running on port ${PORT} — ${mode}`);
   startCronJobs(io);
 });
 

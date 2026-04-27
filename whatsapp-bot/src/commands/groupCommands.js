@@ -11,7 +11,7 @@ const { pool } = require('../utils/db');
 const { extractNumber } = require('../utils/phoneUtils');
 
 /**
- * /kickoff setup <invite_code> — links an existing WA group to a Kickoff league
+ * /derbyup setup <invite_code> — links an existing WA group to a DerbyUp league
  */
 async function handleSetupCommand(client, msg, chat, parts) {
   if (!chat.isGroup) {
@@ -21,7 +21,7 @@ async function handleSetupCommand(client, msg, chat, parts) {
   const groupJid = chat.id._serialized;
   const inviteCode = parts[2]?.toUpperCase();
   if (!inviteCode) {
-    return msg.reply('⚠️ מבנה פקודה לא תקין. השתמש ב: `kickoff setup [קוד-ליגה]`');
+    return msg.reply('⚠️ מבנה פקודה לא תקין. השתמש ב: `derbyup setup [קוד-ליגה]`');
   }
 
   // 0. Permission check: Can we send messages?
@@ -41,13 +41,23 @@ async function handleSetupCommand(client, msg, chat, parts) {
     return msg.reply(`❌ לא נמצאה ליגה פעילה עם הקוד *${inviteCode}*. וודא שהקוד נכון.`);
   }
 
-  // Check if ALREADY connected to THIS group
-  const existingRes = await pool.query(
-    `SELECT * FROM wa_groups WHERE wa_group_id = $1 AND league_id = $2 AND is_active = true`,
-    [groupJid, league.id]
+  console.log(`[WA-DEBUG] Setup command for group ${groupJid} with invite code ${inviteCode}`);
+
+  // Check if group is already linked to ANY active league
+  const currentLinkRes = await pool.query(
+    `SELECT l.name, l.id FROM wa_groups g 
+     JOIN leagues l ON l.id = g.league_id 
+     WHERE g.wa_group_id = $1 AND g.is_active = true`,
+    [groupJid]
   );
-  if (existingRes.rows.length > 0) {
-    return msg.reply(`✅ הקבוצה כבר מחוברת לליגה "${league.name}".`);
+
+  if (currentLinkRes.rows.length > 0) {
+    const currentLeague = currentLinkRes.rows[0];
+    if (String(currentLeague.id) === String(league.id)) {
+      return msg.reply(`✅ הקבוצה כבר מחוברת לליגה "${league.name}".`);
+    } else {
+      return msg.reply(`❌ קבוצה זו כבר מחוברת לליגה פעילה אחרת: "${currentLeague.name}".\n\nכדי לחבר את הקבוצה לליגה "${league.name}", יש לנתק תחילה את הקבוצה מהליגה הקודמת דרך האתר או על ידי מנהל הליגה.`);
+    }
   }
 
   // 2. Link in DB
@@ -118,7 +128,7 @@ async function handleSetupCommand(client, msg, chat, parts) {
     `רוצים לראות את הטבלה העדכנית? תכתבו *"שלח טבלה גבר"*.\n\n` +
     `יאללה, מי שעוד לא חיבר את המשתמש שלו לווטסאפ - זה הזמן.\n` +
     `אתר הליגה:\n` +
-    `https://kickoff-bet.app/leagues/${league.id}\n\n` +
+    `https://derbyup.bet/leagues/${league.id}\n\n` +
     `שיהיה בהצלחה! 🏆${adminWarning}`;
 
   await msg.reply(welcomeText);

@@ -1,4 +1,4 @@
--- Kickoff — Database Schema
+-- DerbyUp — Database Schema
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
