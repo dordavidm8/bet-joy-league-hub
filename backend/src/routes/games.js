@@ -13,6 +13,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const redis = require('../lib/redis');
 
 const POPULAR_TEAMS = [
   'Manchester City', 'Man City', 'Arsenal', 'Liverpool', 'Chelsea', 'Manchester United', 'Man United', 'Tottenham', 'Tottenham Hotspur',
@@ -26,15 +27,20 @@ const POPULAR_TEAMS = [
 // GET /api/games
 router.get('/', async (req, res, next) => {
   const { status, date, competition, search, featured, from, to } = req.query;
+
+  const cacheKey = `games:${new URLSearchParams(Object.entries(req.query).sort()).toString()}`;
+  const cached = await redis.get(cacheKey);
+  if (cached) return res.json(cached);
+
   const conditions = [], params = [];
 
-  if (status) { 
-    params.push(status); 
-    conditions.push(`g.status = $${params.length}`); 
-    if (status === 'scheduled') { 
+  if (status) {
+    params.push(status);
+    conditions.push(`g.status = $${params.length}`);
+    if (status === 'scheduled') {
       // Hide games starting in less than 10 minutes
-      conditions.push(`g.start_time > NOW() + INTERVAL '10 minutes'`); 
-    } 
+      conditions.push(`g.start_time > NOW() + INTERVAL '10 minutes'`);
+    }
   }
   if (date) { params.push(date); conditions.push(`DATE(g.start_time AT TIME ZONE 'UTC') = $${params.length}`); }
   if (from) { params.push(from); conditions.push(`g.start_time >= $${params.length}::date`); }
@@ -62,7 +68,9 @@ router.get('/', async (req, res, next) => {
        ${where} ORDER BY g.start_time ASC LIMIT 100`,
       params
     );
-    res.json({ games: result.rows });
+    const body = { games: result.rows };
+    await redis.set(cacheKey, body, 60);
+    res.json(body);
   } catch (err) { next(err); }
 });
 

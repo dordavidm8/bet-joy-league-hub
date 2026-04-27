@@ -9,6 +9,7 @@
 // The Odds API integration — https://the-odds-api.com
 // Set THE_ODDS_API_KEY in Railway env vars to enable real odds
 const axios = require('axios');
+const redis = require('../lib/redis');
 
 const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 const API_KEY = process.env.THE_ODDS_API_KEY;
@@ -82,14 +83,13 @@ async function fetchOddsForSport(sportKey) {
 }
 
 // Cache odds for 12 hours to stay within free-tier request limits (500/month)
-let _oddsCache = { data: {}, fetchedAt: 0 };
-const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const CACHE_TTL_S = 12 * 60 * 60;
 
-// Fetch all odds across all supported sports (cached)
+// Fetch all odds across all supported sports (cached in Redis; falls through to API on miss)
 async function fetchAllOdds() {
-  if (Date.now() - _oddsCache.fetchedAt < CACHE_TTL_MS) {
-    return _oddsCache.data;
-  }
+  const cached = await redis.get('odds:all');
+  if (cached) return cached;
+
   const results = await Promise.allSettled(
     Object.values(SPORT_MAP).map(sport => fetchOddsForSport(sport))
   );
@@ -97,7 +97,7 @@ async function fetchAllOdds() {
   for (const r of results) {
     if (r.status === 'fulfilled') Object.assign(merged, r.value);
   }
-  _oddsCache = { data: merged, fetchedAt: Date.now() };
+  await redis.set('odds:all', merged, CACHE_TTL_S);
   return merged;
 }
 
