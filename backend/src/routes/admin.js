@@ -390,7 +390,12 @@ router.post('/games/:id/sync-odds', async (req, res, next) => {
     const { buildBetQuestions } = require('../services/sportsApi');
     const { translateTeam } = require('../lib/teamNames');
 
-    const gRes = await pool.query('SELECT * FROM games WHERE id = $1', [req.params.id]);
+    const gRes = await pool.query(`
+      SELECT g.*, c.slug as competition_slug 
+      FROM games g
+      JOIN competitions c ON g.competition_id = c.id
+      WHERE g.id = $1
+    `, [req.params.id]);
     const game = gRes.rows[0];
     if (!game) return res.status(404).json({ error: 'Game not found' });
 
