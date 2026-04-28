@@ -85,19 +85,39 @@ async function fetchOddsForSport(sportKey) {
 // Cache odds for 12 hours to stay within free-tier request limits (500/month)
 const CACHE_TTL_S = 12 * 60 * 60;
 
+// Fallback in-memory cache if Redis is not configured
+let _memoryCache = null;
+let _memoryCacheTime = 0;
+
 // Fetch all odds across all supported sports (cached in Redis; falls through to API on miss)
 async function fetchAllOdds() {
   const cached = await redis.get('odds:all');
   if (cached) return cached;
 
+  if (_memoryCache && (Date.now() - _memoryCacheTime < CACHE_TTL_S * 1000)) {
+    return _memoryCache;
+  }
+
   const results = await Promise.allSettled(
     Object.values(SPORT_MAP).map(sport => fetchOddsForSport(sport))
   );
+  
   const merged = {};
+  let hasData = false;
   for (const r of results) {
-    if (r.status === 'fulfilled') Object.assign(merged, r.value);
+    if (r.status === 'fulfilled' && Object.keys(r.value).length > 0) {
+      Object.assign(merged, r.value);
+      hasData = true;
+    }
   }
-  await redis.set('odds:all', merged, CACHE_TTL_S);
+
+  // Only cache for 12 hours if we actually got data, otherwise cache for 5 minutes to prevent spamming on error
+  const ttl = hasData ? CACHE_TTL_S : 300; 
+  
+  await redis.set('odds:all', merged, ttl);
+  _memoryCache = merged;
+  _memoryCacheTime = Date.now();
+  
   return merged;
 }
 
