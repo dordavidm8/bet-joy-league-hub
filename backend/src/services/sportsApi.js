@@ -30,7 +30,8 @@ let _oddsCacheFuzzy = {}; // super-fuzzy stripped keys
 
 function stripSuffixes(name) {
   return normalizeName(name)
-    .replace(/\b(fc|sv|ac|as|us|cf|cd|ud|rcd|rc|sc|afc|bsc|cfc|fsv|vfl|vfb|tsg|us|1\. fc|1\.|05|98|1846|1907|calcio|foot|olympique|de|stade|utd|united|city|hotspur|cp)\b/g, '')
+    .replace(/\b(fc|sv|ac|as|us|cf|cd|ud|rcd|rc|sc|afc|bsc|cfc|fsv|vfl|vfb|tsg|1\. fc|1\.|05|98|1846|1907|calcio|foot|olympique|de|stade|hotspur|cp)\b/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
