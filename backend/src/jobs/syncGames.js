@@ -132,6 +132,19 @@ async function reseedBetQuestionsOnTeamChange(client, gameId, game, translations
   console.log(`[syncGames] Reseeded bet questions for game ${gameId} (team names changed)`);
 }
 
+// ── Update odds for existing bet questions (Dynamic Odds) ─────────────────────
+async function updateBetQuestions(client, gameId, game, translations = {}) {
+  const questions = buildBetQuestions(game, translations);
+  for (const q of questions) {
+    await client.query(
+      `UPDATE bet_questions
+       SET outcomes = $1, odds_source = $2, question_text = $3
+       WHERE game_id = $4 AND type = $5`,
+      [JSON.stringify(q.outcomes), q.odds_source || 'default', q.question_text, gameId, q.type]
+    );
+  }
+}
+
 // ── Main sync function ────────────────────────────────────────────────────────
 async function syncGames() {
   if (process.env.STUB_MODE === 'true') {
@@ -180,6 +193,8 @@ async function syncGames() {
       } else {
         if (row.teams_changed) {
           await reseedBetQuestionsOnTeamChange(client, row.id, game, translations);
+        } else if (game.status === 'scheduled') {
+          await updateBetQuestions(client, row.id, game, translations);
         }
         updated++;
       }
