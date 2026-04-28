@@ -25,18 +25,35 @@ function normalizeName(name) {
   return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
-let _oddsCache = {}; // { 'HomeTeam|AwayTeam': { home_odds, draw_odds, away_odds } }
-let _oddsCacheNorm = {}; // normalized keys for accent-insensitive fallback lookup
+let _oddsCacheHe = {}; // Hebrew key mapping
+let _oddsCacheFuzzy = {}; // super-fuzzy stripped keys
 
-function setOddsCache(cache) {
+function stripSuffixes(name) {
+  return normalizeName(name)
+    .replace(/\b(fc|sv|ac|as|us|cf|cd|ud|rcd|rc|sc|afc|bsc|cfc|fsv|vfl|vfb|tsg|us|1\. fc|1\.|05|98|1846|1907|calcio|foot|olympique|de|stade|utd|united|city|hotspur|cp)\b/g, '')
+    .trim();
+}
+
+function setOddsCache(cache, dbTranslations = {}) {
   _oddsCache = cache;
   _oddsCacheNorm = {};
+  _oddsCacheHe = {};
+  _oddsCacheFuzzy = {};
+
   for (const [key, val] of Object.entries(cache)) {
     const pipe = key.indexOf('|');
     if (pipe === -1) continue;
-    const h = key.slice(0, pipe);
-    const a = key.slice(pipe + 1);
-    _oddsCacheNorm[`${normalizeName(h)}|${normalizeName(a)}`] = val;
+    const hEn = key.slice(0, pipe);
+    const aEn = key.slice(pipe + 1);
+    
+    _oddsCacheNorm[`${normalizeName(hEn)}|${normalizeName(aEn)}`] = val;
+    _oddsCacheFuzzy[`${stripSuffixes(hEn)}|${stripSuffixes(aEn)}`] = val;
+    
+    const hHe = translateTeam(hEn, dbTranslations);
+    const aHe = translateTeam(aEn, dbTranslations);
+    if (hHe && aHe) {
+      _oddsCacheHe[`${hHe}|${aHe}`] = val;
+    }
   }
 }
 
@@ -201,6 +218,10 @@ function buildBetQuestions(game, dbTranslations = {}) {
     || _oddsCache[`${aEn}|${hEn}`]
     || _oddsCacheNorm[`${hNorm}|${aNorm}`]
     || _oddsCacheNorm[`${aNorm}|${hNorm}`]
+    || _oddsCacheHe[`${h}|${a}`]
+    || _oddsCacheHe[`${a}|${h}`]
+    || _oddsCacheFuzzy[`${stripSuffixes(hEn)}|${stripSuffixes(aEn)}`]
+    || _oddsCacheFuzzy[`${stripSuffixes(aEn)}|${stripSuffixes(hEn)}`]
     || null;
   const realOdds  = espnOdds || apiOdds;
 

@@ -140,12 +140,6 @@ async function syncGames() {
     return;
   }
 
-  // Update odds cache before syncing games
-  const oddsCache = await fetchAllOdds();
-  setOddsCache(oddsCache);
-  const oddsCount = Object.keys(oddsCache).length;
-  if (oddsCount > 0) console.log(`[syncGames] Loaded real odds for ${oddsCount} matches`);
-
   console.log('[syncGames] Fetching games from ESPN…');
   let games;
   try {
@@ -158,15 +152,23 @@ async function syncGames() {
 
   const slugs = [...new Set(games.map(g => g.competition_slug))];
   const client = await pool.connect();
+  
+  let translations = {};
   try {
     await client.query('BEGIN');
     await ensureCompetitions(client, slugs);
     console.log(`[syncGames] Competitions verified: ${slugs.join(', ')}`);
 
     // Fetch all current translations to ensure buildBetQuestions uses them as labels
+    // and setOddsCache uses them to match OddsAPI names with ESPN names
     const transRes = await client.query(`SELECT name_en, name_he FROM team_name_translations WHERE name_he IS NOT NULL`);
-    const translations = {};
     for (const r of transRes.rows) translations[r.name_en] = r.name_he;
+
+    // Update odds cache before syncing games (we do this inside try block so we have translations)
+    const oddsCache = await fetchAllOdds();
+    setOddsCache(oddsCache, translations);
+    const oddsCount = Object.keys(oddsCache).length;
+    if (oddsCount > 0) console.log(`[syncGames] Loaded real odds for ${oddsCount} matches`);
 
     let inserted = 0, updated = 0;
     for (let j = 0; j < games.length; j++) {
