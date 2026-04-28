@@ -73,6 +73,7 @@ const GameDetailPage = () => {
   const [exactScores, setExactScores] = useState<Record<string, string>>({});
   // betContexts: questionId → Set of context keys ('global' | leagueId)
   const [betContexts, setBetContexts] = useState<Record<string, Set<string>>>({});
+  const [showOtherStake, setShowOtherStake] = useState<Record<string, boolean>>({});
   const [showAi, setShowAi] = useState(false);
   const bettingCountdown = useBettingCountdown(data?.game?.start_time ?? "");
 
@@ -438,18 +439,61 @@ const GameDetailPage = () => {
                               .map(l => l.min_bet ?? 0)
                           );
                           return (
-                            <div className="flex flex-col gap-1">
-                              <input
-                                type="number"
-                                min={minRequired || 1}
-                                max={backendUser?.points_balance ?? 9999}
-                                value={stakes[q.id] ?? ""}
-                                onChange={(e) => setStakes((p) => ({ ...p, [q.id]: e.target.value }))}
-                                placeholder={minRequired > 0 ? `מינימום ${minRequired} נק׳` : "כמה נקודות?"}
-                                className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20"
-                              />
-                              {minRequired > 0 && (
-                                <p className="text-[11px] text-muted-foreground">מינימום: {minRequired} נק׳</p>
+                            <div className="flex flex-col gap-2 mt-1">
+                              <p className="text-xs text-muted-foreground font-medium">סכום ההימור:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {[100, 200, 500, 1000].map(amount => (
+                                  <button
+                                    key={amount}
+                                    onClick={() => {
+                                      setStakes((p) => ({ ...p, [q.id]: amount.toString() }));
+                                      setShowOtherStake((p) => ({ ...p, [q.id]: false }));
+                                    }}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+                                      stakes[q.id] === amount.toString() && !showOtherStake[q.id]
+                                        ? "bg-primary text-primary-foreground border-primary"
+                                        : "bg-secondary border-border hover:border-primary/40"
+                                    }`}
+                                  >
+                                    {amount}
+                                  </button>
+                                ))}
+                                <button
+                                  onClick={() => {
+                                    setShowOtherStake((p) => ({ ...p, [q.id]: true }));
+                                    if (stakes[q.id] && [100, 200, 500, 1000].includes(Number(stakes[q.id]))) {
+                                      setStakes((p) => ({ ...p, [q.id]: "" }));
+                                    }
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+                                    showOtherStake[q.id]
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "bg-secondary border-border hover:border-primary/40"
+                                  }`}
+                                >
+                                  אחר
+                                </button>
+                              </div>
+
+                              {(!showOtherStake[q.id] && minRequired > 0) && (
+                                <p className="text-[11px] text-muted-foreground">מינימום להימור זה: {minRequired} נק׳</p>
+                              )}
+
+                              {showOtherStake[q.id] && (
+                                <div className="flex flex-col gap-1 mt-1">
+                                  <input
+                                    type="number"
+                                    min={minRequired || 1}
+                                    max={backendUser?.points_balance ?? 9999}
+                                    value={stakes[q.id] ?? ""}
+                                    onChange={(e) => setStakes((p) => ({ ...p, [q.id]: e.target.value }))}
+                                    placeholder={minRequired > 0 ? `מינימום ${minRequired} נק׳` : "כמה נקודות?"}
+                                    className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20"
+                                  />
+                                  {minRequired > 0 && (
+                                    <p className="text-[11px] text-muted-foreground">מינימום: {minRequired} נק׳</p>
+                                  )}
+                                </div>
                               )}
                             </div>
                           );
