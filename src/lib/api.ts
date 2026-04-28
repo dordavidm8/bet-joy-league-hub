@@ -303,6 +303,8 @@ export const adminUpdateGameOdds = (id: string, home_odds: number, draw_odds: nu
   request<{ message: string }>(`/admin/games/${id}/odds`, {
     method: 'PATCH', body: JSON.stringify({ home_odds, draw_odds, away_odds }),
   });
+export const adminSyncGameOdds = (id: string) =>
+  request<{ message: string; questions: any[] }>(`/admin/games/${id}/sync-odds`, { method: 'POST' });
 export const adminDeleteUser = (id: string) =>
   request<{ message: string }>(`/admin/users/${id}`, { method: 'DELETE' });
 export const adminCleanupAnonymizedUsers = () =>

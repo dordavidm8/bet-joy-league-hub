@@ -383,6 +383,50 @@ router.patch('/games/:id/odds', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/admin/games/:id/sync-odds — fetch fresh odds from API and update DB
+router.post('/games/:id/sync-odds', async (req, res, next) => {
+  try {
+    const { fetchOddsForSport, SPORT_MAP } = require('../services/oddsApi');
+    const { buildBetQuestions } = require('../services/sportsApi');
+    const { translateTeam } = require('../lib/teamNames');
+
+    const gRes = await pool.query('SELECT * FROM games WHERE id = $1', [req.params.id]);
+    const game = gRes.rows[0];
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+
+    const sportKey = SPORT_MAP[game.competition_slug];
+    if (!sportKey) return res.status(400).json({ error: 'Unsupported competition for Odds API' });
+
+    // Force fetch fresh odds for just this sport to save quota
+    const freshOddsMap = await fetchOddsForSport(sportKey);
+
+    // Get translations
+    const transRes = await pool.query('SELECT name_en, name_he FROM team_name_translations WHERE name_he IS NOT NULL');
+    const translations = {};
+    for (const r of transRes.rows) translations[r.name_en] = r.name_he;
+
+    // Manually build odds cache for this one fetch
+    const { setOddsCache } = require('../services/sportsApi');
+    setOddsCache(freshOddsMap, translations);
+
+    // Build the updated questions
+    const questions = buildBetQuestions(game, translations);
+
+    for (const q of questions) {
+      await pool.query(
+        `UPDATE bet_questions
+         SET outcomes = $1, odds_source = $2
+         WHERE game_id = $3 AND type = $4`,
+        [JSON.stringify(q.outcomes), q.odds_source || 'default', game.id, q.type]
+      );
+    }
+
+    const mw = questions.find(q => q.type === 'match_winner');
+    await logAdminAction(req.user.email, 'sync_game_odds', 'game', req.params.id, { new_odds: mw?.outcomes });
+    res.json({ message: 'Odds updated from API', questions });
+  } catch (err) { next(err); }
+});
+
 // GET /api/admin/leagues — all leagues
 router.get('/leagues', async (req, res, next) => {
   const limit = Math.min(parseInt(req.query.limit) || 100, 500);

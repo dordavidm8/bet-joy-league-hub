@@ -20,7 +20,7 @@ import {
   adminGetCompetitions, adminGetLog,
   adminAdjustPoints, adminSendNotification, adminGetMiniGameDraft, adminSaveMiniGameDraft,
   adminFeatureGame, adminUnfeatureGame, adminGetGameAnalytics,
-  adminLockGame, adminUnlockGame, adminPauseLeague, adminStopLeague, adminUpdateGameOdds, adminUpdateUser, adminDeleteUser,
+  adminLockGame, adminUnlockGame, adminPauseLeague, adminStopLeague, adminUpdateGameOdds, adminSyncGameOdds, adminUpdateUser, adminDeleteUser,
   adminCleanupAnonymizedUsers,
   adminRemoveWaGroup, adminSetWaInviteLink, adminUnlinkPhone,
   adminGetUserBets, adminCancelBet, adminToggleCompetition,
@@ -628,6 +628,24 @@ const GamesTab = () => {
     onError: (e: any) => setEditOddsMsg(`❌ ${e.message}`),
   });
 
+  const syncOddsMutation = useMutation({
+    mutationFn: () => adminSyncGameOdds(editOddsGame!.id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-games"] });
+      setEditOddsMsg(`✅ רענון הצליח! הנתונים נשמרו. תבדוק שוב.`);
+      // Update local state so user sees it without closing modal
+      if (data.questions) {
+        const mw = data.questions.find((q: any) => q.type === 'match_winner');
+        if (mw) {
+           setEditHomeOdds(String(mw.outcomes[0]?.odds ?? ""));
+           setEditDrawOdds(String(mw.outcomes[1]?.odds ?? ""));
+           setEditAwayOdds(String(mw.outcomes[2]?.odds ?? ""));
+        }
+      }
+    },
+    onError: (e: any) => setEditOddsMsg(`❌ ${e.message}`),
+  });
+
   const games = data?.games ?? [];
   const featGame = games.find(g => g.id === featuredGameId);
 
@@ -890,9 +908,12 @@ const GamesTab = () => {
             ))}
             {editOddsMsg && <p className="text-sm">{editOddsMsg}</p>}
             <div className="flex gap-2">
+              <Button className="flex-1 bg-amber-500 hover:bg-amber-600" onClick={() => syncOddsMutation.mutate()} disabled={syncOddsMutation.isPending}>
+                {syncOddsMutation.isPending ? "מרענן מ-API..." : "רענן מ-API"}
+              </Button>
               <Button className="flex-1" onClick={() => editOddsMutation.mutate()}
                 disabled={editOddsMutation.isPending || !editHomeOdds || !editDrawOdds || !editAwayOdds}>
-                {editOddsMutation.isPending ? "שומר..." : "שמור odds"}
+                {editOddsMutation.isPending ? "שומר ידנית..." : "שמור ידנית"}
               </Button>
               <Button variant="outline" onClick={() => setEditOddsGame(null)}>ביטול</Button>
             </div>

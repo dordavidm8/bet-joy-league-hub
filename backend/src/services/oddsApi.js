@@ -90,12 +90,14 @@ let _memoryCache = null;
 let _memoryCacheTime = 0;
 
 // Fetch all odds across all supported sports (cached in Redis; falls through to API on miss)
-async function fetchAllOdds() {
-  const cached = await redis.get('odds:all');
-  if (cached) return cached;
+async function fetchAllOdds(force = false) {
+  if (!force) {
+    const cached = await redis.get('odds:all');
+    if (cached) return cached;
 
-  if (_memoryCache && (Date.now() - _memoryCacheTime < CACHE_TTL_S * 1000)) {
-    return _memoryCache;
+    if (_memoryCache && (Date.now() - _memoryCacheTime < CACHE_TTL_S * 1000)) {
+      return _memoryCache;
+    }
   }
 
   const results = await Promise.allSettled(
@@ -121,4 +123,4 @@ async function fetchAllOdds() {
   return merged;
 }
 
-module.exports = { fetchAllOdds, SPORT_MAP };
+module.exports = { fetchAllOdds, SPORT_MAP, fetchOddsForSport };
