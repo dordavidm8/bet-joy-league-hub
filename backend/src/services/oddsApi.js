@@ -29,7 +29,7 @@ async function fetchOddsForSport(sportKey) {
   if (!API_KEY) return {};
   try {
     const { data } = await axios.get(`${ODDS_API_BASE}/sports/${sportKey}/odds`, {
-      params: { apiKey: API_KEY, regions: 'eu', markets: 'h2h,btts,totals', oddsFormat: 'decimal' },
+      params: { apiKey: API_KEY, regions: 'eu', markets: 'h2h,totals', oddsFormat: 'decimal' },
       timeout: 10000,
     });
     const map = {};
