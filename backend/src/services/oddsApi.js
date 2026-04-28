@@ -9,7 +9,7 @@
 // The Odds API integration — https://the-odds-api.com
 // Set THE_ODDS_API_KEY in Railway env vars to enable real odds
 const axios = require('axios');
-const redis = require('../lib/redis');
+const { pool } = require('../config/database');
 
 const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 const API_KEY = process.env.THE_ODDS_API_KEY;
@@ -82,21 +82,26 @@ async function fetchOddsForSport(sportKey) {
   }
 }
 
-// Cache odds for 12 hours to stay within free-tier request limits (500/month)
-const CACHE_TTL_S = 12 * 60 * 60;
+// Ensure DB table exists
+pool.query(`
+  CREATE TABLE IF NOT EXISTS odds_cache (
+    id INT PRIMARY KEY DEFAULT 1,
+    data JSONB NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(e => console.error('[oddsApi] Failed to ensure odds_cache table:', e.message));
 
-// Fallback in-memory cache if Redis is not configured
-let _memoryCache = null;
-let _memoryCacheTime = 0;
-
-// Fetch all odds across all supported sports (cached in Redis; falls through to API on miss)
+// Fetch all odds across all supported sports
+// If force=false, it strictly returns from DB. If DB is empty, it fetches once.
 async function fetchAllOdds(force = false) {
   if (!force) {
-    const cached = await redis.get('odds:all');
-    if (cached) return cached;
-
-    if (_memoryCache && (Date.now() - _memoryCacheTime < CACHE_TTL_S * 1000)) {
-      return _memoryCache;
+    try {
+      const res = await pool.query('SELECT data FROM odds_cache WHERE id = 1');
+      if (res.rows[0] && res.rows[0].data) {
+        return res.rows[0].data;
+      }
+    } catch (e) {
+      console.error('[oddsApi] Error reading cache from DB:', e.message);
     }
   }
 
@@ -113,12 +118,15 @@ async function fetchAllOdds(force = false) {
     }
   }
 
-  // Only cache for 12 hours if we actually got data, otherwise cache for 5 minutes to prevent spamming on error
-  const ttl = hasData ? CACHE_TTL_S : 300; 
-  
-  await redis.set('odds:all', merged, ttl);
-  _memoryCache = merged;
-  _memoryCacheTime = Date.now();
+  try {
+    await pool.query(
+      `INSERT INTO odds_cache (id, data, updated_at) VALUES (1, $1, NOW())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      [JSON.stringify(merged)]
+    );
+  } catch (e) {
+    console.error('[oddsApi] Error saving cache to DB:', e.message);
+  }
   
   return merged;
 }

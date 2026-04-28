@@ -116,7 +116,16 @@ function startJobs() {
     } catch (err) { console.error('[cron:socialListening]', err.message); }
   });
 
-  console.log('[jobs] Cron jobs started: syncGames, settleBets, dailySync, miniGames, dailyReminder, weeklyBonus, featuredNotif, socialPipeline, socialListening, socialAnalytics');
+  // Odds API sync at 02:00 and 14:00 Israel time (to avoid fetching on every deploy)
+  cron.schedule('0 2,14 * * *', async () => {
+    console.log('[cron] Fetching fresh odds from API (Scheduled)');
+    try {
+      const { fetchAllOdds } = require('../services/oddsApi');
+      await fetchAllOdds(true); // force=true bypasses DB check and explicitly calls API
+    } catch (err) { console.error('[cron:oddsSync]', err.message); }
+  }, { timezone: "Asia/Jerusalem" });
+
+  console.log('[jobs] Cron jobs started: syncGames, settleBets, dailySync, miniGames, dailyReminder, weeklyBonus, featuredNotif, socialPipeline, socialListening, socialAnalytics, oddsSync');
 }
 
 module.exports = { startJobs, startCronJobs: startJobs };
